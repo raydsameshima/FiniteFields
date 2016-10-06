@@ -1,0 +1,868 @@
+\documentclass[11pt]{book}
+\usepackage{amsmath,amssymb}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage[all]{xy}
+
+
+\usepackage{hyperref}
+
+\DeclareMathOperator*{\colim}{colim}
+\DeclareMathOperator*{\coker}{coker}
+
+\begin{document}
+
+\newcommand{\Slash}[1]{{\ooalign{\hfil/\crcr$#1$}}}
+
+\title{Finite fields}
+\author{Ray D. Sameshima}
+\date{2016/09/23 $\sim$}
+\maketitle
+
+\tableofcontents
+
+%%%%%%body
+\setcounter{chapter}{-1}
+\chapter{Preface}
+\section{References}
+\begin{enumerate}
+\item Scattering amplitudes over finite fields and multivariate functional reconstruction (Tiziano Peraro)\\
+\url{https://arxiv.org/pdf/1608.01902.pdf}
+
+\item Haskell Language \\
+\url{www.haskell.org}
+
+\item \url{http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7}\\
+(Japanese tech support sns)
+\end{enumerate}
+
+\section{Set theoretical gadgets}
+\subsection{Numbers}
+Here is a list of what we assumed that the readers are familiar with:
+\begin{enumerate}
+\item $\mathbb{N}$ (Peano axiom: $\emptyset, \text{suc}$)
+\item $\mathbb{Z}$
+\item $\mathbb{Q}$
+\item $\mathbb{R}$ (Dedekind cut)
+\item $\mathbb{C}$ 
+\end{enumerate}
+
+\subsection{Algebraic structures}
+\begin{enumerate}
+\item Monoid: $(\mathbb{N},+), (\mathbb{N},\times)$
+\item Group: $(\mathbb{Z},+), (\mathbb{Z},\times)$
+\item Ring: $\mathbb{Z}$
+\item Field: $\mathbb{Q}$, $\mathbb{R}$ (continuous), $\mathbb{C}$ (algebraic closed)
+\end{enumerate}
+
+\section{Haskell}
+From "A Brief, Incomplete and Mostly Wrong History of Programming Languages":\footnote{
+\url{http://james-iry.blogspot.com/2009/05/brief-incomplete-and-mostly-wrong.html}
+}
+\begin{quotation}
+1990 - A committee formed by Simon Peyton-Jones, Paul Hudak, Philip Wadler, Ashton Kutcher, and People for the Ethical Treatment of Animals creates Haskell, a pure, non-strict, functional language. Haskell gets some resistance due to the complexity of using monads to control side effects. Wadler tries to appease critics by explaining that "a monad is a monoid in the category of endofunctors, what's the problem?" 
+\end{quotation}
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=3cm, bb= 0 0 1280 904]{Haskell-Logo.png}
+\caption{Haskell's logo, the combinations of $\lambda$ and monad's bind \texttt{>>=}.}
+\label{Haskell-Logo}
+\end{center}
+\end{figure}
+
+Haskell language is a standardized purely functional declarative statically typed programming language.
+
+In declarative languages, we describe "what" or "definition" in its codes, however imperative languages, like C/C++, "how" or "procedure".
+Instead of loops, we use (implicit) recursions in functional language.\footnote{Of course, as a best practice, we should use higher order function rather than explicit recursions.
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Basics}
+We have assumed living knowledge on (axiomatic, i.e., ZFC) set theory, algebraic structures.
+
+\section{Finite field}
+
+\subsection{Rings}
+A ring $(R,+,*)$ is a structured set $R$ with two binary operations
+\begin{eqnarray}
+\verb|(+) :: R -> R -> R|\\
+\verb|(*) :: R -> R -> R|
+\end{eqnarray}
+satisfying the following 3 (ring) axioms:
+\begin{enumerate}
+\item $(R,+)$ is an abelian, i.e., commutative group,
+i.e.,
+\begin{eqnarray}
+\forall a,b,c \in R, (a+b) + c = a + (b + c) & \text{ (associativity for $+$)} \\
+\forall a, b, \in R, a+b = b+a & \text{ (commutativity)} \\
+\exists 0 \in R, \text{ s.t. } \forall a \in R, a + 0 = a & \text{ (additive identity) } \\
+\forall a \in R, \exists (-a) \in R \text{ s.t. } a + (-a) = 0 & \text{ (additive inverse)}
+\end{eqnarray}
+
+\item $(R,*)$ is a monoid, i.e.,
+\begin{eqnarray}
+\forall a,b,c \in R, (a*b) * c = a * (b * c) & \text{ (associativity for $*$)} \\
+\exists 1 \in R, \text{ s.t. } \forall a \in R, a * 1 = a = 1*a & \text{ (multiplicative identity) } 
+\end{eqnarray}
+
+\item Multiplication is distributive w.r.t addition, i.e., $\forall a,b,c \in R$, 
+\begin{eqnarray}
+a*(b+c) = (a*b) + (a*c) & \text{ (left distributivity)} \\
+(a+b)*c = (a*c) + (b*c) & \text{ (right distributivity)} 
+\end{eqnarray}
+
+\end{enumerate}
+
+\subsection{Fields}
+A field is a ring $(\mathbb{K},+,*)$ whose non-zero elements form an abelian group under multiplication, i.e., $\forall r \in \mathbb{K}$,
+\begin{eqnarray}
+r \neq 0 \Rightarrow \exists r^{-1} \in \mathbb{K} \text{ s.t. } r*r^{-1} = 1 = r^{-1}*r.
+\end{eqnarray}
+A field $\mathbb{K}$ is a finite field iff the underlying set $\mathbb{K}$ is finite.
+A field $\mathbb{K}$ is called infinite field iff the underlying set is infinite.
+
+\subsection{An example of finite rings $\mathbb{Z}_n$}
+Let $n (>0) \in \mathbb{N}$ be a non-zero natural number.
+Then the quotient set
+\begin{eqnarray}
+\mathbb{Z}_n &:=& \mathbb{Z} / n\mathbb{Z} \\
+&\cong& \{0, \cdots, (n-1)\}
+\end{eqnarray}
+with addition, subtraction and multiplication under modulo $n$ is a ring.\footnote{
+Here we have taken an equivalence class, 
+\begin{eqnarray}
+0 \leq \forall k \leq (n-1), [k] := \{k + n*z | z \in \mathbb{Z} \}
+\end{eqnarray}
+with the following operations:
+\begin{eqnarray}
+\left[k \right] + \left[l \right] &:=& \left[k+l\right] \\
+\left[k \right] * \left[l \right] &:=& \left[k * l\right]
+\end{eqnarray}
+This is equivalent to take modular $n$:
+\begin{eqnarray}
+(k \mod n) + (l \mod n) &:=& (k+l \mod n) \\
+(k \mod n) * (l \mod n) &:=& (k*l \mod n).
+\end{eqnarray}
+
+}
+
+\subsection{B\'ezout's lemma}
+Consider $a,b \in \mathbb{Z}$ be nonzero integers.
+Then there exist $x,y \in \mathbb{Z}$ s.t.
+\begin{eqnarray}
+a*x + b*y = \gcd(a,b),
+\end{eqnarray}
+where $\gcd$ is the greatest common divisor (function), see \S\ref{gcdDefinition}.
+We will prove this statement in \S\ref{exGCD}.
+
+\subsection{Greatest common divisor}
+\label{gcdDefinition}
+Before the proof, here is an implementation of $\gcd$ using Euclidean algorithm with Haskell language:
+
+\begin{verbatim}
+> -- Eucledian algorithm.
+> myGCD :: Integral a => a -> a -> a
+> myGCD a b
+>   | b < 0 = myGCD a (-b)
+> myGCD a b
+>   | a == b = a
+>   | b >  a = myGCD b a
+>   | b <  a = myGCD (a-b) b
+\end{verbatim}
+
+\subsubsection{Example, by hands}
+Let us consider the gcd of 7 and 13.
+Since they are primes, the gcd should be 1.
+First it binds \texttt{a} with 7 and \texttt{b} with 13, and hit \texttt{b > a}.
+\begin{eqnarray}
+\texttt{myGCD 7 13 == myGCD 13 7}
+\end{eqnarray}
+Then it hits main line:
+\begin{eqnarray}
+\texttt{myGCD 13 7 == myGCD (13-7) 7}
+\end{eqnarray}
+In order to go to next step, Haskell evaluate $(13-7)$,\footnote{
+Since Haskell language adopts lazy evaluation, i.e., call by need, not call by name.
+}
+and
+\begin{eqnarray}
+\texttt{myGCD (13-7) 7} &\texttt{==}& \texttt{myGCD 6 7} \\
+&\texttt{==}& \texttt{myGCD 7 6} \\
+&\texttt{==}& \texttt{myGCD (7-6) 6} \\
+&\texttt{==}& \texttt{myGCD 1 6} \\
+&\texttt{==}& \texttt{myGCD 6 1}
+\end{eqnarray}
+Finally it ends with 1:
+\begin{eqnarray}
+\texttt{myGCD 1 1 == 1} 
+\end{eqnarray}
+
+As another example, consider $15$ and $25$:
+\begin{eqnarray}
+\texttt{myGCD 15 25} &\texttt{==}& \texttt{myGCD 25 15}\\
+&\texttt{==}& \texttt{myGCD (25-15) 15}\\
+&\texttt{==}& \texttt{myGCD 10 15}\\
+&\texttt{==}& \texttt{myGCD 15 10}\\
+&\texttt{==}& \texttt{myGCD (15-10) 10}\\
+&\texttt{==}& \texttt{myGCD 5 10}\\
+&\texttt{==}& \texttt{myGCD 10 5}\\
+&\texttt{==}& \texttt{myGCD (10-5) 5}\\
+&\texttt{==}& \texttt{myGCD 5 5}\\
+&\texttt{==}& \texttt{5}
+\end{eqnarray}
+
+\subsubsection{Example, by Haskell}
+Let us check simple example using Haskell:
+\begin{verbatim}
+  *Ffield> myGCD 7 13
+  1
+  *Ffield> myGCD 7 14
+  7
+  *Ffield> myGCD (-15) (20)
+  5
+  *Ffield> myGCD (-299) (-13)
+  13
+\end{verbatim}
+The final result is from
+\begin{verbatim}
+  *Ffield> 13*23
+  299
+\end{verbatim}
+
+\subsection{Extended Euclidean algorithm}
+\label{exGCD}
+Here we treat the extended Euclidean algorithm.
+
+As intermediate steps, this algorithm makes sequences of integers $\{r_i\}_i$, $\{s_i\}_i$, $\{t_i\}_i$ and quotients $\{q_i\}_i$ as follows.
+The base case are
+\begin{eqnarray}
+\left(r_0, s_0, t_0 \right) &:=& (a,1,0) \\
+\left(r_1, s_1, t_1 \right) &:=& (b,0,1) 
+\end{eqnarray}
+and inductively,
+\begin{eqnarray}
+q_i &:=& \text{quot}(r_{i-2}, r_{i-1}) \\
+r_i &:=& r_{i-2} - q_i * r_{i-1} \\
+s_i &:=& s_{i-2} - q_i * s_{i-1} \\
+t_i &:=& t_{i-2} - q_i * s_{i-1}.
+\end{eqnarray}
+The termination condition\footnote{
+This algorithm will terminate eventually, since the sequence $\{r_i\}_i$ is non-negative by definition of $q_i$, but strictly decreasing.
+Therefore, $\{r_i\}_i$ will meet $0$ in finite step $k$.
+} is
+\begin{eqnarray}
+r_k = 0
+\end{eqnarray}
+for some $k \in \mathbb{N}$ and
+\begin{eqnarray}
+\gcd(a,b) &=& r_{k-1} \\
+x &=& s_{k-1} \\
+y &=& t_{k-1}.
+\end{eqnarray}
+
+\subsubsection{Proof}
+By definition,
+\begin{eqnarray}
+\gcd(r_{i-1}, r_i) &=& \gcd(r_{i-1}, r_{i-2} - q_i * r_{i-1}) \\
+&=& \gcd(r_{i-1}, r_{i-2})
+\end{eqnarray}
+and this implies 
+\begin{eqnarray}
+\gcd(a,b) =: \gcd(r_0, r_1) = \cdots = \gcd(r_{k-1}, 0),
+\end{eqnarray}
+i.e., 
+\begin{eqnarray}
+r_{k-1} = \gcd(a,b).
+\end{eqnarray}
+
+Next, for $i=0,1$ observe
+\begin{eqnarray}
+\label{guessOfRational}
+a*s_i + b*t_i = r_i.
+\end{eqnarray}
+Let $i\geq 2$, then
+\begin{eqnarray}
+r_i &=& r_{i-2}  - q_i * r_{i-1} \\
+&=& a*s_{i-2} + b*t_{i-2} - q_i *(a*s_{i-1} + b*t_{i-1} ) \\
+&=& a*(s_{i-2} - q_i **s_{i-1}) + b* (t_{i-2} - q_i *t_{i-1} ) \\
+&=:& a*s_i + b*t_i.
+\end{eqnarray}
+Therefore, inductively we get
+\begin{eqnarray}
+\gcd(a,b) = r_{k-1} = a*s_{k-1} + b*t_{k-1}. =: a*s + b*t.
+\end{eqnarray}
+This prove B\'ezout's lemma. \\
+$\blacksquare$
+
+\subsubsection{Haskell implementation}
+\label{exGCDHaskell}
+Here I use lazy lists for intermediate lists of $qs,rs,ss,ts$, and pick up (second) last elements for the results.
+
+\label{extendedEuclideanAlgorithm}
+\begin{verbatim}
+Here we would like to implement the extended Euclidean algorithm.
+See the algorithm, examples, and pseudo code at:
+
+  https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
+
+I've asked at Qiita(Japanese) and get some solutions:
+
+  http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7
+
+> exGCD' :: Integral n => n -> n -> ([n], [n], [n], [n])
+> exGCD' a b = (qs, rs, ss, ts)
+>   where
+>     qs = zipWith quot rs (tail rs)
+>     rs = takeBefore (==0) r'
+>     r' = steps a b
+>     ss = steps 1 0
+>     ts = steps 0 1
+>     steps a b = rr
+>       where rr@(_:rs) = a:b: zipWith (-) rr (zipWith (*) qs rs)
+>         
+> takeBefore :: (a -> Bool) -> [a] -> [a]
+> takeBefore _ [] = []
+> takeBefore p (l:ls)
+>   | p l       = []
+>   | otherwise = l : (takeBefore p ls)
+\end{verbatim}
+Here we have used so called lazy lists, and higher order function\footnote{
+Naively speaking, the function whose inputs and/or outputs are functions is called a higher order function.
+}.
+The gcd of $a$ and $b$ should be the last element of second list, and our targets $(s,t)$ are second last elements of last two lists.
+The following example is from wikipedia:
+\begin{verbatim}
+  *Ffield> exGCD' 240 46
+  ([5,4,1,1,2],[240,46,10,6,4,2],[1,0,1,-4,5,-9,23],[0,1,-5,21,-26,47,-120])
+  *Ffield> gcd 240 46
+  2
+  *Ffield> 240*(-9) + 46*(47)
+  2
+\end{verbatim}
+It works, and we have other simpler examples:
+\begin{verbatim}
+  *Ffield> exGCD' 15 25
+  ([0,1,1,2],[15,25,15,10,5],[1,0,1,-1,2,-5],[0,1,0,1,-1,3])
+  *Ffield> 15 * 2 + 25*(-1)
+  5
+  *Ffield> exGCD' 15 26
+  ([0,1,1,2,1,3],[15,26,15,11,4,3,1],[1,0,1,-1,2,-5,7,-26],[0,1,0,1,-1,3,-4,15])
+  *Ffield> 15*7 + (-4)*26
+  1
+\end{verbatim}
+Now what we should do is extract gcd of $a$ and $b$, and $(s,t)$ from the tuple of lists:
+\begin{verbatim}
+> -- a*x + b*y = gcd a b
+> exGcd a b = (g, x, y)
+>   where
+>     (_,r,s,t) = exGCD' a b
+>     g = last r
+>     x = last . init $ s
+>     y = last . init $ t
+\end{verbatim}
+where the underscore \verb+_+ is a special symbol in Haskell that hits every pattern.
+So, in order to get gcd and $(s,t)$ we don't need quotients list.
+\begin{verbatim}
+  *Ffield> exGcd 46 240
+  (2,47,-9)
+  *Ffield> 46*47 + 240*(-9)
+  2
+  *Ffield> gcd 46 240
+  2
+\end{verbatim}
+
+\subsection{Coprime}
+Let us define a binary relation as follows:
+\begin{verbatim}
+  coprime :: Integral a => a -> a -> Bool
+  coprime a b = (gcd a b) == 1
+\end{verbatim}
+
+\subsection{Corollary (Inverses in $\mathbb{Z}_n$)}
+For a non-zero element
+\begin{eqnarray}
+a \in \mathbb{Z}_n,
+\end{eqnarray}
+there is a unique number 
+\begin{eqnarray}
+b \in \mathbb{Z}_n \text{ s.t. } ((a*b) \mod n) = 1
+\end{eqnarray}
+iff $a$ and $n$ are coprime.
+
+\subsubsection{Proof}
+From B\'ezout's lemma, $a$ and $n$ are coprime iff
+\begin{eqnarray}
+\exists s,t \in \mathbb{Z}, a*s + n*t = 1.
+\end{eqnarray}
+Therefore
+\begin{eqnarray}
+\text{$a$ and $n$ are coprime} &\Leftrightarrow& \exists s,t \in \mathbb{Z}, a*s + n*t = 1 \\
+&\Leftrightarrow &\exists s,t' \in \mathbb{Z}, a*s = 1 + n*t'.
+\end{eqnarray}
+This $s$, by taking its modulo $n$ is our $b = a^{-1}$:
+\begin{eqnarray}
+a*s = 1 \mod n.
+\end{eqnarray}
+$\blacksquare$
+
+\subsection{Corollary ($\mathbb{Z}_p$)}
+If $p$ is prime, then 
+\begin{eqnarray}
+\mathbb{Z}_p := \{0, \cdots, (p-1)\}
+\end{eqnarray}
+with addition, subtraction and multiplication under modulo $n$ is a field.
+
+\subsubsection{Proof}
+It suffices to show that 
+\begin{eqnarray}
+\forall a \in \mathbb{Z}_p, a \neq 0 \Rightarrow \exists a^{-1} \in \mathbb{K} \text{ s.t. } a*a^{-1} = 1 = a^{-1}*a,
+\end{eqnarray}
+but since $p$ is prime, and
+\begin{eqnarray}
+\forall a \in \mathbb{Z}_p, a \neq 0 \Rightarrow \texttt{gcd a p == 1}
+\end{eqnarray}
+so all non-zero element has its inverse in $ \mathbb{Z}_p$.\\
+$\blacksquare$
+
+\subsubsection{Example and implementation}
+Let us pick 11 as a prime and consider $\mathbb{Z}_{11}$:
+\begin{verbatim}
+Example Z_{11}
+
+  *Ffield> isField 11
+  True
+  *Ffield> map (exGcd 11) [0..10]
+  [(11,1,0),(1,0,1),(1,1,-5),(1,-1,4),(1,-1,3)
+  ,(1,1,-2),(1,-1,2),(1,2,-3),(1,3,-4),(1,-4,5)
+  ,(1,1,-1)
+  ]
+
+  *Ffield> map ((`mod` 11) . (\(_,_,x)->x) . exGcd 11) [1..10] 
+  [1,6,4,3,9,2,8,7,5,10]
+  *Ffield> zip [1..10] it
+  [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
+\end{verbatim}
+Let us generalize these flow into a function\footnote{
+From \url{https://hackage.haskell.org/package/base-4.9.0.0/docs/Data-Maybe.html}:
+\begin{quotation}
+The Maybe type encapsulates an optional value. 
+A value of type Maybe a either contains a value of type a (represented as Just a), or it is empty (represented as Nothing). 
+Using Maybe is a good way to deal with errors or exceptional cases without resorting to drastic measures such as error.
+\end{quotation}
+}:
+\begin{verbatim}
+> inverses :: Int -> Maybe [(Int, Int)]
+> inverses n
+>   | isField n = Just lst -- isPrime n
+>   | otherwise = Nothing
+>   where
+>     lst' = map ((`mod` n) . (\(_,_,c)->c) . exGcd n) [1..(n-1)]
+>     lst = zip [1..] lst'
+\end{verbatim}
+Now we define \texttt{inversep}\footnote{
+Here we have used do-notation, a syntactic sugar for use with monadic expressions.
+From \url{https://wiki.haskell.org/Monad}:
+\begin{quotation}
+Monads in Haskell can be thought of as composable computation descriptions.
+\end{quotation}
+} whose 1st input is the base $p$ of our ring(field) and 2nd input is an element in $\mathbb{Z}_p$.
+\begin{verbatim}
+> inversep :: Int -> Int -> Maybe Int
+> inversep p a = do
+>   l <- inverses p
+>   let a' = (a `mod` p)
+>   return (snd $ l !! (a'-1)) 
+   
+  *Ffield> inverses 11
+  Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
+\end{verbatim}
+The function \texttt{inverses} returns a list of nonzero number with their inverses if $p$ is prime.
+
+\subsection{A map from $\mathbb{Q}$ to $\mathbb{Z}_p$}
+Let $p$ be a prime.
+Now we have a map
+\begin{eqnarray}
+- \mod p : \mathbb{Z} \to \mathbb{Z}_p; a \mapsto (a \mod p),
+\end{eqnarray}
+and a natural inclusion (or a forgetful map)\footnote{
+By introducing this forgetful map, we can use 
+\begin{eqnarray}
+\times : (\mathbb{Z}, \mathbb{Z}) \to \mathbb{Z} 
+\end{eqnarray}
+of normal product on $\mathbb{Z}$.
+}
+\begin{eqnarray}
+\text{\textquestiondown} : \mathbb{Z}_p \hookrightarrow \mathbb{Z}.
+\end{eqnarray}
+Then we can define a map\footnote{
+This is an example of operator overloadings.
+}
+\begin{eqnarray}
+- \mod p : \mathbb{Q} \to \mathbb{Z}_p
+\end{eqnarray}
+by
+\begin{eqnarray}
+q = \frac{a}{b} \mapsto (q \mod p) := \left( \left( a \times \text{\textquestiondown} \left( b^{-1} \mod p\right) \right) \mod p \right).
+\end{eqnarray}
+
+\subsubsection{Example and implementation}
+An easy implementation is the followings:
+\begin{verbatim}
+A map from Q to Z_p.
+
+> modp :: Ratio Int -> Int -> Int
+> q `modp` p = (a * (bi `mod` p)) `mod` p
+>   where
+>     (a,b) = (numerator q, denominator q)
+>     bi = fromJust $ inversep p b
+\end{verbatim}
+Let us consider a rational number $\frac{3}{7}$ on a finite field $\mathbb{Z}_{11}$:
+\begin{verbatim}
+Example: on Z_{11}
+Consider (3 % 7).
+
+  *Ffield Data.Ratio> let q = 3 % 7
+  *Ffield Data.Ratio> 3 `mod` 11
+  3
+  *Ffield Data.Ratio> 7 `mod` 11
+  7
+  *Ffield Data.Ratio> inverses 11
+  Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
+  *Ffield Data.Ratio> 7*8 == 11*5+1
+  True
+
+on Z_{11}, (7^{-1} `mod` 11) is equal to (8 `mod` 11) and
+  (3%7) |-> (3 * (7^{-1} `mod` 11) `mod` 11)
+             == (3*8 `mod` 11) 
+             == 2 ` mod 11
+
+  *Ffield Data.Ratio> q `modp` 11
+  2
+\end{verbatim}
+
+\subsection{Reconstruction from $\mathbb{Z}_p$ to $\mathbb{Q}$}
+Consider a rational number $q$ and its image $a \in \mathbb{Z}_p$.
+\begin{eqnarray}
+a := q \mod p
+\end{eqnarray}
+The extended Euclidean algorithm can be used for guessing a rational number $q$ from $a := q \mod p$.
+
+At each step, the extended Euclidean algorithm satisfies eq.(\ref{guessOfRational}).
+\begin{eqnarray}
+a*s_i + p*t_i = r_i
+\end{eqnarray}
+Therefore
+\begin{eqnarray}
+r_i = a*s_i \mod p \Leftrightarrow \frac{r_i}{s_i} \mod p = a.
+\end{eqnarray}
+Hence $\frac{r_i}{s_i}$ is a possible guess for $q$.
+We take
+\begin{eqnarray}
+r_i^2 < p
+\end{eqnarray}
+as the termination condition for this reconstruction.
+
+\subsubsection{Haskell implementation}
+
+
+\subsection{Chinese remainder theorem}
+From wikipedia\footnote{
+\url{https://en.wikipedia.org/wiki/Chinese_remainder_theorem}
+}
+\begin{quotation}
+There are certain things whose number is unknown. If we count them by threes, we have two left over; by fives, we have three left over; and by sevens, two are left over. How many things are there? 
+\end{quotation}
+Here is a solution with Haskell:
+\begin{verbatim}
+> let lst = [n|n<-[0..], n `mod` 3 == 2, n `mod` 5 == 3, n `mod` 7 == 2]
+> head lst
+23
+\end{verbatim}
+or more explicitly,
+\begin{verbatim}
+> let clst = [n|n<-[0.. (3*5*7)], mod n 3 == 2, mod n 5 == 3, mod n 7 == 2]
+> clst 
+[23]
+\end{verbatim}
+
+The statement for binary case is the following.
+Let $n_1, n_2 \in \mathbb{Z}$ be coprime, then for arbitrary $a_1,a_2 \in \mathbb{Z}$, the following a system of equations
+\begin{eqnarray}
+x &=& a_1 \mod n_1\\
+x &=& a_2 \mod n_2
+\end{eqnarray}
+have a unique solution modular $n_1*n_2$.
+
+\subsubsection{Proof}
+(existence) With \S\ref{exGCD}, there are $m_1,m_2 \in \mathbb{Z}$ s.t.
+\begin{eqnarray}
+n_1 * m_1 + n_2 * m_2 = 1.
+\end{eqnarray}
+Now we have
+\begin{eqnarray}
+n_1 * m_1 &=& 1 \mod n_2 \\
+n_2 * m_2 &=& 1 \mod n_1
+\end{eqnarray}
+that is
+\begin{eqnarray}
+m_1 &=& n_1^{-1} \mod n_2 \\
+m_2 &=& n_2^{-1} \mod n_1.
+\end{eqnarray}
+Then
+\begin{eqnarray}
+a := a_1 * n_2 * m_2 + a_2 * n_1 * m_1 \mod (n_1*n_2)
+\end{eqnarray}
+is a solution.
+
+(uniqueness)
+If $a'$ is also a solution, then
+\begin{eqnarray}
+a - a' &=& 0 \mod n_1 \\
+a - a' &=& 0 \mod n_2.
+\end{eqnarray}
+Since $n_1$ and $n_2$ are coprime, i.e., no common divisors, this difference is divisible by $n_1*n_2$, and
+\begin{eqnarray}
+a - a' = 0 \mod (n_1 * n_2).
+\end{eqnarray}
+Therefore, the solution is unique modular $n_1*n_2$. \\
+$\blacksquare$
+
+\subsubsection{Generalization}
+Given $a \in Z_n$ of pairwise coprime numbers
+\begin{eqnarray}
+n := n_1 * \cdots * n_k,
+\end{eqnarray}
+a system of equations
+\begin{eqnarray}
+\left. a_i = a \mod n_i \right|_{i=1}^k
+\end{eqnarray}
+have a unique solution
+\begin{eqnarray}
+a = \sum_i m_i a_i \mod n,
+\end{eqnarray}
+where
+\begin{eqnarray}
+\left. m_i = \left( \frac{n_i}{n} \mod n_i \right) \frac{n}{n_i} \right|_{i=1}^k.
+\end{eqnarray}
+
+\section{Polynomials and rational functions}
+
+\subsection{Notations}
+Let $n \in \mathbb{N}$ be positive. 
+We use multi-index notation:
+\begin{eqnarray}
+\alpha = (\alpha_1, \cdots, \alpha_n) \in \mathbb{N}^n.
+\end{eqnarray}
+A monomial is defined as
+\begin{eqnarray}
+z^\alpha := \prod_i z_i^{\alpha_i}.
+\end{eqnarray}
+The total degree of this monomial is given by
+\begin{eqnarray}
+|\alpha| := \sum_i \alpha_i.
+\end{eqnarray}
+
+\subsection{Polynomials and rational functions}
+Let $\mathbb{K}$ be a field.
+Consider a map
+\begin{eqnarray}
+f : \mathbb{F}^n \to \mathbb{F}; z \mapsto f(z) := \sum_\alpha c_\alpha z^\alpha,
+\end{eqnarray}
+where
+\begin{eqnarray}
+c_\alpha \in \mathbb{F}.
+\end{eqnarray}
+We call the value $f(z)$ at the dummy $z \in \mathbb{F}^n$ a polynomial:
+\begin{eqnarray}
+f(z) := \sum_\alpha c_\alpha z^\alpha.
+\end{eqnarray}
+We denote
+\begin{eqnarray}
+\mathbb{F}[z] := \left\{ \sum_\alpha c_\alpha z^\alpha \right\}
+\end{eqnarray}
+as the ring of all polynomial functions in the variable $z$ with $\mathbb{F}$-coefficients.
+
+Similarly, a rational function can be expressed as a ratio of two polynomials $p(z),q(z) \in \mathbb{F}[z]$:
+\begin{eqnarray}
+\frac{p(z)}{q(z)} = \frac{\sum_\alpha n_\alpha z^\alpha}{\sum_\beta d_\beta z^\beta}.
+\end{eqnarray}
+We denote
+\begin{eqnarray}
+\mathbb{F}(z) := \left\{ \frac{\sum_\alpha n_\alpha z^\alpha}{\sum_\beta d_\beta z^\beta} \right\}
+\end{eqnarray}
+as the field of rational functions in the variable $z$ with $\mathbb{F}$-coefficients.
+Similar to fractional numbers, there are several equivalent representation of a rational function, even if we simplify with gcd.
+However there still is an overall constant ambiguity.
+To have a unique representation, usually we put the lowest degree of term of the denominator to be 1.
+
+\subsection{As data}
+We can identify a polynomial
+\begin{eqnarray}
+\sum_\alpha c_\alpha z^\alpha
+\end{eqnarray}
+as a set of coefficients
+\begin{eqnarray}
+\{ c_\alpha\}_{\alpha}.
+\end{eqnarray}
+
+Similarly, for a rational function, we can identify
+\begin{eqnarray}
+\frac{\sum_\alpha n_\alpha z^\alpha}{\sum_\beta d_\beta z^\beta}
+\end{eqnarray}
+as an ordered pair of coefficients
+\begin{eqnarray}
+(\{ n_\alpha\}_\alpha, \{ d_\beta\}_\beta).
+\end{eqnarray}
+However, there still is an overall factor ambiguity even after gcd simplifications.
+
+\chapter{Functional reconstruction}
+The goal of a functional reconstruction algorithm is to identify the monomials appearing in their definition and the corresponding coefficients.
+
+\section{Univariate polynomials}
+\subsection{Newtons' polynomial representation}
+Consider a univariate polynomial $f(z)$.
+Given a sequence of values $\left. y_n \right|_{n \in \mathbb{N}}$, we evaluate the polynomial form $f(z)$ sequentially:
+\begin{eqnarray}
+f_0(z) &=& a_0 \\
+f_1(z) &=& a_0 + (z-y_0)a_1 \\
+\nonumber
+&\vdots& \\
+f_r(z) &=& a_0 + (z-y_0) \left(a_1 + (z-y_1)(\cdots + (z - y_{r-1})a_r \right) \\
+&=& f_{r-1}(z) + (z-y_0) (z-y_1) \cdots (z - y_{r-1})a_r,
+\end{eqnarray}
+where
+\begin{eqnarray}
+a_0 &=& f(y_0) \\
+a_1 &=& \frac{f(y_1) - a_0}{y_1 - y_0} \\
+\nonumber
+&\vdots& \\
+a_r &=& \left( \left( \left( f(y_r)-a_0 \right)\frac{1}{y_r - y_0} - a_1 \right)\frac{1}{y_r - y_1} - \cdots - a_{r-1} \right) \frac{1}{y_r - y_{r-1}} \qquad
+\end{eqnarray}
+When we have already known the total degree of $f(z)$, say $R$, then we can terminate this sequential trial:
+\begin{eqnarray}
+f(z) &=& f_R(z) \\
+&=& \sum_{r=0}^R a_r \prod_{i=0}^{r-1}(z - y_i).
+\end{eqnarray}
+
+In practice, a consecutive zero on the sequence $a_r$ can be taken as the termination condition for this algorithm.\footnote{
+We have not proved, but higher power will be dominant when we take sufficiently big input, so we terminate this sequence when we get a consecutive zero in $a_r$.
+}
+
+\subsection{Towards canonical representations}
+Once we get the Newton's representation
+\begin{eqnarray}
+\sum_{r=0}^R a_r \prod_{i=0}^{r-1}(z - y_i) = a_0 + (z-y_0) \left(a_1 + (z-y_1)(\cdots + (z - y_{R-1})a_R \right) \quad
+\end{eqnarray}
+as the reconstructed polynomial, it is convenient to convert it into the canonical form:
+\begin{eqnarray}
+\sum_{r=0}^R c_r z^r.
+\end{eqnarray}
+This conversion only requires addition and multiplication of univariate polynomials.
+These operations are reasonably cheap, especially on $\mathbb{Z}_p$. 
+
+
+\section{Univariate rational functions}
+\subsection{Thiele's interpolation formula}
+Consider a univariate rational function $f(z)$.
+Given a sequence of values $\left. y_n \right|_{n \in \mathbb{N}}$, we evaluate the polynomial form $f(z)$ as a continued fraction:
+\begin{eqnarray}
+f_0(z) &=& a_0 \\
+f_1(z) &=& a_0 + \frac{(z-y_0)}{a_1} \\
+\nonumber
+&\vdots& \\
+f_r(z) &=& a_0 + \cfrac{(z-y_0)}{a_1 + \cfrac{z-y_1}{a_2 + \cfrac{z- y_3}{\cdots + \cfrac{z-y_{r-1}}{a_r}}}},
+\end{eqnarray}
+where
+\begin{eqnarray}
+a_0 &=& f(y_0) \\
+a_1 &=& \frac{y_1 - y_0}{f(y_1) - a_0}\\
+\nonumber
+&\vdots& \\
+a_r &=& \left( \left( \left( f(y_r)-a_0 \right)^{-1} (y_r - y_0) - a_1 \right)^{-1} \frac{1}{y_r - y_1} - \cdots - a_{r-1} \right)^{-1} (y_r - y_{r-1}) \qquad\qquad
+\end{eqnarray}
+
+\subsubsection{Termination condition(s)}
+We choose our termination conditions as several agreements among new reconstructed function:\footnote{
+Note that, this does not simply mean
+\begin{eqnarray}
+a_{n} = a_{n+1} = a_{n+2} = \cdots = 0.
+\end{eqnarray}
+}
+\begin{eqnarray}
+f_{n-1}(z) \neq f_n(z) = f_{n+1}(z) = f_{n+2}(z) = \cdots.
+\end{eqnarray}
+
+\subsection{Towards canonical representations}
+In order to get a unique representation of canonical form
+\begin{eqnarray}
+\frac{\sum_\alpha n_\alpha z^\alpha}{\sum_\beta d_\beta z^\beta}
+\end{eqnarray}
+we put
+\begin{eqnarray}
+d_{\min r'} = 1
+\end{eqnarray}
+as a normalization, instead of $d_0$.
+
+\section{Multivariate polynomials}
+
+\subsection{Foldings as recursive applications}
+Consider an arbitrary multivariate polynomial
+\begin{eqnarray}
+f(z_1,\cdots, z_n) \in \mathbb{F}[z_1,\cdots, z_n].
+\end{eqnarray}
+First, fix all the variable but 1st and apply the univariate Newton's reconstruction:
+\begin{eqnarray}
+f(z_1, z_2, \cdots, z_n) = \sum_{r=0}^R a_r (z_2,\cdots, z_n) \prod_{i=0}^{r-1}(z_1 - y_i)
+\end{eqnarray}
+Recursively, pick up one "coefficient" and apply the univariate Newton's reconstruction on $z_2$:
+\begin{eqnarray}
+a_r(z_2, \cdots, z_n) = \sum_{s=0}^{S} b_s (z_3,\cdots, z_n) \prod_{j=0}^{s-1}(z_2 - x_j)
+\end{eqnarray}
+The terminate cotndition should be the univariate case.
+
+\section{Multivariate rational functions}
+\subsection{The canonical normalization}
+Our target is a pair of coefficients $(\{ n_\alpha\}_\alpha, \{ d_\beta\}_\beta)$ in
+\begin{eqnarray}
+\frac{\sum_\alpha n_\alpha z^\alpha}{\sum_\beta d_\beta z^\beta}
+\end{eqnarray}
+A canonical choice is
+\begin{eqnarray}
+d_0 = d_{(0,\cdots,0)} = 1.
+\end{eqnarray}
+Accidentally we might face $d_0 = 0$, but we can shift our function and make
+\begin{eqnarray}
+d'_0 = d_{s} \neq 0.
+\end{eqnarray}
+
+\subsection{An auxiliary $t$}
+Introducing an auxiliary variable $t$, let us define
+\begin{eqnarray}
+h(t,z) := f(tz_1, \cdots, tz_n),
+\end{eqnarray}
+and reconstruct $h(t,z)$ as a univariate rational function of $t$:
+\begin{eqnarray}
+h(t,z) = \frac{\sum_{r=0}^R p_r(z) t^r}{1+ \sum_{r'=1}^{R'} q_{r'}(z) t^{r'}}
+\end{eqnarray}
+where
+\begin{eqnarray}
+p_r(z) &=& \sum_{|\alpha| = r} n_\alpha z^\alpha \\
+q_{r'}(z) &=& \sum_{|\beta| = r'} n_\beta z^\beta
+\end{eqnarray}
+are homogeneous polynomials.
+
+Thus, what we shall do is the (homogeneous) polynomial reconstructions of $\left. p_r(z) \right|_{0 \leq r \leq R}, \left. q_{r'} \right|_{1 \leq r' \leq R'}$.
+
+\subsubsection{A simplification}
+Since our new targets are homogeneous polynomials, we can consider, say,
+\begin{eqnarray}
+p_r(1, z_2, \cdots, z_n)
+\end{eqnarray}
+instead of $p_r(z_1, z_2, \cdots, z_n)$, reconstruct it using multivariate Newton's method, and homogenize with $z_1$.
+
+
+
+
+\end{document}
