@@ -178,7 +178,7 @@ Reconstruction Z_p -> Q
 >       select :: Integral t => [t] -> [t] -> t -> Ratio t
 >       select [] _ _ = 0%1
 >       select (r:rs) (s:ss) p
->         | s /= 0 && r^2 <= p && s^2 <= p = (r%s)
+>         | s /= 0 && r^2 <= p && s^2 <= p = r%s
 >         | otherwise = select rs ss p
 >
 > -- Hard code of big primes.
