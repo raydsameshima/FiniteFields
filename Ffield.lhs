@@ -109,16 +109,12 @@ Example Z_{11}
 >     lst = zip [1..] lst'
 >     
 > inversep :: Int -> Int -> Maybe Int
-> inversep p a = do
->   l <- inverses p
->   let a' = a `mod` p
->   return $ snd $ l !! (a'-1)
-   
-  *Ffield> inverses 11
-  Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
+> inversep p a = let (_,x,y) = exGcd p a in
+>   if isPrime p then Just (y `mod` p)
+>                else Nothing
 
-> inversep' :: Int -> Int -> Maybe Int
-> inversep' = undefined
+  map (inversep' 10007) [1..10006]
+  (1.74 secs, 771,586,416 bytes)
   
 A map from Q to Z_p.
 
