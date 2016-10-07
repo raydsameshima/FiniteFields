@@ -582,17 +582,22 @@ r_i = a*s_i \mod p \Leftrightarrow \frac{r_i}{s_i} \mod p = a.
 Hence $\frac{r_i}{s_i}$ is a possible guess for $q$.
 We take
 \begin{eqnarray}
-r_i^2 < p
+\label{terminationOfRec}
+r_i^2 , s_i^2 < p
 \end{eqnarray}
 as the termination condition for this reconstruction.
 
 \subsubsection{Haskell implementation}
-From the following observation
+Let us try to reconstruct from the image $(\frac{1}{3} \mod p)$ of some prime $p$.
+Here we have chosen three primes
 \begin{verbatim}
 Reconstruction Z_p -> Q
   *Ffield> let q = (1%3)
   *Ffield> take 3 $ dropWhile (<100) primes
   [101,103,107]
+\end{verbatim}
+The images are basically given by the first elements ($s_0$'s) of second lists:
+\begin{verbatim}  
   *Ffield> q `modp` 101
   34
   *Ffield> let try x = exGCD' (q `modp` x) x
@@ -603,7 +608,10 @@ Reconstruction Z_p -> Q
   *Ffield> try 107
   ([0,2,1,35],[36,107,36,35,1],[1,0,1,-2,3,-107],[0,1,0,1,-1,36])  
 \end{verbatim}
-we can make a simple "guess" function:
+Look at the first hit of termination condition eq.(\ref{terminationOfRec}), $r_4=1$ and $s_4=3$.
+They give us the same guess $\frac{1}{3}$, and that the reconstructed number.
+
+From the above observations we can make a simple "guess" function:
 \begin{verbatim}
 > guess :: (Int, Int)       -- (q `modp` p, p)
 >       -> (Ratio Int, Int)
@@ -629,7 +637,7 @@ We choose 3 times match as the termination condition.
 >   | a == b && b == c = a
 >   | otherwise        = matches3 bb
 \end{verbatim}
-Finally,
+Finally, we can check our gadgets.
 \begin{verbatim}
 What we know is a list of (q `modp` p) and prime p.
 
@@ -637,7 +645,9 @@ What we know is a list of (q `modp` p) and prime p.
   *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes  
   *Ffield> matches3 $  map (fst . guess) knownData 
   10 % 19
-
+\end{verbatim}
+The following is the function we need, its input is the list of tuple which first element is the image in $\mathbb{Z}_p$ and second element is that prime $p$.
+\begin{verbatim}
 > reconstruct :: [(Int,Int)] -> Ratio Int
 > reconstruct aps = matches3 $ map (fst . guess) aps
 
