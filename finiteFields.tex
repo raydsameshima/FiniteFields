@@ -74,8 +74,19 @@ From "A Brief, Incomplete and Mostly Wrong History of Programming Languages":\fo
 Haskell language is a standardized purely functional declarative statically typed programming language.
 
 In declarative languages, we describe "what" or "definition" in its codes, however imperative languages, like C/C++, "how" or "procedure".
+\begin{quotation}
+Functional languages can be seen as 'executable mathematics'; the notation was designed to be as close as possible to the mathematical way of writing.\footnote{
+Algorithms: A Functional Programming Approach (Fethi A. Rabhi, Guy Lapalme)
+}
+\end{quotation}
 Instead of loops, we use (implicit) recursions in functional language.\footnote{Of course, as a best practice, we should use higher order function rather than explicit recursions.
 }
+\begin{verbatim}
+> sum :: [Int] -> Int
+> sum []     = 0
+> sum (i:is) = i + sum is
+\end{verbatim}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -461,7 +472,7 @@ Using Maybe is a good way to deal with errors or exceptional cases without resor
 >     lst' = map ((`mod` n) . (\(_,_,c)->c) . exGcd n) [1..(n-1)]
 >     lst = zip [1..] lst'
 \end{verbatim}
-Now we define \texttt{inversep}\footnote{
+Now we define \texttt{inversep'}\footnote{
 Here we have used do-notation, a syntactic sugar for use with monadic expressions.
 From \url{https://wiki.haskell.org/Monad}:
 \begin{quotation}
@@ -469,16 +480,27 @@ Monads in Haskell can be thought of as composable computation descriptions.
 \end{quotation}
 } whose 1st input is the base $p$ of our ring(field) and 2nd input is an element in $\mathbb{Z}_p$.
 \begin{verbatim}
-> inversep :: Int -> Int -> Maybe Int
-> inversep p a = do
+> inversep' :: Int -> Int -> Maybe Int
+> inversep 'p a = do
 >   l <- inverses p
 >   let a' = (a `mod` p)
 >   return (snd $ l !! (a'-1)) 
    
-  *Ffield> inverses 11
+  *Ffield> inverses' 11
   Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
 \end{verbatim}
 The function \texttt{inverses} returns a list of nonzero number with their inverses if $p$ is prime.
+However, this is not efficient, and we refactor it as follows:
+\begin{verbatim}
+> inversep :: Int -> Int -> Maybe Int
+> inversep p a = let (_,x,y) = exGcd p a in
+>   if isPrime p then Just (y `mod` p)
+>                else Nothing
+
+  map (inversep' 10007) [1..10006]
+  (1.74 secs, 771,586,416 bytes)
+\end{verbatim}
+
 
 \subsection{A map from $\mathbb{Q}$ to $\mathbb{Z}_p$}
 Let $p$ be a prime.
