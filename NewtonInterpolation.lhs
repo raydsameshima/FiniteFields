@@ -3,8 +3,8 @@ NewtonInterpolation.lhs
 http://homepages.cwi.nl/~jve/HR/PolAddendum.pdf
 
 > module NewtonInterpolation where
-> import POL
-> import Polynomials
+> import POL (difLists)
+> -- import Polynomials
 > import Data.Ratio
 
 First we introduce a new infix symbol for the operation of taking a falling power.

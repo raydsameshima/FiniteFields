@@ -16,7 +16,7 @@
 
 \title{Finite fields}
 \author{Ray D. Sameshima}
-\date{2016/09/23 $\sim$}
+\date{2016/09/23 $\sim$ }
 \maketitle
 
 \tableofcontents
@@ -34,6 +34,10 @@
 
 \item \url{http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7}\\
 (Japanese tech support sns)
+
+\item \label{Haskellroad}
+The Haskell Road to Logic, Maths and Programming (Kees Doets, Jan van Eijck)\\
+\url{http://homepages.cwi.nl/~jve/HR/}
 \end{enumerate}
 
 \section{Set theoretical gadgets}
@@ -55,7 +59,7 @@ Here is a list of what we assumed that the readers are familiar with:
 \item Field: $\mathbb{Q}$, $\mathbb{R}$ (continuous), $\mathbb{C}$ (algebraic closed)
 \end{enumerate}
 
-\section{Haskell}
+\section{Haskell language}
 From "A Brief, Incomplete and Mostly Wrong History of Programming Languages":\footnote{
 \url{http://james-iry.blogspot.com/2009/05/brief-incomplete-and-mostly-wrong.html}
 }
@@ -79,7 +83,7 @@ Functional languages can be seen as 'executable mathematics'; the notation was d
 Algorithms: A Functional Programming Approach (Fethi A. Rabhi, Guy Lapalme)
 }
 \end{quotation}
-Instead of loops, we use (implicit) recursions in functional language.\footnote{Of course, as a best practice, we should use higher order function rather than explicit recursions.
+Instead of loops, we use (implicit) recursions in functional language.\footnote{Of course, as a best practice, we should use higher order function (in this case \texttt{foldr} or \texttt{foldl}) rather than explicit recursions.
 }
 \begin{verbatim}
 > sum :: [Int] -> Int
@@ -94,6 +98,17 @@ Instead of loops, we use (implicit) recursions in functional language.\footnote{
 We have assumed living knowledge on (axiomatic, i.e., ZFC) set theory, algebraic structures.
 
 \section{Finite field}
+\begin{verbatim}
+Ffield.lhs
+
+https://arxiv.org/pdf/1608.01902.pdf
+
+> module Ffield where
+
+> import Data.Ratio 
+> import Data.Maybe
+> import Data.Numbers.Primes
+\end{verbatim}
 
 \subsection{Rings}
 A ring $(R,+,*)$ is a structured set $R$ with two binary operations
@@ -317,10 +332,6 @@ Here we would like to implement the extended Euclidean algorithm.
 See the algorithm, examples, and pseudo code at:
 
   https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
-
-I've asked at Qiita(Japanese) and get some solutions:
-
-  http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7
 
 > exGCD' :: Integral n => n -> n -> ([n], [n], [n], [n])
 > exGCD' a b = (qs, rs, ss, ts)
@@ -652,11 +663,13 @@ The following is the function we need, its input is the list of tuple which firs
 > reconstruct aps = matches3 $ map (fst . guess) aps
 
 Here is a naive test:
-  > let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
+  > let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32
+             ,869 % 232,778 % 123,331 % 739]
   > let modmap q = zip (map (modp q) bigPrimes) bigPrimes 
   > let longList = map modmap qs
   > map reconstruct longList 
-  [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
+  [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32
+  ,869 % 232,778 % 123,331 % 739]
   > it == qs
   True
 \end{verbatim}
@@ -816,6 +829,174 @@ as an ordered pair of coefficients
 \end{eqnarray}
 However, there still is an overall factor ambiguity even after gcd simplifications.
 
+\section{Haskell implementation of univariate polynomials}
+Here we basically follows some part of \S9 of ref.\ref{Haskellroad}, and its addendum\footnote{
+See \url{http://homepages.cwi.nl/~jve/HR/PolAddendum.pdf}
+}.
+
+\begin{verbatim}
+Univariate.lhs
+
+> module Univariate where
+> import Data.Ratio
+\end{verbatim}
+
+\subsection{A polynomial as a list of coefficients}
+Let us start \texttt{instance} declaration, which enable us to use basic arithmetics:
+\begin{verbatim}
+> -- polynomials, as coefficients lists
+> instance (Num a, Ord a) => Num [a] where
+>   fromInteger c = [fromInteger c] 
+> 
+>   negate []     = []
+>   negate (f:fs) = negate f : negate fs
+> 
+>   signum [] = []
+>   signum gs 
+>     | signum (last gs) < 0 = negate z
+>     | otherwise = z
+> 
+>   abs [] = []
+>   abs gs 
+>     | signum gs == z = gs
+>     | otherwise      = negate gs
+> 
+>   fs     + []     = fs
+>   []     + gs     = gs
+>   (f:fs) + (g:gs) = f+g : fs+gs
+> 
+>   fs     * []     = []
+>   []     * gs     = []
+>   (f:fs) * gg@(g:gs) = f*g : (f .* gs + fs * gg)
+\end{verbatim}
+Note that the above operators are overloaded, say \texttt{(*)}, \texttt{f*g} is a multiplication of two numbers but \texttt{fs*gg} is a multiplication of two list of coefficients.
+We can not extend this overloading to scalar multiplication, since Haskell type system takes the operands of \texttt{(*)} the same type:
+\begin{verbatim}
+> -- scalar multiplication
+> infixl 7 .*
+> (.*) :: Num a => a -> [a] -> [a]
+> c .* []     = []
+> c .* (f:fs) = c*f : c .* fs
+\end{verbatim}
+Now the (dummy) variable is given as 
+\begin{verbatim}
+> -- z of f(z), variable
+> z :: Num a => [a]
+> z = [0,1]
+\end{verbatim}
+
+A polynomial of degree $R$ is given by a finite sum of the following form:
+\begin{eqnarray}
+f(z) := \sum_{r=0}^R c_i z^i.
+\end{eqnarray}
+Therefore, it is natural to represent $f(z)$ by a list of coefficient $\{c_i\}_i$.
+Here is the translator from the coefficient list to a polynomial function:
+\begin{verbatim}
+> p2fct :: Num a => [a] -> a -> a
+> p2fct [] x = 0
+> p2fct (a:as) x = a + (x * p2fct as x)
+\end{verbatim}
+This gives us
+\begin{verbatim}
+*Univariate> take 10 $ map (p2fct [1,2,3]) [0..]
+[1,6,17,34,57,86,121,162,209,262]
+*Univariate> take 10 $ map (\n -> 1+2*n+3*n^2) [0..]
+[1,6,17,34,57,86,121,162,209,262]
+\end{verbatim}
+
+\subsection{Difference analysis}
+We do not know in general this canonical form of the polynomial, nor the degree.
+That means, what we can access is the graph of $f$, i.e., the list of inputs and outputs.
+Without loss of generality, we can take
+\begin{eqnarray}
+\texttt{[0..]}
+\end{eqnarray}
+as the input data.
+Usually we take a finite sublist of this, but we assume it is sufficiently long.
+The outputs should be
+\begin{eqnarray}
+\texttt{map f [0..] = [f 0, f 1 ..]}
+\end{eqnarray}
+For example
+\begin{verbatim}
+*Univariate> take 10 $ map (\n -> n^2+2*n+1) [0..]
+[1,4,9,16,25,36,49,64,81,100]
+\end{verbatim}
+
+Let us consider the difference sequence
+\begin{eqnarray}
+\label{difference}
+\Delta(f) (n) := f(n+1) - f(n).
+\end{eqnarray}
+Its Haskell version is
+\begin{verbatim}
+> -- difference analysis
+> difs :: (Integral n) => [n] -> [n]
+> difs [] = []
+> difs [_] = []
+> difs (i:jj@(j:js)) = j-i : difs jj
+\end{verbatim}
+This gives
+\begin{verbatim}
+*Univariate> difs [1,4,9,16,25,36,49,64,81,100]
+[3,5,7,9,11,13,15,17,19]
+*Univariate> difs [3,5,7,9,11,13,15,17,19]
+[2,2,2,2,2,2,2,2]
+\end{verbatim}
+
+We claim that if $f(z)$ is a polynomial of degree $R$, then $\Delta(f)(z)$ is a polynomial of degree $R-1$.
+Since the degree is given, we can write $f(z)$ in canonical form
+\begin{eqnarray}
+f(n) = \sum_{r=0}^R c_i n^i
+\end{eqnarray}
+and
+\begin{eqnarray}
+\Delta(f)(n) &:=& f(n+1) - f(n) \\
+&=& \sum_{r=0}^R c_i \left\{ (n+1)^i - n^i\right\} \\
+&=& \sum_{r=1}^R c_i \left\{ (n+1)^i - n^i\right\} \\
+&=& \sum_{r=1}^R c_i \left\{ i*n^{i-1} + O(n^{i-2}) \right\} \\
+&=& c_R*R*n^{R-1} + O(n^{R-2})
+\end{eqnarray}
+where $O(n^{i-2})$ is some polynomial(s) of degree $i-2$.
+
+This guarantees the following function will terminate in finite steps\footnote{
+If a given lists is generated by a polynomial.
+}; \texttt{difLists} keeps generating difference lists until the difference get constant.
+\begin{verbatim}
+> difLists :: (Integral n) => [[n]] -> [[n]]
+> difLists [] = []
+> difLists xx@(xs:xss) =
+>   if isConst xs then xx
+>                 else difLists $ difs xs : xx
+>   where
+>     isConst (i:jj@(j:js)) = all (==i) jj
+>     isConst _ = error "difLists: lack of data, or not a polynomial"
+\end{verbatim}
+Let us try:
+\begin{verbatim}
+  *Univariate> difLists [[-12,-11,6,45,112,213,354,541,780,1077]]
+  [[6,6,6,6,6,6,6]
+  ,[16,22,28,34,40,46,52,58]
+  ,[1,17,39,67,101,141,187,239,297]
+  ,[-12,-11,6,45,112,213,354,541,780,1077]
+  ]
+\end{verbatim}
+
+The degree of the polynomial can be computed by difference analysis:
+\begin{verbatim}
+> degree :: (Integral n) => [n] -> Int
+> degree xs = length (difLists [xs]) -1
+\end{verbatim}
+For example,
+\begin{verbatim}
+*Univariate> degree [1,4,9,16,25,36,49,64,81,100]
+2
+*Univariate> take 10 $ map (\n -> n^2+2*n+1) [0..]
+[1,4,9,16,25,36,49,64,81,100]
+*Univariate> degree $ take 10 $ map (\n -> n^5+4*n^3+1) [0..]
+5
+\end{verbatim}
+
 \chapter{Functional reconstruction}
 The goal of a functional reconstruction algorithm is to identify the monomials appearing in their definition and the corresponding coefficients.
 
@@ -861,8 +1042,247 @@ as the reconstructed polynomial, it is convenient to convert it into the canonic
 This conversion only requires addition and multiplication of univariate polynomials.
 These operations are reasonably cheap, especially on $\mathbb{Z}_p$. 
 
+\subsection{Simplification of our problem}
+Without loss of generality, we can put 
+\begin{eqnarray}
+\texttt{[0..]}
+\end{eqnarray}
+as our input list, usually we take its finite part but we assume it has enough length.
+Corresponding to above input,
+\begin{eqnarray}
+\texttt{map f [0..] = [f 0, f 1, ..]}
+\end{eqnarray}
+is our output list.
+
+Then we have slightly simpler forms of coefficients:
+\begin{eqnarray}
+a_0 &=& f(0) \\
+a_1 &=& f(y_1) - a_0 \\
+&=& f(1) - f(0) =: \Delta(f)(0) \\
+a_2 &=& \frac{f(2)-a_0}{2}-a_1 \\
+&=& \frac{f(2) - f(0)}{2} - \left( f(1) - f(0) \right) \\
+&=& \frac{f(2)-2f(1)-f(0)}{2} \\
+&=& \frac{\left( f(2)-f(1) \right) -\left(f(1)-f(0) \right)}{2} =: \frac{\Delta^2(f)(0)}{2} \\
+\nonumber
+&\vdots&\\
+a_r &=& \frac{\Delta^r(f)(0)}{r!},
+\end{eqnarray}
+where $\Delta$ is the difference operator in eq.(\ref{difference}):
+\begin{eqnarray}
+\Delta(f)(n) := f(n+1) - f(n).
+\end{eqnarray}
+
+In order to simplify our expression, we introduce a falling power:
+\begin{eqnarray}
+(x)_0 &:=& 1 \\
+(x)_n &:=& x(x-1) \cdots (x-n+1) \\
+&=& \prod_{i=0}^{n-1} (x-i).
+\end{eqnarray}
+
+Under these settings, we have
+\begin{eqnarray}
+f(z) &=& f_R(z) \\
+&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} (x)_r
+\end{eqnarray}
+
+\subsubsection{Example}
+Consider a polynomial
+\begin{eqnarray}
+f(z) := 2*z^3+3*z,
+\end{eqnarray}
+and its out put list
+\begin{eqnarray}
+\left[ f(0), f(1), f(3), \cdots\right] = \left[0,5,22,63,140,265, \cdots \right]
+\end{eqnarray}
+This polynomial is 3rd degree, so we compute up to $\Delta^3(f)(0)$:
+\begin{eqnarray}
+f(0) &=& 0 \\
+\Delta(f)(0) &=& f(1) - f(0) = 5\\
+\nonumber
+\Delta^2(f)(0) &=& \Delta(f)(1) - \Delta(f)(0) \\
+&=& f(2) - f(1) - 5 = 22 -5 -5= 12 \\
+\nonumber
+\Delta^3(f)(0) &=& \Delta^2(f)(1) - \Delta^2(f)(0) \\
+&=& f(3)-f(2) - \left\{ f(2) - f(1)\right\} - 12 = 12
+\end{eqnarray}
+so we get
+\begin{eqnarray}
+\label{exOfDiff}
+\left[0,5,12,12\right]
+\end{eqnarray}
+as the difference list.
+Therefore, we get the falling power representation of $f$:
+\begin{eqnarray}
+f(z) &=& 5(x)_1 + \frac{12}{2}(x)_2 + \frac{12}{3!}(x)_3 \\
+\label{exOfNewton} &=&  5(x)_1 + 6(x)_2 + 2(x)_3.
+\end{eqnarray}
+
+\subsection{Haskell implementation}
+\subsubsection{Newton interpolation formula}
+First, the falling power is naturally given by recursively:
+\begin{verbatim}
+> infixr 8 ^- -- falling power
+> (^-) :: (Integral a) => a -> a -> a
+> x ^- 0 = 1
+> x ^- n = (x ^- (n-1)) * (x - n + 1)
+\end{verbatim}
+
+Assume the differences are given in a list
+\begin{eqnarray}
+\verb|[x_0, x_1 ..]| := \left[f(0), \Delta(f)(0), \Delta^2(f)(0), \cdots \right].
+\end{eqnarray}
+Then the implementation of the Newton interpolation formula is as follows:
+\begin{verbatim}
+> newton :: Integral a => [a] -> [Ratio a]
+> newton xs = [x % factorial k | (x,k) <- zip xs [0..]]
+>   where
+>     factorial k = product [1..fromInteger k]
+\end{verbatim}
+Consider a polynomial
+\begin{eqnarray}
+\verb|f x = 2*x^3+3*x|
+\end{eqnarray}
+Let us try to reconstruct this polynomial from output list.
+In order to get the list \verb+[x_0, x_1 ..]+, take \texttt{difLists} and pick the first elements:
+\begin{verbatim}
+  *NewtonInterpolation> take 10 $ map f [0..]
+  [0,5,22,63,140,265,450,707,1048,1485]
+  *NewtonInterpolation> difLists [it]
+  [[12,12,12,12,12,12,12]
+  ,[12,24,36,48,60,72,84,96]
+  ,[5,17,41,77,125,185,257,341,437]
+  ,[0,5,22,63,140,265,450,707,1048,1485]
+  ]
+  *NewtonInterpolation> reverse $ map head it
+  [0,5,12,12]
+\end{verbatim}
+This list is the same as eq.(\ref{exOfDiff}) and we get the same expression as eq.(\ref{exOfNewton}):
+\begin{verbatim}  
+  *NewtonInterpolation> newton it
+  [0 % 1,5 % 1,6 % 1,2 % 1]
+\end{verbatim}
+
+The list of first differences can be computed as follows:
+\begin{verbatim}
+> firstDifs :: [Integer] -> [Integer]
+> firstDifs xs = reverse $ map head $ difLists [xs]
+\end{verbatim}
+Mapping a list of integers to a Newton representation:
+\begin{verbatim}
+> list2npol :: [Integer] -> [Rational]
+> list2npol = newton . map fromInteger . firstDifs
+
+  *NewtonInterpolation> take 10 $ map f [0..]
+  [0,5,22,63,140,265,450,707,1048,1485]
+  *NewtonInterpolation> list2npol it
+  [0 % 1,5 % 1,6 % 1,2 % 1]
+\end{verbatim}
+
+\subsubsection{Stirling numbers of the first kind}
+We need to map Newton falling powers to standard powers.  
+This is a matter of applying combinatorics, by means of a convention formula that uses the so-called Stirling cyclic numbers 
+\begin{eqnarray}
+\left[\begin{array}{c}n \\k \end{array}\right]
+\end{eqnarray}
+Its defining relation is, $\forall n > 0$,
+\begin{eqnarray}
+(x)_n = \sum_{k=1}^n (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k, 
+\end{eqnarray}
+and
+\begin{eqnarray}
+\left[\begin{array}{c}0 \\0 \end{array}\right] := 1.
+\end{eqnarray}
+From the highest order, $x^n$, we get
+\begin{eqnarray}
+\left[\begin{array}{c}n \\n \end{array}\right] = 1, \forall n > 0.
+\end{eqnarray}
+We also put
+\begin{eqnarray}
+\left[\begin{array}{c}0 \\1 \end{array}\right] = \left[\begin{array}{c}0 \\2 \end{array}\right] = \left[\begin{array}{c}0 \\3 \end{array}\right] = \cdots = 0,
+\end{eqnarray}
+and
+\begin{eqnarray}
+\left[\begin{array}{c}1 \\ 0 \end{array}\right] = \left[\begin{array}{c}2  \\ 0 \end{array}\right] =\left[\begin{array}{c}3 \\ 0 \end{array}\right] = \cdots = 0.
+\end{eqnarray}
+
+The key equation is
+\begin{eqnarray}
+(x)_n = (x)_{n-1}*  (x-n+1)
+\end{eqnarray}
+and we get
+\begin{eqnarray}
+(x)_n &=& \sum_{k=1}^n (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k\\
+&=& x^n + \sum_{k=1}^{n-1} (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k\\
+(x)_{n-1}*  (x-n+1) &=&  \sum_{k=1}^{n-1} (-)^{n-1-k} \left\{ \left[\begin{array}{c}n-1 \\k \end{array}\right] x^{k+1} -(n-1) \left[\begin{array}{c}n-1 \\k \end{array}\right] x^k \right\} \qquad \qquad \\
+&=& \sum_{l=2}^n (-)^{n-l} \left[\begin{array}{c}n-1 \\l-1 \end{array}\right] x^l + (n-1)\sum_{k=1}^{n-1} (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k \\
+\nonumber &=& x^n + (n-1)(-)^{n-1} x \\
+&&+ \sum_{k=2}^{n-1} (-)^{n-k} \left\{ \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right] \right\} x^k \\
+&=& x^n + \sum_{k=1}^{n-1} (-)^{n-k} \left\{ \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right] \right\} x^k 
+\end{eqnarray}
+Therefore, $\forall n,k > 0$,
+\begin{eqnarray}
+\left[\begin{array}{c}n \\k \end{array}\right] = \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right]
+\end{eqnarray}
+  
+Therefore, an implementation is as follows:
+\begin{verbatim}
+> stirlingC :: Integer -> Integer -> Integer
+> stirlingC 0 0 = 1
+> stirlingC 0 _ = 0
+> stirlingC n k = (n-1)*(stirlingC (n-1) k) + stirlingC (n-1) (k-1)
+\end{verbatim}
+This definition can be used to convert from falling powers to standard powers.
+\begin{verbatim}
+> fall2pol :: Integer -> [Integer]
+> fall2pol 0 = [1]
+> fall2pol n = 0 : [(stirlingC n k)*(-1)^(n-k) | k<-[1..n]]
+\end{verbatim}
+We use \texttt{fall2pol} to convert Newton representations to standard polynomials in coefficients list representation.
+Here we have uses sum to collect same order terms in list representation.
+\begin{verbatim}
+> npol2pol :: (Ord t, Num t) => [t] -> [t]
+> npol2pol xs = sum [ [x] * (map fromInteger $ fall2pol k)
+>                   | (x,k) <- zip xs [0..]
+>                   ]
+\end{verbatim}
+Finally, here is the function for computing a polynomial from an output sequence:
+\begin{verbatim}
+> list2pol :: [Integer] -> [Rational]
+> list2pol = npol2pol . list2npol
+\end{verbatim}
+Here are some checks on these functions:
+\begin{verbatim}
+Reconstruction as curve fitting
+  *NewtonInterpolation> list2pol $ map (\n -> 7*n^2+3*n-4) [0..100]
+  [(-4) % 1,3 % 1,7 % 1]
+
+  *NewtonInterpolation> list2pol [0,1,5,14,30]
+  [0 % 1,1 % 6,1 % 2,1 % 3]
+  *NewtonInterpolation> map (\n -> n%6 + n^2%2 + n^3%3) [0..4]
+  [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1]
+
+  *NewtonInterpolation> map (p2fct $ list2pol [0,1,5,14,30]) [0..8]
+  [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1,55 % 1,91 % 1,140 % 1,204 % 1]
+
+\end{verbatim}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 \section{Univariate rational functions}
+See \url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#Haskell}
+
 \subsection{Thiele's interpolation formula}
 Consider a univariate rational function $f(z)$.
 Given a sequence of values $\left. y_n \right|_{n \in \mathbb{N}}$, we evaluate the polynomial form $f(z)$ as a continued fraction:
