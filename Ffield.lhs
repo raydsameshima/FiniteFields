@@ -201,13 +201,12 @@ What we know is a list of (q `modp` p) and prime p.
 > reconstruct aps = matches3 $ map (fst . guess) aps
 
 Here is a naive test:
-  *Ffield> let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
-  *Ffield> let longList = map lst qs
-  *Ffield> map reconstruct long
-  longList  longlist
-  *Ffield> map reconstruct longList 
+  > let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
+  >let lst q = zip (map (modp q) bigPrimes) bigPrimes 
+  > let longList = map lst qs
+  > map reconstruct longList 
   [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
-  *Ffield> it == qs
+  > it == qs
   True
 
 Functional reconstruction
