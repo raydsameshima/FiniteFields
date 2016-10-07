@@ -407,7 +407,7 @@ a*s = 1 \mod n.
 \end{eqnarray}
 $\blacksquare$
 
-\subsection{Corollary ($\mathbb{Z}_p$)}
+\subsection{Corollary (Finite field $\mathbb{Z}_p$)}
 If $p$ is prime, then 
 \begin{eqnarray}
 \mathbb{Z}_p := \{0, \cdots, (p-1)\}
@@ -565,6 +565,74 @@ r_i^2 < p
 as the termination condition for this reconstruction.
 
 \subsubsection{Haskell implementation}
+From the following observation
+\begin{verbatim}
+Reconstruction Z_p -> Q
+  *Ffield> let q = (1%3)
+  *Ffield> take 3 $ dropWhile (<100) primes
+  [101,103,107]
+  *Ffield> q `modp` 101
+  34
+  *Ffield> let try x = exGCD' (q `modp` x) x
+  *Ffield> try 101
+  ([0,2,1,33],[34,101,34,33,1],[1,0,1,-2,3,-101],[0,1,0,1,-1,34])
+  *Ffield> try 103
+  ([0,1,2,34],[69,103,69,34,1],[1,0,1,-1,3,-103],[0,1,0,1,-2,69])
+  *Ffield> try 107
+  ([0,2,1,35],[36,107,36,35,1],[1,0,1,-2,3,-107],[0,1,0,1,-1,36])  
+\end{verbatim}
+we can make a simple "guess" function:
+\begin{verbatim}
+> guess :: (Int, Int)       -- (q `modp` p, p)
+>       -> (Ratio Int, Int)
+> guess (a, p) = let (_,rs,ss,_) = exGCD' a p in
+>   (select rs ss p, p)
+>     where
+>       select :: Integral t => [t] -> [t] -> t -> Ratio t
+>       select [] _ _ = 0%1
+>       select (r:rs) (s:ss) p
+>         | s /= 0 && r^2 <= p && s^2 <= p = (r%s)
+>         | otherwise = select rs ss p
+\end{verbatim}
+We have put a list of big primes as follows.
+\begin{verbatim}
+> -- Hard code of big primes.
+> bigPrimes :: [Int]
+> bigPrimes = dropWhile (< 897473) $ takeWhile (<978948) primes  
+\end{verbatim}
+We choose 3 times match as the termination condition.
+\begin{verbatim}
+> matches3 :: Eq a => [a] -> a
+> matches3 (a:bb@(b:c:cs))
+>   | a == b && b == c = a
+>   | otherwise        = matches3 bb
+\end{verbatim}
+Finally,
+\begin{verbatim}
+What we know is a list of (q `modp` p) and prime p.
+
+  *Ffield> let q = 10%19
+  *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes  
+  *Ffield> matches3 $  map (fst . guess) knownData 
+  10 % 19
+
+> reconstruct :: [(Int,Int)] -> Ratio Int
+> reconstruct aps = matches3 $ map (fst . guess) aps
+
+Here is a naive test:
+  *Ffield> let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
+  *Ffield> let longList = map lst qs
+  *Ffield> map reconstruct long
+  longList  longlist
+  *Ffield> map reconstruct longList 
+  [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
+  *Ffield> it == qs
+  True
+\end{verbatim}
+
+
+
+
 
 
 \subsection{Chinese remainder theorem}

@@ -53,7 +53,8 @@ I've asked at Qiita and get some solutions:
 >     ss = steps 1 0
 >     ts = steps 0 1
 >     steps a b = rr
->       where rr@(_:rs) = a:b: zipWith (-) rr (zipWith (*) qs rs)
+>       where 
+>         rr@(_:rs) = a:b: zipWith (-) rr (zipWith (*) qs rs)
 >
 > takeUntil :: (a -> Bool) -> [a] -> [a]
 > takeUntil p = foldr func []
@@ -72,6 +73,7 @@ This example is from wikipedia:
   2
 
 > -- a*x + b*y = gcd a b
+> exGcd :: Integral t => t -> t -> (t, t, t)
 > exGcd a b = (g, x, y)
 >   where
 >     (_,r,s,t) = exGCD' a b
@@ -114,10 +116,13 @@ Example Z_{11}
    
   *Ffield> inverses 11
   Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
+
+> inversep' :: Int -> Int -> Maybe Int
+> inversep' = undefined
   
 A map from Q to Z_p.
 
-> -- modp :: Int -> Ratio Int -> Int
+> -- p should be prime.
 > modp :: Ratio Int -> Int -> Int
 > q `modp` p = (a * (bi `mod` p)) `mod` p
 >   where
@@ -154,6 +159,60 @@ Example: on Z_{5}
   Just [(1,1),(2,3),(3,2),(4,4)]
   *Ffield Data.Ratio> modp q 5 
   4
+
+Reconstruction Z_p -> Q
+  *Ffield> let q = (1%3)
+  *Ffield> take 3 $ dropWhile (<100) primes
+  [101,103,107]
+  *Ffield> q `modp` 101
+  34
+  *Ffield> let rec x = exGCD' (q `modp` x) x
+  *Ffield> rec 101
+  ([0,2,1,33],[34,101,34,33,1],[1,0,1,-2,3,-101],[0,1,0,1,-1,34])
+  *Ffield> rec 103
+  ([0,1,2,34],[69,103,69,34,1],[1,0,1,-1,3,-103],[0,1,0,1,-2,69])
+  *Ffield> rec 107
+  ([0,2,1,35],[36,107,36,35,1],[1,0,1,-2,3,-107],[0,1,0,1,-1,36])  
+
+> guess :: (Int, Int)       -- (q `modp` p, p)
+>       -> (Ratio Int, Int)
+> guess (a, p) = let (_,rs,ss,_) = exGCD' a p in
+>   (select rs ss p, p)
+>     where
+>       select :: Integral t => [t] -> [t] -> t -> Ratio t
+>       select [] _ _ = 0%1
+>       select (r:rs) (s:ss) p
+>         | s /= 0 && r^2 <= p && s^2 <= p = (r%s)
+>         | otherwise = select rs ss p
+>
+> -- Hard code of big primes.
+> bigPrimes :: [Int]
+> bigPrimes = dropWhile (< 897473) $ takeWhile (<978948) primes  
+>
+> matches3 :: Eq a => [a] -> a
+> matches3 (a:bb@(b:c:cs))
+>   | a == b && b == c = a
+>   | otherwise        = matches3 bb
+
+What we know is a list of (q `modp` p) and prime p.
+
+  *Ffield> let q = 10%19
+  *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes  
+  *Ffield> matches3 $  map (fst . guess) knownData 
+  10 % 19
+
+> reconstruct :: [(Int,Int)] -> Ratio Int
+> reconstruct aps = matches3 $ map (fst . guess) aps
+
+Here is a naive test:
+  *Ffield> let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
+  *Ffield> let longList = map lst qs
+  *Ffield> map reconstruct long
+  longList  longlist
+  *Ffield> map reconstruct longList 
+  [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
+  *Ffield> it == qs
+  True
 
 Functional reconstruction
 
