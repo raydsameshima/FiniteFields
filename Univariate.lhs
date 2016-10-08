@@ -209,5 +209,15 @@ http://mathworld.wolfram.com/ThielesInterpolationFormula.html
 
 reciprocal difference
 
+> rho :: [Ratio Int] -> Int -> Int -> Ratio Int
+> rho fs 0 i = fs !! i
+> rho fs n i = (n*den)%num + rho fs (n-2) (i+1)
+>   where
+>     num = numerator next
+>     den = denominator next
+>     next = (rho fs (n-1) (i+1)) - (rho fs (n-2) (i+1))
+
+Note that (%) has the following type,
+  (%) :: Integral a => a -> a -> Ratio a
 
 

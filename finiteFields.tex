@@ -887,7 +887,7 @@ Now the (dummy) variable is given as
 
 A polynomial of degree $R$ is given by a finite sum of the following form:
 \begin{eqnarray}
-f(z) := \sum_{r=0}^R c_i z^i.
+f(z) := \sum_{i=0}^R c_i z^i.
 \end{eqnarray}
 Therefore, it is natural to represent $f(z)$ by a list of coefficient $\{c_i\}_i$.
 Here is the translator from the coefficient list to a polynomial function:
@@ -947,14 +947,14 @@ This gives
 We claim that if $f(z)$ is a polynomial of degree $R$, then $\Delta(f)(z)$ is a polynomial of degree $R-1$.
 Since the degree is given, we can write $f(z)$ in canonical form
 \begin{eqnarray}
-f(n) = \sum_{r=0}^R c_i n^i
+f(n) = \sum_{i=0}^R c_i n^i
 \end{eqnarray}
 and
 \begin{eqnarray}
 \Delta(f)(n) &:=& f(n+1) - f(n) \\
-&=& \sum_{r=0}^R c_i \left\{ (n+1)^i - n^i\right\} \\
-&=& \sum_{r=1}^R c_i \left\{ (n+1)^i - n^i\right\} \\
-&=& \sum_{r=1}^R c_i \left\{ i*n^{i-1} + O(n^{i-2}) \right\} \\
+&=& \sum_{i=0}^R c_i \left\{ (n+1)^i - n^i\right\} \\
+&=& \sum_{i=1}^R c_i \left\{ (n+1)^i - n^i\right\} \\
+&=& \sum_{i=1}^R c_i \left\{ i*n^{i-1} + O(n^{i-2}) \right\} \\
 &=& c_R*R*n^{R-1} + O(n^{R-2})
 \end{eqnarray}
 where $O(n^{i-2})$ is some polynomial(s) of degree $i-2$.
