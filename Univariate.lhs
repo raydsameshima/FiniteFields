@@ -170,19 +170,19 @@ Therefore, an implementation is as follows:
 > stirlingC :: Integer -> Integer -> Integer
 > stirlingC 0 0 = 1
 > stirlingC 0 _ = 0
-> stirlingC n k = (n-1)*(stirlingC (n-1) k) + stirlingC (n-1) (k-1)
+> stirlingC n k = stirlingC (n-1) (k-1) + (n-1)*stirlingC (n-1) k  
 
 This definition can be used to convert from falling powers to standard powers.
 
 > fall2pol :: Integer -> [Integer]
 > fall2pol 0 = [1]
-> fall2pol n = 0 : [(stirlingC n k)*(-1)^(n-k) | k<-[1..n]]
+> fall2pol n = 0 : [(-1)^(n-k) * stirlingC n k| k<-[1..n]]
 
 We use this to convert Newton representations to standard polynomials in coefficients list representation.
 Here we have uses sum to collect same order terms in list representation.
 
 > npol2pol :: (Ord t, Num t) => [t] -> [t]
-> npol2pol xs = sum [ [x] * (map fromInteger $ fall2pol k)
+> npol2pol xs = sum [ [x] * map fromInteger (fall2pol k)
 >                   | (x,k) <- zip xs [0..]
 >                   ]
 
@@ -220,13 +220,13 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 >   where
 >     num  = numerator next
 >     den  = denominator next
->     next = (rho fs (n-1) (i+1)) - (rho fs (n-1) i)
+>     next = rho fs (n-1) (i+1) - rho fs (n-1) i
 
 Note that (%) has the following type,
   (%) :: Integral a => a -> a -> Ratio a
 
 > a :: [Ratio Int] -> Int -> Ratio Int
-> a fs 0 = fs !! 0
+> a fs 0 = head fs
 > a fs n = rho fs n 0 - rho fs (n-2) 0
 
 Consider
