@@ -225,6 +225,7 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 Note that (%) has the following type,
   (%) :: Integral a => a -> a -> Ratio a
 
+> a :: [Ratio Int] -> Int -> Ratio Int
 > a fs 0 = fs !! 0
 > a fs n = rho fs n 0 - rho fs (n-2) 0
 
@@ -258,7 +259,8 @@ Consider
 >       | otherwise       = helper fs (n+1)
 >       where
 >         fs' = map (rho fs n) [0..]
->     isConstants (i:j:_) = i==j
+>     isConstants (i:j:_) = i==j -- 2 times match
+> --  isConstants (i:j:k_) = i==j && j==k
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
   *Univariate> let hs = map h [0..]
@@ -274,7 +276,9 @@ Consider
 
   (%o36) (18*t^2+6*t+3)/(1+2*t+20*t^2)
 
-  *Univariate> let thieleC lst = map (a lst) [0..d] where d=tDegree lst
+> thieleC :: [Ratio Int] -> [Ratio Int]
+> thieleC lst = map (a lst) [0..(tDegree lst)]
+
   *Univariate> thieleC hs
   [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
 

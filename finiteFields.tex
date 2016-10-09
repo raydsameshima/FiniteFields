@@ -26,7 +26,8 @@
 \chapter{Preface}
 \section{References}
 \begin{enumerate}
-\item Scattering amplitudes over finite fields and multivariate functional reconstruction (Tiziano Peraro)\\
+\item \label{Tiziano}
+Scattering amplitudes over finite fields and multivariate functional reconstruction (Tiziano Peraro)\\
 \url{https://arxiv.org/pdf/1608.01902.pdf}
 
 \item Haskell Language \\
@@ -872,7 +873,11 @@ Let us start \texttt{instance} declaration, which enable us to use basic arithme
 >   (f:fs) * gg@(g:gs) = f*g : (f .* gs + fs * gg)
 \end{verbatim}
 Note that the above operators are overloaded, say \texttt{(*)}, \texttt{f*g} is a multiplication of two numbers but \texttt{fs*gg} is a multiplication of two list of coefficients.
-We can not extend this overloading to scalar multiplication, since Haskell type system takes the operands of \texttt{(*)} the same type:
+We can not extend this overloading to scalar multiplication, since Haskell type system takes the operands of \texttt{(*)} the same type
+\begin{eqnarray}
+\verb+(*) :: Num a => a -> a -> a+
+\end{eqnarray}
+
 \begin{verbatim}
 > -- scalar multiplication
 > infixl 7 .*
@@ -1325,6 +1330,143 @@ we put
 d_{\min r'} = 1
 \end{eqnarray}
 as a normalization, instead of $d_0$.
+
+\subsection{Haskell implementation}
+Here we the same notion of
+\begin{quotation}
+\url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula}
+\end{quotation}
+and especially
+\begin{quotation}
+\url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C}
+\end{quotation}
+
+What we can know is the output-list of \texttt{f::Int -> Ratio Int}:
+\begin{eqnarray}
+\texttt{map f [0..]}
+\end{eqnarray}
+ 
+\subsubsection{Claim}
+We claim, without proof, that the Thiele coefficients are given by
+\begin{eqnarray}
+a_0 &:=& f(0) \\
+a_n &:=& \rho_{n,0} - \rho_{{n-2},0},
+\end{eqnarray}
+where $\rho$ is so called the reciprocal difference:
+\begin{eqnarray}
+\rho_{0,i} &:=& f(i), i=0,1,2,\cdots \\
+\rho_{n,i} &:=& 0, n<0 \\
+\rho_{n,i} &:=& \frac{n}{\rho_{{n-1},1} - \rho_{{n-1},0}} + \rho_{{n-2},1}
+\end{eqnarray}
+
+These preparation helps us to write the following codes:
+\begin{verbatim}
+Thiele's interpolation formula
+https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#Haskell
+http://mathworld.wolfram.com/ThielesInterpolationFormula.html
+
+reciprocal difference
+Using the same notation of 
+https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
+
+> rho :: [Ratio Int] -- A list of output of f :: Int -> Ratio Int
+>     -> Int -> Int -> Ratio Int
+> rho fs 0 i = fs !! i
+> rho fs n _ 
+>   | n < 0 = 0
+> rho fs n i = (n*den)%num + rho fs (n-2) (i+1)
+>   where
+>     num  = numerator next
+>     den  = denominator next
+>     next = (rho fs (n-1) (i+1)) - (rho fs (n-1) i)
+
+Note that (%) has the following type,
+  (%) :: Integral a => a -> a -> Ratio a
+
+> a fs 0 = fs !! 0
+> a fs n = rho fs n 0 - rho fs (n-2) 0
+\end{verbatim}
+Now let us consider a simple example
+\begin{eqnarray}
+f(x) &:=& 1 + \cfrac{x}{2+\cfrac{x-1}{3+\cfrac{x-2}{4}}} \\
+&=& \frac{x^2+16x+16}{16+6x}
+\end{eqnarray}
+Using Maxima, we can verify this:
+\begin{verbatim}
+  (%i25) f(x) := 1+(x/(2+(x-1)/(3+(x-2)/4)));
+  (%o25) f(x):=x/(2+(x-1)/(3+(x-2)/4))+1
+  (%i26) ratsimp(f(x));
+  (%o26) (x^2+16*x+16)/(16+6*x)
+\end{verbatim}
+Let us try to get the Thiele coefficients of
+\begin{verbatim}
+> func x = (x^2 + 16*x + 16)%(6*x + 16)
+
+  *Univariate> map (a fs) [0..]
+  [1 % 1,2 % 1,3 % 1,4 % 1,*** Exception: Ratio has zero denominator
+\end{verbatim}
+This is clearly unsafe, so let us think more carefully.
+Observe the reciprocal differences
+\begin{verbatim}
+  *Univariate> let fs = map func [0..]
+  *Univariate> take 5 $ map (rho fs 0) [0..]
+  [1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]
+  *Univariate> take 5 $ map (rho fs 1) [0..]
+  [2 % 1,14 % 5,238 % 69,170 % 43,230 % 53]
+  *Univariate> take 5 $ map (rho fs 2) [0..]
+  [4 % 1,79 % 16,269 % 44,667 % 88,413 % 44]
+  *Univariate> take 5 $ map (rho fs 3) [0..]
+  [6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
+\end{verbatim}
+So, the constancy of the reciprocal differences can be used to get the depth of Thiele series:
+\begin{verbatim}
+> tDegree :: [Ratio Int] -> Int
+> tDegree fs = helper fs 0
+>   where
+>     helper fs n
+>       | isConstants fs' = n
+>       | otherwise       = helper fs (n+1)
+>       where
+>         fs' = map (rho fs n) [0..]
+>     isConstants (i:j:_) = i==j -- 2 times match
+> --  isConstants (i:j:k_) = i==j && j==k
+\end{verbatim}
+Using this \verb+tDegree+ function, we can safely take the (finite) Thiele sequence.
+
+\subsubsection{Example}
+From the equation (3.26) of ref.\ref{Tiziano},
+\begin{verbatim}
+  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+  *Univariate> let hs = map h [0..]
+  *Univariate> tDegree hs
+  4
+\end{verbatim}
+So we get the Thiele coefficients
+\begin{verbatim}  
+  *Univariate> map (a hs) [0..(tDegree hs)]
+  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+\end{verbatim}
+Plug these in the continued fraction, and simplify with Maxima
+\begin{verbatim}
+  (%i35) h(t) := 3+t/((-23/42)+(t-1)/((-28/13)+(t-2)/((767/14)+(t-3)/(7/130))));
+  (%o35) h(t):=t/((-23)/42+(t-1)/((-28)/13+(t-2)/(767/14+(t-3)/(7/130))))+3
+  (%i36) ratsimp(h(t));
+  (%o36) (18*t^2+6*t+3)/(1+2*t+20*t^2)
+\end{verbatim}
+Finally we make a function \verb+thieleC+ that returns the Thiele coefficients:
+\begin{verbatim}
+> thieleC :: [Ratio Int] -> [Ratio Int]
+> thieleC lst = map (a lst) [0..(tDegree lst)]
+
+  *Univariate> thieleC hs
+  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+\end{verbatim}
+
+\subsubsection{Haskell representation for rational functions TBA}
+
+
+
+
 
 \section{Multivariate polynomials}
 
