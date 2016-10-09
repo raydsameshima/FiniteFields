@@ -211,7 +211,8 @@ reciprocal difference
 Using the same notation of 
 https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 
-> rho :: [Ratio Int] -> Int -> Int -> Ratio Int
+> rho :: [Ratio Int] -- A list of output of f :: Int -> Ratio Int
+>     -> Int -> Int -> Ratio Int
 > rho fs 0 i = fs !! i
 > rho fs n _ 
 >   | n < 0 = 0
@@ -224,6 +225,56 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 Note that (%) has the following type,
   (%) :: Integral a => a -> a -> Ratio a
 
-> trial x = (x^2+8*x+1)%(4*x+1)
+> a fs 0 = fs !! 0
+> a fs n = rho fs n 0 - rho fs (n-2) 0
 
+Consider
+  (%i25) f(x) := 1+(x/(2+(x-1)/(3+(x-2)/4)));
+  (%o25) f(x):=x/(2+(x-1)/(3+(x-2)/4))+1
+  (%i26) ratsimp(f(x));
+  (%o26) (x^2+16*x+16)/(16+6*x)
+
+> func x = (x^2 + 16*x + 16)%(6*x + 16)
+
+  *Univariate> map (a fs) [0..]
+  [1 % 1,2 % 1,3 % 1,4 % 1,*** Exception: Ratio has zero denominator
+
+Consider
+  *Univariate> let fs = map func [0..]
+  *Univariate> take 5 $ map (rho fs 0) [0..]
+  [1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]
+  *Univariate> take 5 $ map (rho fs 1) [0..]
+  [2 % 1,14 % 5,238 % 69,170 % 43,230 % 53]
+  *Univariate> take 5 $ map (rho fs 2) [0..]
+  [4 % 1,79 % 16,269 % 44,667 % 88,413 % 44]
+  *Univariate> take 5 $ map (rho fs 3) [0..]
+  [6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
+
+> tDegree :: [Ratio Int] -> Int
+> tDegree fs = helper fs 0
+>   where
+>     helper fs n
+>       | isConstants fs' = n
+>       | otherwise       = helper fs (n+1)
+>       where
+>         fs' = map (rho fs n) [0..]
+>     isConstants (i:j:_) = i==j
+
+  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+  *Univariate> let hs = map h [0..]
+  *Univariate> tDegree hs
+  4
+  *Univariate> map (a hs) [0..(tDegree hs)]
+  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+
+  (%i35) h(t) := 3+t/((-23/42)+(t-1)/((-28/13)+(t-2)/((767/14)+(t-3)/(7/130))));
+
+  (%o35) h(t):=t/((-23)/42+(t-1)/((-28)/13+(t-2)/(767/14+(t-3)/(7/130))))+3
+  (%i36) ratsimp(h(t));
+
+  (%o36) (18*t^2+6*t+3)/(1+2*t+20*t^2)
+
+  *Univariate> let thieleC lst = map (a lst) [0..d] where d=tDegree lst
+  *Univariate> thieleC hs
+  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
 
