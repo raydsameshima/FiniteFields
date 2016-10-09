@@ -483,6 +483,8 @@ Using Maybe is a good way to deal with errors or exceptional cases without resor
 >     lst' = map ((`mod` n) . (\(_,_,c)->c) . exGcd n) [1..(n-1)]
 >     lst = zip [1..] lst'
 \end{verbatim}
+The function \texttt{inverses} returns a list of nonzero number with their inverses if $p$ is prime.
+
 Now we define \texttt{inversep'}\footnote{
 Here we have used do-notation, a syntactic sugar for use with monadic expressions.
 From \url{https://wiki.haskell.org/Monad}:
@@ -492,7 +494,7 @@ Monads in Haskell can be thought of as composable computation descriptions.
 } whose 1st input is the base $p$ of our ring(field) and 2nd input is an element in $\mathbb{Z}_p$.
 \begin{verbatim}
 > inversep' :: Int -> Int -> Maybe Int
-> inversep 'p a = do
+> inversep' p a = do
 >   l <- inverses p
 >   let a' = (a `mod` p)
 >   return (snd $ l !! (a'-1)) 
@@ -500,7 +502,6 @@ Monads in Haskell can be thought of as composable computation descriptions.
   *Ffield> inverses' 11
   Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
 \end{verbatim}
-The function \texttt{inverses} returns a list of nonzero number with their inverses if $p$ is prime.
 However, this is not efficient, and we refactor it as follows:
 \begin{verbatim}
 > inversep :: Int -> Int -> Maybe Int
@@ -509,6 +510,8 @@ However, this is not efficient, and we refactor it as follows:
 >                else Nothing
 
   map (inversep' 10007) [1..10006]
+  (12.99 secs, 17,194,752,504 bytes)
+  map (inversep 10007) [1..10006]
   (1.74 secs, 771,586,416 bytes)
 \end{verbatim}
 
@@ -529,13 +532,13 @@ of normal product on $\mathbb{Z}$.
 \begin{eqnarray}
 \text{\textquestiondown} : \mathbb{Z}_p \hookrightarrow \mathbb{Z}.
 \end{eqnarray}
-Then we can define a map\footnote{
-This is an example of operator overloadings.
-}
+Then we can define a map
 \begin{eqnarray}
 - \mod p : \mathbb{Q} \to \mathbb{Z}_p
 \end{eqnarray}
-by
+by\footnote{
+This is an example of operator overloadings.
+}
 \begin{eqnarray}
 q = \frac{a}{b} \mapsto (q \mod p) := \left( \left( a \times \text{\textquestiondown} \left( b^{-1} \mod p\right) \right) \mod p \right).
 \end{eqnarray}
@@ -563,10 +566,14 @@ Consider (3 % 7).
   7
   *Ffield Data.Ratio> inverses 11
   Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
+\end{verbatim}
+For example, pick 7:
+\begin{verbatim}  
   *Ffield Data.Ratio> 7*8 == 11*5+1
   True
-
-on Z_{11}, (7^{-1} `mod` 11) is equal to (8 `mod` 11) and
+\end{verbatim}
+Therefore, on $\mathbb{Z}_{11}$, $(7^{-1} \mod 11)$ is equal to $(8 \mod 11)$ and
+\begin{verbatim}  
   (3%7) |-> (3 * (7^{-1} `mod` 11) `mod` 11)
              == (3*8 `mod` 11) 
              == 2 ` mod 11
@@ -574,13 +581,14 @@ on Z_{11}, (7^{-1} `mod` 11) is equal to (8 `mod` 11) and
   *Ffield Data.Ratio> q `modp` 11
   2
 \end{verbatim}
+consistent.
 
 \subsection{Reconstruction from $\mathbb{Z}_p$ to $\mathbb{Q}$}
 Consider a rational number $q$ and its image $a \in \mathbb{Z}_p$.
 \begin{eqnarray}
 a := q \mod p
 \end{eqnarray}
-The extended Euclidean algorithm can be used for guessing a rational number $q$ from $a := q \mod p$.
+The extended Euclidean algorithm can be used for guessing a rational number $q$ from the images $a := q \mod p$ of several primes $p$'s.
 
 At each step, the extended Euclidean algorithm satisfies eq.(\ref{guessOfRational}).
 \begin{eqnarray}
@@ -599,7 +607,7 @@ r_i^2 , s_i^2 < p
 as the termination condition for this reconstruction.
 
 \subsubsection{Haskell implementation}
-Let us try to reconstruct from the image $(\frac{1}{3} \mod p)$ of some prime $p$.
+Let us first try to reconstruct from the image $(\frac{1}{3} \mod p)$ of some prime $p$.
 Here we have chosen three primes
 \begin{verbatim}
 Reconstruction Z_p -> Q
@@ -607,7 +615,7 @@ Reconstruction Z_p -> Q
   *Ffield> take 3 $ dropWhile (<100) primes
   [101,103,107]
 \end{verbatim}
-The images are basically given by the first elements ($s_0$'s) of second lists:
+The images are basically given by the first elements of second lists ($s_0$'s):
 \begin{verbatim}  
   *Ffield> q `modp` 101
   34
@@ -688,15 +696,9 @@ There are certain things whose number is unknown. If we count them by threes, we
 \end{quotation}
 Here is a solution with Haskell:
 \begin{verbatim}
-> let lst = [n|n<-[0..], n `mod` 3 == 2, n `mod` 5 == 3, n `mod` 7 == 2]
-> head lst
+*Ffield> let lst = [n|n<-[0..], mod n 3==2, mod n 5==3, mod n 7==2]
+*Ffield> head lst
 23
-\end{verbatim}
-or more explicitly,
-\begin{verbatim}
-> let clst = [n|n<-[0.. (3*5*7)], mod n 3 == 2, mod n 5 == 3, mod n 7 == 2]
-> clst 
-[23]
 \end{verbatim}
 
 The statement for binary case is the following.

@@ -113,9 +113,9 @@ Example Z_{11}
 >   if isPrime p then Just (y `mod` p)
 >                else Nothing
 
-  map (inversep' 10007) [1..10006]
+  map (inversep 10007) [1..10006]
   (1.74 secs, 771,586,416 bytes)
-  
+
 A map from Q to Z_p.
 
 > -- p should be prime.
