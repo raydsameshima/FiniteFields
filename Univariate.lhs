@@ -208,16 +208,22 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#Haskell
 http://mathworld.wolfram.com/ThielesInterpolationFormula.html
 
 reciprocal difference
+Using the same notation of 
+https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 
 > rho :: [Ratio Int] -> Int -> Int -> Ratio Int
 > rho fs 0 i = fs !! i
+> rho fs n _ 
+>   | n < 0 = 0
 > rho fs n i = (n*den)%num + rho fs (n-2) (i+1)
 >   where
->     num = numerator next
->     den = denominator next
->     next = (rho fs (n-1) (i+1)) - (rho fs (n-2) (i+1))
+>     num  = numerator next
+>     den  = denominator next
+>     next = (rho fs (n-1) (i+1)) - (rho fs (n-1) i)
 
 Note that (%) has the following type,
   (%) :: Integral a => a -> a -> Ratio a
+
+> trial x = (x^2+8*x+1)%(4*x+1)
 
 
