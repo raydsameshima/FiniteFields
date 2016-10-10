@@ -3,10 +3,6 @@ Univariate.lhs
 > module Univariate where
 > import Data.Ratio
 >
-> data Poly = C [Rational]
->           | N [Rational]
->           deriving (Show, Eq)
->
 > -- polynomials, as coefficients lists
 > instance (Num a, Ord a) => Num [a] where
 >   fromInteger c = [fromInteger c] 
@@ -32,7 +28,11 @@ Univariate.lhs
 >   []     * gs     = []
 >   (f:fs) * gg@(g:gs) = f*g : (f .* gs + fs * gg)
 >
-> --
+> -- polynomials in canonical or newton rep.
+> data Poly = C [Rational]
+>           | N [Rational]
+>           deriving (Show, Eq)
+>
 >
 > -- scalar multiplication
 > infixl 7 .*
