@@ -3,6 +3,10 @@ Univariate.lhs
 > module Univariate where
 > import Data.Ratio
 >
+> data Poly = C [Rational]
+>           | N [Rational]
+>           deriving (Show, Eq)
+>
 > -- polynomials, as coefficients lists
 > instance (Num a, Ord a) => Num [a] where
 >   fromInteger c = [fromInteger c] 
