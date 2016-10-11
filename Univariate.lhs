@@ -310,5 +310,3 @@ We need a convertor from this thiele sequence to continuous form of rational fun
   27 % 10
   *Univariate> th 0.5
   3 % 2
-
-
