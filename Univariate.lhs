@@ -293,20 +293,32 @@ Consider
 We need a convertor from this thiele sequence to continuous form of rational function.
 
 > nextStep [a0,a1] (v:_)  = a0 + v/a1
-> nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
+> nextStep (a:as)  (v:vs) = a + v * (1 / nextStep as vs)
+> -- nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
 >
 > thiele' :: Integral a => [Ratio a] -> Ratio a -> Ratio a
-> thiele' fs 0 = a0
->   where a0 = head . thieleC $ fs
-> thiele' fs x = nextStep as [x,x-1 ..]
->   where as = thieleC fs
+> thiele' fs x
+>   | x == 0 = a0
+>   | otherwise = nextStep as [x,x-1 ..]
+>   where
+>     a0 = head as
+>     as = thieleC fs
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
   *Univariate> let hs = map h [0..]
-  *Univariate> let th = thiele' hs
-  *Univariate> map th [0..9] == take 10 hs
-  True
+  *Univariate> let th x = thiele' hs x
+  *Univariate> h 0.1
+
+  <interactive>:28:1: error:
+      • Ambiguous type variable ‘a0’ arising from a use of ‘it’
+        prevents the constraint ‘(Fractional a0)’ from being solved.
+        Probable fix: use a type annotation to specify what ‘a0’ should be.
+        These potential instances exist:
+          instance Integral a => Fractional (Ratio a)
+            -- Defined in ‘GHC.Real’
+          instance Fractional Double -- Defined in ‘GHC.Float’
+        instance Fractional Float -- Defined in ‘GHC.Float’
+      • In the first argument of ‘print’, namely ‘it’
+        In a stmt of an interactive GHCi command: print it
   *Univariate> th 0.1
-  27 % 10
-  *Univariate> th 0.5
-  3 % 2
+  27 % 10 
