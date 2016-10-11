@@ -60,8 +60,17 @@ we reconstrunct the canonical form of f.
 >     isConst (i:jj@(j:js)) = all (==i) jj
 >     isConst _ = error "difLists: lack of data, or not a polynomial"
 >
+> -- This degree function is "strict".
 > degree :: (Eq a, Num a) => [a] -> Int
 > degree xs = length (difLists [xs]) -1
+>
+> -- This degree function can compute the degree of infinite list.
+> degreeLazy :: (Eq a, Num a) => [a] -> Int
+> degreeLazy xs = helper xs 0
+>   where
+>     helper as@(a:b:c:_) n
+>       | a==b && b==c = n
+>       | otherwise    = helper (difs as) (n+1)
 >
 > -- translator from output list to polynomial (function)
 > p2fct :: Num a => [a] -> (a -> a)
@@ -293,8 +302,7 @@ Consider
 We need a convertor from this thiele sequence to continuous form of rational function.
 
 > nextStep [a0,a1] (v:_)  = a0 + v/a1
-> nextStep (a:as)  (v:vs) = a + v * (1 / nextStep as vs)
-> -- nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
+> nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
 >
 > thiele' :: Integral a => [Ratio a] -> Ratio a -> Ratio a
 > thiele' fs x
