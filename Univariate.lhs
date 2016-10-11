@@ -343,6 +343,7 @@ Here is a translator from coefficients lists to rational function.
   [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]
   *Univariate> let ffrac x = (1+(1%2)*x+(1%3)*x^2)/(2+(2%3)*x)
   *Univariate> take 10 $ map ffrac [0..]
+  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]
 
 The following canonicalizer reduces the tuple-rep of rational function in canonical form, i.e., the coefficien of the lowest degree term of the denominator to be 1.
 
@@ -357,6 +358,14 @@ The following canonicalizer reduces the tuple-rep of rational function in canoni
 >       | a /= 0 = a
 >       | otherwise = firstNonzero as
 
-  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]
-
 What we need is a translator from Thiele coefficients to this tuple-rep.
+The following does not work!
+
+> thiele2ratf :: (Integral a) => [Ratio a] -> ([Ratio a],[Ratio a])
+> thiele2ratf as = t2r as 0
+>   where
+>     t2r [an,an'] n = -- ([an'-(n-1)/an,1],[1]) -- 
+>                      ([an*an' - n,1],[an'])
+>     t2r (a:as)   n = (((a .* as) + [0,1]) * den, num)
+>       where
+>         (num, den) = t2r as (n+1)
