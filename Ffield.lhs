@@ -183,7 +183,7 @@ Reconstruction Z_p -> Q
 >
 > -- Hard code of big primes.
 > bigPrimes :: [Int]
-> bigPrimes = dropWhile (< 897473) $ takeWhile (<978948) primes  
+> bigPrimes = dropWhile (< 897473) $ takeWhile (< 978948) primes  
 >
 > matches3 :: Eq a => [a] -> a
 > matches3 (a:bb@(b:c:cs))
@@ -197,19 +197,31 @@ What we know is a list of (q `modp` p) and prime p.
   *Ffield> matches3 $  map (fst . guess) knownData 
   10 % 19
 
-> reconstruct :: [(Int,Int)] -> Ratio Int
+> reconstruct :: [(Int,Int)] -- In [(Z_p, primes)]
+>             -> Ratio Int
 > reconstruct aps = matches3 $ map (fst . guess) aps
 
 Here is a naive test:
   > let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
-  >let lst q = zip (map (modp q) bigPrimes) bigPrimes 
-  > let longList = map lst qs
+  > let func q = zip (map (modp q) bigPrimes) bigPrimes 
+  > let longList = map func qs
   > map reconstruct longList 
   [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
   > it == qs
   True
 
-Functional reconstruction
+> matches3' :: Eq a => [(a, t)] -> (a, t)
+> matches3' (a0@(a,_):bb@((b,_):(c,_):cs))
+>   | a == b && b == c = a0
+>   | otherwise        = matches3' bb
 
-Here is a nice imprementation for Thiele's interpolation formula:
-https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#Haskell
+  *Ffield> let q = (331%739)
+  (0.01 secs, 44,024 bytes)
+  *Ffield> let smallerprimes = dropWhile (<100) $ takeWhile (<978948) primes
+  (0.01 secs, 39,968 bytes)
+  *Ffield> let knownData = zip (map (modp q) smallerprimes) smallerprimes 
+  (0.01 secs, 39,872 bytes)
+  *Ffield> matches3' $ map guess knownData 
+  (331 % 739,614693)
+  (17.64 secs, 12,402,878,080 bytes)
+
