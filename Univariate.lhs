@@ -330,3 +330,33 @@ We need a convertor from this thiele sequence to continuous form of rational fun
         In a stmt of an interactive GHCi command: print it
   *Univariate> th 0.1
   27 % 10 
+
+We represent a rational function by a tuple of coefficient lists:
+  (ns,ds) :: ([Ratio Int],[Ratio Int])
+Here is a translator from coefficients lists to rational function.
+
+> lists2ratf :: (Integral a) => ([Ratio a],[Ratio a]) -> (Ratio a -> Ratio a)
+> lists2ratf (ns,ds) x = (p2fct ns x)/(p2fct ds x)
+
+  *Univariate> let frac x = lists2ratf ([1,1%2,1%3],[2,2%3]) x
+  *Univariate> take 10 $ map frac [0..]
+  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]
+  *Univariate> let ffrac x = (1+(1%2)*x+(1%3)*x^2)/(2+(2%3)*x)
+  *Univariate> take 10 $ map ffrac [0..]
+
+The following canonicalizer reduces the tuple-rep of rational function in canonical form, i.e., the coefficien of the lowest degree term of the denominator to be 1.
+
+> canonicalizer :: (Integral a) => ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
+> canonicalizer rat@(ns,ds)
+>   | dMin == 1 = rat
+>   | otherwise = (map (/dMin) ns, map (/dMin) ds)
+>   where
+>     dMin = firstNonzero ds
+>     firstNonzero [a] = a
+>     firstNonzero (a:as)
+>       | a /= 0 = a
+>       | otherwise = firstNonzero as
+
+  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]
+
+What we need is a translator from Thiele coefficients to this tuple-rep.
