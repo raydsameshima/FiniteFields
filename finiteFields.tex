@@ -3,7 +3,7 @@
 \usepackage{amsfonts}
 \usepackage{graphicx}
 \usepackage[all]{xy}
-
+\usepackage[yyyymmdd]{datetime}
 
 \usepackage{hyperref}
 
@@ -16,7 +16,7 @@
 
 \title{Finite fields}
 \author{Ray D. Sameshima}
-\date{2016/09/23 $\sim$ }
+\date{2016/09/23 $\sim$ \today \, \currenttime}
 \maketitle
 
 \tableofcontents
@@ -683,6 +683,25 @@ Here is a naive test:
   True
 \end{verbatim}
 
+As another example, we have slightly involved function:
+\begin{verbatim}
+> matches3' :: Eq a => [(a, t)] -> (a, t)
+> matches3' (a0@(a,_):bb@((b,_):(c,_):cs))
+>   | a == b && b == c = a0
+>   | otherwise        = matches3' bb
+
+  *Ffield> let q = (331%739)
+  (0.01 secs, 44,024 bytes)
+  *Ffield> let smallerprimes = dropWhile (<100) $ takeWhile (<978948) primes
+  (0.01 secs, 39,968 bytes)
+  *Ffield> let knownData = zip (map (modp q) smallerprimes) smallerprimes 
+  (0.01 secs, 39,872 bytes)
+  *Ffield> matches3' $ map guess knownData 
+  (331 % 739,614693)
+  (17.64 secs, 12,402,878,080 bytes)
+\end{verbatim}
+so, the new function \verb+matches3'+ returns the reconstructed value in $\mathbb{Q}$ and the first matching prime.
+
 
 
 
@@ -1003,6 +1022,17 @@ For example,
 *Univariate> degree $ take 10 $ map (\n -> n^5+4*n^3+1) [0..]
 5
 \end{verbatim}
+
+Above \verb+degree+ function can only treat finite list, however, the following function can compute the degree of infinite list.
+\begin{verbatim} 
+> degreeLazy :: (Eq a, Num a) => [a] -> Int
+> degreeLazy xs = helper xs 0
+>   where
+>     helper as@(a:b:c:_) n
+>       | a==b && b==c = n
+>       | otherwise    = helper (difs as) (n+1)
+\end{verbatim}
+Note that this lazy function only sees the first two elements of the list (of difference).
 
 \chapter{Functional reconstruction}
 The goal of a functional reconstruction algorithm is to identify the monomials appearing in their definition and the corresponding coefficients.
@@ -1460,6 +1490,39 @@ Finally we make a function \verb+thieleC+ that returns the Thiele coefficients:
 
   *Univariate> thieleC hs
   [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+\end{verbatim}
+
+We need a convertor from this thiele sequence to continuous form of rational function.
+\begin{verbatim}
+> nextStep [a0,a1] (v:_)  = a0 + v/a1
+> nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
+>
+> thiele' :: Integral a => [Ratio a] -> Ratio a -> Ratio a
+> thiele' fs x
+>   | x == 0 = a0
+>   | otherwise = nextStep as [x,x-1 ..]
+>   where
+>     a0 = head as
+>     as = thieleC fs
+
+  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+  *Univariate> let hs = map h [0..]
+  *Univariate> let th x = thiele' hs x
+  *Univariate> h 0.1
+
+  <interactive>:28:1: error:
+      ? Ambiguous type variable ?a0? arising from a use of ?it?
+        prevents the constraint ?(Fractional a0)? from being solved.
+        Probable fix: use a type annotation to specify what ?a0? should be.
+        These potential instances exist:
+          instance Integral a => Fractional (Ratio a)
+            -- Defined in ?GHC.Real?
+          instance Fractional Double -- Defined in ?GHC.Float?
+        instance Fractional Float -- Defined in ?GHC.Float?
+      ? In the first argument of ?print?, namely ?it?
+        In a stmt of an interactive GHCi command: print it
+  *Univariate> th 0.1
+  27 % 10 
 \end{verbatim}
 
 \subsubsection{Haskell representation for rational functions TBA}
