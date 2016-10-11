@@ -27,12 +27,7 @@ Univariate.lhs
 >   fs     * []     = []
 >   []     * gs     = []
 >   (f:fs) * gg@(g:gs) = f*g : (f .* gs + fs * gg)
->
-> -- polynomials in canonical or newton rep.
-> data Poly = C [Rational]
->           | N [Rational]
->           deriving (Show, Eq)
->
+> -- the end of Num [a]
 >
 > -- scalar multiplication
 > infixl 7 .*
@@ -43,14 +38,20 @@ Univariate.lhs
 > -- z of f(z), variable
 > z :: Num a => [a]
 > z = [0,1]
->
+
+From the output list
+  map f [0..]
+of a polynomial
+  f :: Int -> Ratio Int
+we reconstrunct the canonical form of f.
+
 > -- difference analysis
-> difs :: (Integral n) => [n] -> [n]
+> difs :: (Num a) => [a] -> [a]
 > difs [] = []
 > difs [_] = []
 > difs (i:jj@(j:js)) = j-i : difs jj
 >
-> difLists :: (Integral n) => [[n]] -> [[n]]
+> difLists :: (Eq a, Num a) => [[a]] -> [[a]]
 > difLists [] = []
 > difLists xx@(xs:xss) =
 >   if isConst xs then xx
@@ -59,19 +60,19 @@ Univariate.lhs
 >     isConst (i:jj@(j:js)) = all (==i) jj
 >     isConst _ = error "difLists: lack of data, or not a polynomial"
 >
-> degree :: (Integral n) => [n] -> Int
+> degree :: (Eq a, Num a) => [a] -> Int
 > degree xs = length (difLists [xs]) -1
 >
-> p2fct :: Num a => [a] -> a -> a
-> p2fct [] x = 0
+> -- translator from output list to polynomial (function)
+> p2fct :: Num a => [a] -> (a -> a)
+> p2fct []     x = 0
 > p2fct (a:as) x = a + (x * p2fct as x)
->
 
 Newton interpolation formula
 First we introduce a new infix symbol for the operation of taking a falling power.
 
 > infixr 8 ^- -- falling power
-> (^-) :: (Integral a) => a -> a -> a
+> (^-) :: (Eq a, Num a) => a -> a -> a
 > x ^- 0 = 1
 > x ^- n = (x ^- (n-1)) * (x - n + 1)
 
@@ -81,11 +82,11 @@ A polynomial f of degree n is expressed as
 where diff^n(f) is the n-th difference of f.
 
 Example
-Consider
+Consider a polynomial
 
 > f x = 2*x^3+3*x
 
-In general, we have no prior knowledge of the form of this polynomial, but we know the sequences as a list of outputs:
+In general, we have no prior knowledge of this form, but we know the sequences as a list of outputs:
 
   > take 10 $ map f [0..]
   [0,5,22,63,140,265,450,707,1048,1485]
@@ -148,13 +149,13 @@ Then the implementation of the Newton interpolation formula is as follows:
 
 The list of first differences can be computed as follows:
 
-> firstDifs :: [Integer] -> [Integer]
+> firstDifs :: (Eq a, Num a) => [a] -> [a]
 > firstDifs xs = reverse $ map head $ difLists [xs]
 
 Mapping a list of integers to a Newton representation:
 
-> list2npol :: [Integer] -> [Rational]
-> list2npol = newton . map fromInteger . firstDifs
+> list2npol :: (Integral a) => [a] -> [Ratio a]
+> list2npol = newton . map fromIntegral . firstDifs
 
   > take 10 $ map f [0..]
   [0,5,22,63,140,265,450,707,1048,1485]
@@ -171,28 +172,28 @@ The key equation is
   
 Therefore, an implementation is as follows:
 
-> stirlingC :: Integer -> Integer -> Integer
+> stirlingC :: (Integral a) => a -> a -> a
 > stirlingC 0 0 = 1
 > stirlingC 0 _ = 0
 > stirlingC n k = stirlingC (n-1) (k-1) + (n-1)*stirlingC (n-1) k  
 
 This definition can be used to convert from falling powers to standard powers.
 
-> fall2pol :: Integer -> [Integer]
+> fall2pol :: (Integral a) => a -> [a]
 > fall2pol 0 = [1]
 > fall2pol n = 0 : [(-1)^(n-k) * stirlingC n k| k<-[1..n]]
 
 We use this to convert Newton representations to standard polynomials in coefficients list representation.
 Here we have uses sum to collect same order terms in list representation.
 
-> npol2pol :: (Ord t, Num t) => [t] -> [t]
+> npol2pol :: (Integral a) => [Ratio a] -> [Ratio a]
 > npol2pol xs = sum [ [x] * map fromInteger (fall2pol k)
 >                   | (x,k) <- zip xs [0..]
 >                   ]
 
 Finally, here is the function for computing a polynomial from an output sequence:
 
-> list2pol :: [Integer] -> [Rational]
+> list2pol :: (Integral a) => [a] -> [Ratio a]
 > list2pol = npol2pol . list2npol
 
 Reconstruction as curve fitting
@@ -207,6 +208,8 @@ Reconstruction as curve fitting
   > map (p2fct $ list2pol [0,1,5,14,30]) [0..8]
   [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1,55 % 1,91 % 1,140 % 1,204 % 1]
 
+-----------------------------------------------------------------------
+
 Thiele's interpolation formula
 https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#Haskell
 http://mathworld.wolfram.com/ThielesInterpolationFormula.html
@@ -215,8 +218,9 @@ reciprocal difference
 Using the same notation of 
 https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 
-> rho :: [Ratio Int] -- A list of output of f :: Int -> Ratio Int
->     -> Int -> Int -> Ratio Int
+> rho :: (Integral a) => 
+>        [Ratio a] -- A list of output of f :: a -> Ratio a 
+>     -> a -> Int -> Ratio a
 > rho fs 0 i = fs !! i
 > rho fs n _ 
 >   | n < 0 = 0
@@ -229,7 +233,7 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 Note that (%) has the following type,
   (%) :: Integral a => a -> a -> Ratio a
 
-> a :: [Ratio Int] -> Int -> Ratio Int
+> a :: (Integral a) => [Ratio a] -> a -> Ratio a
 > a fs 0 = head fs
 > a fs n = rho fs n 0 - rho fs (n-2) 0
 
@@ -255,7 +259,7 @@ Consider
   *Univariate> take 5 $ map (rho fs 3) [0..]
   [6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
 
-> tDegree :: [Ratio Int] -> Int
+> tDegree :: Integral a => [Ratio a] -> a
 > tDegree fs = helper fs 0
 >   where
 >     helper fs n
@@ -264,7 +268,7 @@ Consider
 >       where
 >         fs' = map (rho fs n) [0..]
 >     isConstants (i:j:_) = i==j -- 2 times match
-> --  isConstants (i:j:k_) = i==j && j==k
+> --  isConstants (i:j:k_) = i==j && j==k -- 3 times match
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
   *Univariate> let hs = map h [0..]
@@ -280,9 +284,31 @@ Consider
 
   (%o36) (18*t^2+6*t+3)/(1+2*t+20*t^2)
 
-> thieleC :: [Ratio Int] -> [Ratio Int]
+> thieleC :: (Integral a) => [Ratio a] -> [Ratio a]
 > thieleC lst = map (a lst) [0..(tDegree lst)]
 
   *Univariate> thieleC hs
   [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+
+We need a convertor from this thiele sequence to continuous form of rational function.
+
+> nextStep [a0,a1] (v:_)  = a0 + v/a1
+> nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
+>
+> thiele' :: Integral a => [Ratio a] -> Ratio a -> Ratio a
+> thiele' fs 0 = a0
+>   where a0 = head . thieleC $ fs
+> thiele' fs x = nextStep as [x,x-1 ..]
+>   where as = thieleC fs
+
+  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+  *Univariate> let hs = map h [0..]
+  *Univariate> let th = thiele' hs
+  *Univariate> map th [0..9] == take 10 hs
+  True
+  *Univariate> th 0.1
+  27 % 10
+  *Univariate> th 0.5
+  3 % 2
+
 
