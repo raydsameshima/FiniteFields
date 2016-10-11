@@ -1033,6 +1033,7 @@ Above \verb+degree+ function can only treat finite list, however, the following 
 >       | otherwise    = helper (difs as) (n+1)
 \end{verbatim}
 Note that this lazy function only sees the first two elements of the list (of difference).
+So first take the lazy \verb+degreeLazy+ and guess the degree, take sufficient finite sublist of output and apply \verb+degree+.
 
 \chapter{Functional reconstruction}
 The goal of a functional reconstruction algorithm is to identify the monomials appearing in their definition and the corresponding coefficients.
@@ -1318,7 +1319,7 @@ Reconstruction as curve fitting
 
 
 \section{Univariate rational functions}
-See \url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#Haskell}
+% See \url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#Haskell}
 
 \subsection{Thiele's interpolation formula}
 Consider a univariate rational function $f(z)$.
@@ -1459,7 +1460,7 @@ So, the constancy of the reciprocal differences can be used to get the depth of 
 >       where
 >         fs' = map (rho fs n) [0..]
 >     isConstants (i:j:_) = i==j -- 2 times match
-> --  isConstants (i:j:k_) = i==j && j==k
+> --  isConstants (i:j:k:_) = i==j && j==k
 \end{verbatim}
 Using this \verb+tDegree+ function, we can safely take the (finite) Thiele sequence.
 
@@ -1525,7 +1526,51 @@ We need a convertor from this thiele sequence to continuous form of rational fun
   27 % 10 
 \end{verbatim}
 
-\subsubsection{Haskell representation for rational functions TBA}
+\subsubsection{Haskell representation for rational functions}
+We represent a rational function by a tuple of coefficient lists, say,
+\begin{eqnarray}
+\texttt{(ns,ds) :: ([Ratio Int],[Ratio Int])}
+\end{eqnarray}
+
+Here is a translator from coefficients lists to rational function.
+\begin{verbatim}
+> lists2ratf :: (Integral a) => ([Ratio a],[Ratio a]) -> (Ratio a -> Ratio a)
+> lists2ratf (ns,ds) x = (p2fct ns x)/(p2fct ds x)
+
+  *Univariate> let frac x = lists2ratf ([1,1%2,1%3],[2,2%3]) x
+  *Univariate> take 10 $ map frac [0..]
+  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]
+  *Univariate> let ffrac x = (1+(1%2)*x+(1%3)*x^2)/(2+(2%3)*x)
+  *Univariate> take 10 $ map ffrac [0..]
+  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]  
+\end{verbatim}
+
+The following \texttt{canonicalizer} reduces the tuple-rep of rational function in canonical form, i.e., the coefficient of the lowest degree term of the denominator to be 1.
+\begin{verbatim}
+> canonicalizer :: (Integral a) => ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
+> canonicalizer rat@(ns,ds)
+>   | dMin == 1 = rat
+>   | otherwise = (map (/dMin) ns, map (/dMin) ds)
+>   where
+>     dMin = firstNonzero ds
+>     firstNonzero [a] = a
+>     firstNonzero (a:as)
+>       | a /= 0 = a
+>       | otherwise = firstNonzero as
+
+  *Univariate> canonicalizer ([1,1%2,1%3],[2,2%3])
+  ([1 % 2,1 % 4,1 % 6],[1 % 1,1 % 3])
+  *Univariate> canonicalizer ([1,1%2,1%3],[0,0,2,2%3])
+  ([1 % 2,1 % 4,1 % 6],[0 % 1,0 % 1,1 % 1,1 % 3])
+  *Univariate> :e
+  [1 of 1] Compiling Univariate       ( Univariate.lhs, interpreted )
+  Ok, modules loaded: Univariate.
+  *Univariate> canonicalizer ([1,1%2,1%3],[0,0,0,2%3])
+  ([3 % 2,3 % 4,1 % 2],[0 % 1,0 % 1,0 % 1,1 % 1])
+\end{verbatim}
+
+What we need is a translator from Thiele coefficients to this tuple-rep.
+
 
 
 
