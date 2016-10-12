@@ -252,12 +252,12 @@ Consider
   (%i26) ratsimp(f(x));
   (%o26) (x^2+16*x+16)/(16+6*x)
 
-> func x = (x^2 + 16*x + 16)%(6*x + 16)
 
   *Univariate> map (a fs) [0..]
   [1 % 1,2 % 1,3 % 1,4 % 1,*** Exception: Ratio has zero denominator
 
 Consider
+  *Univariate> let func x = (x^2 + 16*x + 16)%(6*x + 16)
   *Univariate> let fs = map func [0..]
   *Univariate> take 5 $ map (rho fs 0) [0..]
   [1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]

@@ -260,15 +260,15 @@ The final result is from
 
 \subsection{Extended Euclidean algorithm}
 \label{exGCD}
-Here we treat the extended Euclidean algorithm.
+Here we treat the extended Euclidean algorithm, this is a constructive solution for B\'ezout's lemma.
 
 As intermediate steps, this algorithm makes sequences of integers $\{r_i\}_i$, $\{s_i\}_i$, $\{t_i\}_i$ and quotients $\{q_i\}_i$ as follows.
-The base case are
+The base cases are
 \begin{eqnarray}
 \left(r_0, s_0, t_0 \right) &:=& (a,1,0) \\
 \left(r_1, s_1, t_1 \right) &:=& (b,0,1) 
 \end{eqnarray}
-and inductively,
+and inductively, for $i \geq 2$,
 \begin{eqnarray}
 q_i &:=& \text{quot}(r_{i-2}, r_{i-1}) \\
 r_i &:=& r_{i-2} - q_i * r_{i-1} \\
@@ -313,7 +313,7 @@ Let $i\geq 2$, then
 \begin{eqnarray}
 r_i &=& r_{i-2}  - q_i * r_{i-1} \\
 &=& a*s_{i-2} + b*t_{i-2} - q_i *(a*s_{i-1} + b*t_{i-1} ) \\
-&=& a*(s_{i-2} - q_i **s_{i-1}) + b* (t_{i-2} - q_i *t_{i-1} ) \\
+&=& a*(s_{i-2} - q_i *s_{i-1}) + b* (t_{i-2} - q_i *t_{i-1} ) \\
 &=:& a*s_i + b*t_i.
 \end{eqnarray}
 Therefore, inductively we get
@@ -354,11 +354,14 @@ See the algorithm, examples, and pseudo code at:
 Here we have used so called lazy lists, and higher order function\footnote{
 Naively speaking, the function whose inputs and/or outputs are functions is called a higher order function.
 }.
-The gcd of $a$ and $b$ should be the last element of second list, and our targets $(s,t)$ are second last elements of last two lists.
+The gcd of $a$ and $b$ should be the last element of second list \verb+rs+, and our targets $(s,t)$ are second last elements of last two lists \verb+ss+ and \verb+ts+.
 The following example is from wikipedia:
 \begin{verbatim}
   *Ffield> exGCD' 240 46
   ([5,4,1,1,2],[240,46,10,6,4,2],[1,0,1,-4,5,-9,23],[0,1,-5,21,-26,47,-120])
+\end{verbatim}  
+Look at the second lasts of \verb+[1,0,1,-4,5,-9,23],[0,1,-5,21,-26,47,-120]+, i.e., -9 and 47:
+\begin{verbatim}  
   *Ffield> gcd 240 46
   2
   *Ffield> 240*(-9) + 46*(47)
@@ -385,7 +388,7 @@ Now what we should do is extract gcd of $a$ and $b$, and $(s,t)$ from the tuple 
 >     x = last . init $ s
 >     y = last . init $ t
 \end{verbatim}
-where the underscore \verb+_+ is a special symbol in Haskell that hits every pattern.
+where the underscore \verb+_+ is a special symbol in Haskell that hits every pattern, since we do not need the quotient list.
 So, in order to get gcd and $(s,t)$ we don't need quotients list.
 \begin{verbatim}
   *Ffield> exGcd 46 240
@@ -461,12 +464,31 @@ Example Z_{11}
   ,(1,1,-2),(1,-1,2),(1,2,-3),(1,3,-4),(1,-4,5)
   ,(1,1,-1)
   ]
-
+\end{verbatim}
+This list of three-tuple let us know the candidate of inverse.
+Take the last one, \verb+(1,1,-1)+.
+This is the image of \verb+exGcd 11 10+, and 
+\begin{eqnarray}
+1 = 10*1 + 11*(-1)
+\end{eqnarray}
+holds.
+This suggests -1 is a candidate of the inverse of 10 in $\mathbb{Z}_{11}$:
+\begin{eqnarray}
+10^{-1} &=& -1 \mod 11 \\
+&=& 10 \mod 11
+\end{eqnarray}
+In fact,
+\begin{eqnarray}
+10*10 = 11*9+1.
+\end{eqnarray}
+So, picking up the third elements in tuple and zipping with nonzero elements, we have a list of inverses:
+\begin{verbatim}
   *Ffield> map ((`mod` 11) . (\(_,_,x)->x) . exGcd 11) [1..10] 
   [1,6,4,3,9,2,8,7,5,10]
   *Ffield> zip [1..10] it
   [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
 \end{verbatim}
+
 Let us generalize these flow into a function\footnote{
 From \url{https://hackage.haskell.org/package/base-4.9.0.0/docs/Data-Maybe.html}:
 \begin{quotation}
@@ -503,7 +525,10 @@ Monads in Haskell can be thought of as composable computation descriptions.
   *Ffield> inverses' 11
   Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
 \end{verbatim}
-However, this is not efficient, and we refactor it as follows:
+However, this is not efficient, and we refactor it as follows:\footnote{
+Note that, here we use our Haskell code as a script, and we have not compile it.
+Hopefully after compile our code, it become much faster.
+}
 \begin{verbatim}
 > inversep :: Int -> Int -> Maybe Int
 > inversep p a = let (_,x,y) = exGcd p a in
@@ -545,7 +570,13 @@ q = \frac{a}{b} \mapsto (q \mod p) := \left( \left( a \times \text{\textquestion
 \end{eqnarray}
 
 \subsubsection{Example and implementation}
-An easy implementation is the followings:
+An easy implementation is the followings:\footnote{
+The backquotes makes any binary function infix operator.
+For example,
+\begin{eqnarray}
+\texttt{add a b == a `add` b}
+\end{eqnarray}
+}
 \begin{verbatim}
 A map from Q to Z_p.
 
@@ -574,15 +605,18 @@ For example, pick 7:
   True
 \end{verbatim}
 Therefore, on $\mathbb{Z}_{11}$, $(7^{-1} \mod 11)$ is equal to $(8 \mod 11)$ and
+\begin{eqnarray}
+\frac{3}{7} \in \mathbb{Q} &\mapsto& (3 \times \text{\textquestiondown}(7^{-1} \mod 11) \mod 11) \\
+&&= (3 \times 8) \mod 11 \\
+&&= 24 \mod 11 \\
+&&= 2 \mod 11.
+\end{eqnarray}
+Haskell returns the same result
 \begin{verbatim}  
-  (3%7) |-> (3 * (7^{-1} `mod` 11) `mod` 11)
-             == (3*8 `mod` 11) 
-             == 2 ` mod 11
-
   *Ffield Data.Ratio> q `modp` 11
   2
 \end{verbatim}
-consistent.
+and consistent.
 
 \subsection{Reconstruction from $\mathbb{Z}_p$ to $\mathbb{Q}$}
 Consider a rational number $q$ and its image $a \in \mathbb{Z}_p$.
@@ -658,9 +692,9 @@ We choose 3 times match as the termination condition.
 >   | otherwise        = matches3 bb
 \end{verbatim}
 Finally, we can check our gadgets.
-\begin{verbatim}
-What we know is a list of (q `modp` p) and prime p.
 
+What we know is a list of (q `modp` p) and prime p for several (big) primes.
+\begin{verbatim}
   *Ffield> let q = 10%19
   *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes  
   *Ffield> matches3 $  map (fst . guess) knownData 
@@ -689,7 +723,10 @@ As another example, we have slightly involved function:
 > matches3' (a0@(a,_):bb@((b,_):(c,_):cs))
 >   | a == b && b == c = a0
 >   | otherwise        = matches3' bb
-
+\end{verbatim}
+Let us start from smaller prime, say 101.
+And see the first good guess, Haskell tells us that in order to reconstruct $\frac{331}{739}$, we should take three primes start from 614693:
+\begin{verbatim}
   *Ffield> let q = (331%739)
   (0.01 secs, 44,024 bytes)
   *Ffield> let smallerprimes = dropWhile (<100) $ takeWhile (<978948) primes
@@ -700,12 +737,6 @@ As another example, we have slightly involved function:
   (331 % 739,614693)
   (17.64 secs, 12,402,878,080 bytes)
 \end{verbatim}
-so, the new function \verb+matches3'+ returns the reconstructed value in $\mathbb{Q}$ and the first matching prime.
-
-
-
-
-
 
 \subsection{Chinese remainder theorem}
 From wikipedia\footnote{
@@ -720,14 +751,25 @@ Here is a solution with Haskell:
 *Ffield> head lst
 23
 \end{verbatim}
+We define an infinite list of natural numbers that satisfy
+\begin{eqnarray}
+n \mod 3 = 2, n \mod 5 = 3, n \mod 7 = 2.
+\end{eqnarray}
+Then take the first element, and this is the answer.
 
+\subsubsection{Claim}
 The statement for binary case is the following.
 Let $n_1, n_2 \in \mathbb{Z}$ be coprime, then for arbitrary $a_1,a_2 \in \mathbb{Z}$, the following a system of equations
 \begin{eqnarray}
 x &=& a_1 \mod n_1\\
 x &=& a_2 \mod n_2
 \end{eqnarray}
-have a unique solution modular $n_1*n_2$.
+have a unique solution modular $n_1*n_2$\footnote{
+Note that, this is equivalent that there is a unique solution $a$ in
+\begin{eqnarray}
+0 \leq a < n_1\times n_2.
+\end{eqnarray}
+}.
 
 \subsubsection{Proof}
 (existence) With \S\ref{exGCD}, there are $m_1,m_2 \in \mathbb{Z}$ s.t.
@@ -782,6 +824,7 @@ where
 \end{eqnarray}
 
 \section{Polynomials and rational functions}
+The following discussion on an arbitrary field $\mathbb{K}$.
 
 \subsection{Notations}
 Let $n \in \mathbb{N}$ be positive. 
@@ -802,29 +845,29 @@ The total degree of this monomial is given by
 Let $\mathbb{K}$ be a field.
 Consider a map
 \begin{eqnarray}
-f : \mathbb{F}^n \to \mathbb{F}; z \mapsto f(z) := \sum_\alpha c_\alpha z^\alpha,
+f : \mathbb{K}^n \to \mathbb{K}; z \mapsto f(z) := \sum_\alpha c_\alpha z^\alpha,
 \end{eqnarray}
 where
 \begin{eqnarray}
-c_\alpha \in \mathbb{F}.
+c_\alpha \in \mathbb{K}.
 \end{eqnarray}
-We call the value $f(z)$ at the dummy $z \in \mathbb{F}^n$ a polynomial:
+We call the value $f(z)$ at the dummy $z \in \mathbb{K}^n$ a polynomial:
 \begin{eqnarray}
 f(z) := \sum_\alpha c_\alpha z^\alpha.
 \end{eqnarray}
 We denote
 \begin{eqnarray}
-\mathbb{F}[z] := \left\{ \sum_\alpha c_\alpha z^\alpha \right\}
+\mathbb{K}[z] := \left\{ \sum_\alpha c_\alpha z^\alpha \right\}
 \end{eqnarray}
-as the ring of all polynomial functions in the variable $z$ with $\mathbb{F}$-coefficients.
+as the ring of all polynomial functions in the variable $z$ with $\mathbb{K}$-coefficients.
 
-Similarly, a rational function can be expressed as a ratio of two polynomials $p(z),q(z) \in \mathbb{F}[z]$:
+Similarly, a rational function can be expressed as a ratio of two polynomials $p(z),q(z) \in \mathbb{K}[z]$:
 \begin{eqnarray}
 \frac{p(z)}{q(z)} = \frac{\sum_\alpha n_\alpha z^\alpha}{\sum_\beta d_\beta z^\beta}.
 \end{eqnarray}
 We denote
 \begin{eqnarray}
-\mathbb{F}(z) := \left\{ \frac{\sum_\alpha n_\alpha z^\alpha}{\sum_\beta d_\beta z^\beta} \right\}
+\mathbb{K}(z) := \left\{ \frac{\sum_\alpha n_\alpha z^\alpha}{\sum_\beta d_\beta z^\beta} \right\}
 \end{eqnarray}
 as the field of rational functions in the variable $z$ with $\mathbb{F}$-coefficients.
 Similar to fractional numbers, there are several equivalent representation of a rational function, even if we simplify with gcd.
@@ -922,7 +965,19 @@ Here is the translator from the coefficient list to a polynomial function:
 > p2fct [] x = 0
 > p2fct (a:as) x = a + (x * p2fct as x)
 \end{verbatim}
-This gives us
+This gives us\footnote{
+Here we have used lambda, or so called anonymous function.
+From \url{http://learnyouahaskell.com/higher-order-functions}
+\begin{quote}
+To make a lambda, we write a \ (because it kind of looks like the greek letter lambda if you squint hard enough) and then we write the parameters, separated by spaces. 
+\end{quote}
+For example,
+\begin{eqnarray}
+f(x) &:=& x^2 + 1 \\
+f &:=& \lambda x. x^2+1
+\end{eqnarray}
+are the same definition.
+}
 \begin{verbatim}
 *Univariate> take 10 $ map (p2fct [1,2,3]) [0..]
 [1,6,17,34,57,86,121,162,209,262]
@@ -1038,10 +1093,12 @@ So first take the lazy \verb+degreeLazy+ and guess the degree, take sufficient f
 \chapter{Functional reconstruction}
 The goal of a functional reconstruction algorithm is to identify the monomials appearing in their definition and the corresponding coefficients.
 
+From here, we use $\mathbb{Q}$ as our base field, but every algorithm can be computed on any field, e.g., finite field $\mathbb{Z}_p$.
+
 \section{Univariate polynomials}
 \subsection{Newtons' polynomial representation}
 Consider a univariate polynomial $f(z)$.
-Given a sequence of values $\left. y_n \right|_{n \in \mathbb{N}}$, we evaluate the polynomial form $f(z)$ sequentially:
+Given a sequence of distinct values $\left. y_n \right|_{n \in \mathbb{N}}$, we evaluate the polynomial form $f(z)$ sequentially:
 \begin{eqnarray}
 f_0(z) &=& a_0 \\
 f_1(z) &=& a_0 + (z-y_0)a_1 \\
@@ -1058,6 +1115,11 @@ a_1 &=& \frac{f(y_1) - a_0}{y_1 - y_0} \\
 &\vdots& \\
 a_r &=& \left( \left( \left( f(y_r)-a_0 \right)\frac{1}{y_r - y_0} - a_1 \right)\frac{1}{y_r - y_1} - \cdots - a_{r-1} \right) \frac{1}{y_r - y_{r-1}} \qquad
 \end{eqnarray}
+It is easy to see that, $f_r(z)$ and the original $f(z)$ match on the given data points, i.e.,
+\begin{eqnarray}
+f_r(n) = f(n), 0 \leq n \leq r.
+\end{eqnarray}
+
 When we have already known the total degree of $f(z)$, say $R$, then we can terminate this sequential trial:
 \begin{eqnarray}
 f(z) &=& f_R(z) \\
@@ -1094,6 +1156,7 @@ is our output list.
 
 Then we have slightly simpler forms of coefficients:
 \begin{eqnarray}
+f_r(z) &:=& a_0 + z*\left( a_1 +(z-1)\left(a_2 + (z-2)\left(a_3 + \cdots + (z-r+1)a_r \right) \right) \right) \qquad\qquad \\
 a_0 &=& f(0) \\
 a_1 &=& f(y_1) - a_0 \\
 &=& f(1) - f(0) =: \Delta(f)(0) \\
@@ -1120,8 +1183,13 @@ In order to simplify our expression, we introduce a falling power:
 Under these settings, we have
 \begin{eqnarray}
 f(z) &=& f_R(z) \\
-&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} (x)_r
+&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} (x)_r,
 \end{eqnarray}
+where we have assume
+\begin{eqnarray}
+\Delta^{R+1}(f) = [0,0,\cdots].
+\end{eqnarray}
+
 
 \subsubsection{Example}
 Consider a polynomial
@@ -1200,7 +1268,11 @@ This list is the same as eq.(\ref{exOfDiff}) and we get the same expression as e
   [0 % 1,5 % 1,6 % 1,2 % 1]
 \end{verbatim}
 
-The list of first differences can be computed as follows:
+The list of first differences, i.e.,
+\begin{eqnarray}
+\left[ f(0), \Delta(f)(0), \Delta^2(f)(0), \cdots \right]
+\end{eqnarray}
+can be computed as follows:
 \begin{verbatim}
 > firstDifs :: [Integer] -> [Integer]
 > firstDifs xs = reverse $ map head $ difLists [xs]
@@ -1215,9 +1287,10 @@ Mapping a list of integers to a Newton representation:
   *NewtonInterpolation> list2npol it
   [0 % 1,5 % 1,6 % 1,2 % 1]
 \end{verbatim}
+Therefore, we get the Newton coefficients from the output list.
 
 \subsubsection{Stirling numbers of the first kind}
-We need to map Newton falling powers to standard powers.  
+We need to map Newton falling powers to standard powers to get the canonical representation.  
 This is a matter of applying combinatorics, by means of a convention formula that uses the so-called Stirling cyclic numbers 
 \begin{eqnarray}
 \left[\begin{array}{c}n \\k \end{array}\right]
@@ -1261,8 +1334,16 @@ Therefore, $\forall n,k > 0$,
 \begin{eqnarray}
 \left[\begin{array}{c}n \\k \end{array}\right] = \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right]
 \end{eqnarray}
-  
-Therefore, an implementation is as follows:
+
+Now we have the following canonical, power representation of reconstructed polynomial
+\begin{eqnarray}
+f(z) &=& f_R(z) \\
+&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} (x)_r \\
+&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} \sum_{k=1}^r (-)^{r-k} \left[\begin{array}{c}r \\k \end{array}\right] x^k, 
+\end{eqnarray}
+So, what shall we do is to sum up order by order.
+
+Here is an implementation:
 \begin{verbatim}
 > stirlingC :: Integer -> Integer -> Integer
 > stirlingC 0 0 = 1
@@ -1276,7 +1357,7 @@ This definition can be used to convert from falling powers to standard powers.
 > fall2pol n = 0 : [(stirlingC n k)*(-1)^(n-k) | k<-[1..n]]
 \end{verbatim}
 We use \texttt{fall2pol} to convert Newton representations to standard polynomials in coefficients list representation.
-Here we have uses sum to collect same order terms in list representation.
+Here we have uses \verb+sum+ to collect same order terms in list representation.
 \begin{verbatim}
 > npol2pol :: (Ord t, Num t) => [t] -> [t]
 > npol2pol xs = sum [ [x] * (map fromInteger $ fall2pol k)
@@ -1303,53 +1384,47 @@ Reconstruction as curve fitting
   [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1,55 % 1,91 % 1,140 % 1,204 % 1]
 
 \end{verbatim}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+First example shows that from the sufficiently long output list, we can reconstruct the list of coefficients.
+Second example shows that from a given outputs, we have a list coefficients.
+Then use these coefficients, we define the output list of the function, and they match.
+The last example shows that from a limited (but sufficient) output information, we reconstruct a function and get extra outputs outside from the given data.
 
 \section{Univariate rational functions}
-% See \url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#Haskell}
+We use the same notion, i.e., what we can know is the output-list of a univariate rational function \texttt{f::Int -> Ratio Int}:
+\begin{eqnarray}
+\texttt{map f [0..]}
+\end{eqnarray}
 
 \subsection{Thiele's interpolation formula}
-Consider a univariate rational function $f(z)$.
-Given a sequence of values $\left. y_n \right|_{n \in \mathbb{N}}$, we evaluate the polynomial form $f(z)$ as a continued fraction:
+We evaluate the polynomial form $f(z)$ as a continued fraction:
 \begin{eqnarray}
 f_0(z) &=& a_0 \\
-f_1(z) &=& a_0 + \frac{(z-y_0)}{a_1} \\
+f_1(z) &=& a_0 + \frac{z)}{a_1} \\
 \nonumber
 &\vdots& \\
-f_r(z) &=& a_0 + \cfrac{(z-y_0)}{a_1 + \cfrac{z-y_1}{a_2 + \cfrac{z- y_3}{\cdots + \cfrac{z-y_{r-1}}{a_r}}}},
+f_r(z) &=& a_0 + \cfrac{z}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z- 2}{\cdots + \cfrac{z-r+1}{a_r}}}},
 \end{eqnarray}
 where
 \begin{eqnarray}
-a_0 &=& f(y_0) \\
-a_1 &=& \frac{y_1 - y_0}{f(y_1) - a_0}\\
+a_0 &=& f(0) \\
+a_1 &=& \frac{1}{f(1) - a_0}\\
+a_2 &=& \cfrac{1}{\cfrac{2}{f(2)-a_0} - a_0} \\
 \nonumber
 &\vdots& \\
-a_r &=& \left( \left( \left( f(y_r)-a_0 \right)^{-1} (y_r - y_0) - a_1 \right)^{-1} \frac{1}{y_r - y_1} - \cdots - a_{r-1} \right)^{-1} (y_r - y_{r-1}) \qquad\qquad
+a_r &=&\cfrac{1}{\cfrac{2}{\cfrac{3}{\cfrac{\vdots}{\cfrac{r}{f(r)-a_0}-a_1}} - a_{r-2}} - a_{r-1}} \\
+&=& \left( \left( \left( f(r)-a_0 \right)^{-1} r - a_1 \right)^{-1} (r - 1) - \cdots - a_{r-1} \right)^{-1} 1 \qquad\qquad
 \end{eqnarray}
 
-\subsubsection{Termination condition(s)}
-We choose our termination conditions as several agreements among new reconstructed function:\footnote{
-Note that, this does not simply mean
-\begin{eqnarray}
-a_{n} = a_{n+1} = a_{n+2} = \cdots = 0.
-\end{eqnarray}
-}
-\begin{eqnarray}
-f_{n-1}(z) \neq f_n(z) = f_{n+1}(z) = f_{n+2}(z) = \cdots.
-\end{eqnarray}
+%\subsubsection{Termination condition(s)}
+%We choose our termination conditions as several agreements among new reconstructed function:\footnote{
+%Note that, this does not simply mean
+%\begin{eqnarray}
+%a_{n} = a_{n+1} = a_{n+2} = \cdots = 0.
+%\end{eqnarray}
+%}
+%\begin{eqnarray}
+%f_{n-1}(z) \neq f_n(z) = f_{n+1}(z) = f_{n+2}(z) = \cdots.
+%\end{eqnarray}
 
 \subsection{Towards canonical representations}
 In order to get a unique representation of canonical form
@@ -1371,11 +1446,6 @@ and especially
 \begin{quotation}
 \url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C}
 \end{quotation}
-
-What we can know is the output-list of \texttt{f::Int -> Ratio Int}:
-\begin{eqnarray}
-\texttt{map f [0..]}
-\end{eqnarray}
  
 \subsubsection{Claim}
 We claim, without proof, that the Thiele coefficients are given by
@@ -1385,19 +1455,16 @@ a_n &:=& \rho_{n,0} - \rho_{{n-2},0},
 \end{eqnarray}
 where $\rho$ is so called the reciprocal difference:
 \begin{eqnarray}
-\rho_{0,i} &:=& f(i), i=0,1,2,\cdots \\
 \rho_{n,i} &:=& 0, n<0 \\
-\rho_{n,i} &:=& \frac{n}{\rho_{{n-1},1} - \rho_{{n-1},0}} + \rho_{{n-2},1}
+\rho_{0,i} &:=& f(i), i=0,1,2,\cdots \\
+\rho_{n,i} &:=& \frac{n}{\rho_{{n-1}, i+1} - \rho_{{n-1},i}} + \rho_{{n-2},i+1}
 \end{eqnarray}
 
 These preparation helps us to write the following codes:
 \begin{verbatim}
 Thiele's interpolation formula
-https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#Haskell
-http://mathworld.wolfram.com/ThielesInterpolationFormula.html
 
-reciprocal difference
-Using the same notation of 
+Reciprocal difference rho, using the same notation of 
 https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 
 > rho :: [Ratio Int] -- A list of output of f :: Int -> Ratio Int
@@ -1417,7 +1484,13 @@ Note that (%) has the following type,
 > a fs 0 = fs !! 0
 > a fs n = rho fs n 0 - rho fs (n-2) 0
 \end{verbatim}
-Now let us consider a simple example
+
+\subsubsection{Example}
+Now let us consider a simple example which is given by the following Thiele coefficients
+\begin{eqnarray}
+a_0 = 1, a_1 = 2, a_2 = 3, a_3=4.
+\end{eqnarray}
+The function is now
 \begin{eqnarray}
 f(x) &:=& 1 + \cfrac{x}{2+\cfrac{x-1}{3+\cfrac{x-2}{4}}} \\
 &=& \frac{x^2+16x+16}{16+6x}
@@ -1429,7 +1502,7 @@ Using Maxima, we can verify this:
   (%i26) ratsimp(f(x));
   (%o26) (x^2+16*x+16)/(16+6*x)
 \end{verbatim}
-Let us try to get the Thiele coefficients of
+Let us come back Haskell, and try to get the Thiele coefficients of
 \begin{verbatim}
 > func x = (x^2 + 16*x + 16)%(6*x + 16)
 
@@ -1464,7 +1537,7 @@ So, the constancy of the reciprocal differences can be used to get the depth of 
 \end{verbatim}
 Using this \verb+tDegree+ function, we can safely take the (finite) Thiele sequence.
 
-\subsubsection{Example}
+\subsubsection{Another example}
 From the equation (3.26) of ref.\ref{Tiziano},
 \begin{verbatim}
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
@@ -1493,7 +1566,7 @@ Finally we make a function \verb+thieleC+ that returns the Thiele coefficients:
   [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
 \end{verbatim}
 
-We need a convertor from this thiele sequence to continuous form of rational function.
+We need a convertor from this Thiele sequence to continuous form of rational function.
 \begin{verbatim}
 > nextStep [a0,a1] (v:_)  = a0 + v/a1
 > nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
@@ -1505,23 +1578,18 @@ We need a convertor from this thiele sequence to continuous form of rational fun
 >   where
 >     a0 = head as
 >     as = thieleC fs
-
+\end{verbatim}
+The following example shows that, the given output lists \verb+hs+, we can interpolate the value between our discrete data.
+\begin{verbatim}
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
   *Univariate> let hs = map h [0..]
+  *Univariate> take 5 hs
+  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47]
   *Univariate> let th x = thiele' hs x
-  *Univariate> h 0.1
-
-  <interactive>:28:1: error:
-      ? Ambiguous type variable ?a0? arising from a use of ?it?
-        prevents the constraint ?(Fractional a0)? from being solved.
-        Probable fix: use a type annotation to specify what ?a0? should be.
-        These potential instances exist:
-          instance Integral a => Fractional (Ratio a)
-            -- Defined in ?GHC.Real?
-          instance Fractional Double -- Defined in ?GHC.Float?
-        instance Fractional Float -- Defined in ?GHC.Float?
-      ? In the first argument of ?print?, namely ?it?
-        In a stmt of an interactive GHCi command: print it
+  *Univariate> map th [0..4]
+  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47]
+  *Univariate> th 0.5
+  3 % 2
   *Univariate> th 0.1
   27 % 10 
 \end{verbatim}
@@ -1534,7 +1602,8 @@ We represent a rational function by a tuple of coefficient lists, say,
 
 Here is a translator from coefficients lists to rational function.
 \begin{verbatim}
-> lists2ratf :: (Integral a) => ([Ratio a],[Ratio a]) -> (Ratio a -> Ratio a)
+> lists2ratf :: (Integral a) => 
+>   ([Ratio a],[Ratio a]) -> (Ratio a -> Ratio a)
 > lists2ratf (ns,ds) x = (p2fct ns x)/(p2fct ds x)
 
   *Univariate> let frac x = lists2ratf ([1,1%2,1%3],[2,2%3]) x
@@ -1544,10 +1613,12 @@ Here is a translator from coefficients lists to rational function.
   *Univariate> take 10 $ map ffrac [0..]
   [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]  
 \end{verbatim}
+Simply taking numerator and denominator polynomials.
 
 The following \texttt{canonicalizer} reduces the tuple-rep of rational function in canonical form, i.e., the coefficient of the lowest degree term of the denominator to be 1.
 \begin{verbatim}
-> canonicalizer :: (Integral a) => ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
+> canonicalizer :: (Integral a) => 
+>   ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
 > canonicalizer rat@(ns,ds)
 >   | dMin == 1 = rat
 >   | otherwise = (map (/dMin) ns, map (/dMin) ds)
@@ -1562,14 +1633,79 @@ The following \texttt{canonicalizer} reduces the tuple-rep of rational function 
   ([1 % 2,1 % 4,1 % 6],[1 % 1,1 % 3])
   *Univariate> canonicalizer ([1,1%2,1%3],[0,0,2,2%3])
   ([1 % 2,1 % 4,1 % 6],[0 % 1,0 % 1,1 % 1,1 % 3])
-  *Univariate> :e
-  [1 of 1] Compiling Univariate       ( Univariate.lhs, interpreted )
-  Ok, modules loaded: Univariate.
   *Univariate> canonicalizer ([1,1%2,1%3],[0,0,0,2%3])
   ([3 % 2,3 % 4,1 % 2],[0 % 1,0 % 1,0 % 1,1 % 1])
 \end{verbatim}
 
 What we need is a translator from Thiele coefficients to this tuple-rep.
+Since the list of Thiele coefficients is finite, we can naturally think recursively:
+\begin{eqnarray}
+a_0 + \cfrac{z)}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z-2}{\cdots + a_{r-1}+ \cfrac{z-r+1}{a_r}}}} 
+\end{eqnarray}
+The base case should be
+\begin{eqnarray}
+a_{r-1}+ \frac{z-r+1}{a_r} &=& \frac{a_r\times a_{r-1}-r+1 + z }{a_r} 
+\end{eqnarray}
+and induction step should be
+\begin{eqnarray}
+a_{n-1}(z)
+&=&a_{n-1}+ \frac{z-n+1}{a_n(z)} \\
+&=& \frac{a_{n-1}a_n(z)+ z -n+1}{a_n(z)} 
+\end{eqnarray}
+
+
+
+
+
+
+\begin{verbatim}
+> thiele2ratf :: (Integral a) => [Ratio a] -> ([Ratio a],[Ratio a])
+> thiele2ratf as = t2r as 0
+>   where
+>     t2r [an,an'] n = ([an*an'-n,1],[an'])
+>     t2r (a:as)   n = ((a .* num) + ([-n,1] * den), num)
+>       where
+>         (num, den) = t2r as (n+1)
+\end{verbatim}
+Here is a simple check, and it works.
+
+From the first example,
+\begin{verbatim}
+*Univariate> let func x = (x^2+16*x+16)%(6*x+16)
+*Univariate> let funcList = map func [0..]
+*Univariate> take 5 funcList
+[1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]
+*Univariate> tDegree funcList 
+3
+*Univariate> let thieleFunc x = thiele' funcList x
+*Univariate> map thieleFunc [0..4]
+[1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]
+*Univariate> let asOfFunc = thieleC funcList 
+*Univariate> asOfFunc 
+[1 % 1,2 % 1,3 % 1,4 % 1]
+*Univariate> thiele2ratf asOfFunc 
+([16 % 1,16 % 1,1 % 1],[16 % 1,6 % 1])
+*Univariate> canonicalizer it
+([1 % 1,1 % 1,1 % 16],[1 % 1,3 % 8])
+\end{verbatim}
+
+From the other example, equation (3.26) of ref.\ref{Tiziano},
+\begin{verbatim}
+*Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+*Univariate> let hs = map h [0..]
+*Univariate> take 5 hs
+[3 % 1,27 % 23,87 % 85,183 % 187,45 % 47]
+*Univariate> let th x = thiele' hs x
+*Univariate> map th [0..5]
+[3 % 1,27 % 23,87 % 85,183 % 187,45 % 47,69 % 73]
+*Univariate> let as = thieleC hs
+*Univariate> as
+[3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+*Univariate> thiele2ratf as
+([3 % 20,3 % 10,9 % 10],[1 % 20,1 % 10,1 % 1])
+*Univariate> canonicalizer it
+([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
+\end{verbatim}
 
 
 
