@@ -333,6 +333,7 @@ We need a convertor from this thiele sequence to continuous form of rational fun
 
 We represent a rational function by a tuple of coefficient lists:
   (ns,ds) :: ([Ratio Int],[Ratio Int])
+where ns and ds are coef-list-rep of numerator polynomial and denominator polynomial. 
 Here is a translator from coefficients lists to rational function.
 
 > lists2ratf :: (Integral a) => ([Ratio a],[Ratio a]) -> (Ratio a -> Ratio a)
@@ -359,13 +360,19 @@ The following canonicalizer reduces the tuple-rep of rational function in canoni
 >       | otherwise = firstNonzero as
 
 What we need is a translator from Thiele coefficients to this tuple-rep.
-The following does not work!
 
 > thiele2ratf :: (Integral a) => [Ratio a] -> ([Ratio a],[Ratio a])
 > thiele2ratf as = t2r as 0
 >   where
->     t2r [an,an'] n = -- ([an'-(n-1)/an,1],[1]) -- 
->                      ([an*an' - n,1],[an'])
->     t2r (a:as)   n = (((a .* as) + [0,1]) * den, num)
+>     t2r [an,an'] n = ([an*an'-n,1],[an'])
+>     t2r (a:as)   n = ((a .* num) + ([-n,1] * den), num)
 >       where
 >         (num, den) = t2r as (n+1)
+
+  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+  *Univariate> let hs = map h [0..]
+  *Univariate> let as = thieleC hs
+  *Univariate> thiele2ratf as
+  ([3 % 20,3 % 10,9 % 10],[1 % 20,1 % 10,1 % 1])
+  *Univariate> canonicalizer it
+  ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
