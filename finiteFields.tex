@@ -39,6 +39,10 @@ Scattering amplitudes over finite fields and multivariate functional reconstruct
 \item \label{Haskellroad}
 The Haskell Road to Logic, Maths and Programming (Kees Doets, Jan van Eijck)\\
 \url{http://homepages.cwi.nl/~jve/HR/}
+
+\item \label{Numerical}
+Introduction to numerical analysis (Stoer Josef, Bulirsch Roland)
+
 \end{enumerate}
 
 \section{Set theoretical gadgets}
@@ -874,7 +878,7 @@ Similar to fractional numbers, there are several equivalent representation of a 
 However there still is an overall constant ambiguity.
 To have a unique representation, usually we put the lowest degree of term of the denominator to be 1.
 
-\subsection{As data}
+\subsection{As data, lists}
 We can identify a polynomial
 \begin{eqnarray}
 \sum_\alpha c_\alpha z^\alpha
@@ -1343,7 +1347,7 @@ f(z) &=& f_R(z) \\
 \end{eqnarray}
 So, what shall we do is to sum up order by order.
 
-Here is an implementation:
+Here is an implementation, first the Stirling numbers:
 \begin{verbatim}
 > stirlingC :: Integer -> Integer -> Integer
 > stirlingC 0 0 = 1
@@ -1390,7 +1394,7 @@ Then use these coefficients, we define the output list of the function, and they
 The last example shows that from a limited (but sufficient) output information, we reconstruct a function and get extra outputs outside from the given data.
 
 \section{Univariate rational functions}
-We use the same notion, i.e., what we can know is the output-list of a univariate rational function \texttt{f::Int -> Ratio Int}:
+We use the same notion, i.e., what we can know is the output-list of a univariate rational function, say\texttt{f::Int -> Ratio Int}:
 \begin{eqnarray}
 \texttt{map f [0..]}
 \end{eqnarray}
@@ -1399,10 +1403,10 @@ We use the same notion, i.e., what we can know is the output-list of a univariat
 We evaluate the polynomial form $f(z)$ as a continued fraction:
 \begin{eqnarray}
 f_0(z) &=& a_0 \\
-f_1(z) &=& a_0 + \frac{z)}{a_1} \\
+f_1(z) &=& a_0 + \frac{z}{a_1} \\
 \nonumber
 &\vdots& \\
-f_r(z) &=& a_0 + \cfrac{z}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z- 2}{\cdots + \cfrac{z-r+1}{a_r}}}},
+f_r(z) &=& a_0 + \cfrac{z}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z- 2}{ \cfrac{\vdots}{a_{r-1} + \cfrac{z-r+1}{a_r}}}}},
 \end{eqnarray}
 where
 \begin{eqnarray}
@@ -1448,7 +1452,9 @@ and especially
 \end{quotation}
  
 \subsubsection{Claim}
-We claim, without proof, that the Thiele coefficients are given by
+We claim, without proof\footnote{
+See the ref.\ref{Numerical}, Theorem (2.2.2.5) in 2nd edition.
+}, that the Thiele coefficients are given by
 \begin{eqnarray}
 a_0 &:=& f(0) \\
 a_n &:=& \rho_{n,0} - \rho_{{n-2},0},
@@ -1504,11 +1510,10 @@ Using Maxima, we can verify this:
 \end{verbatim}
 Let us come back Haskell, and try to get the Thiele coefficients of
 \begin{verbatim}
-> func x = (x^2 + 16*x + 16)%(6*x + 16)
-
+  *Univariate> let func x = (x^2 + 16*x + 16)%(6*x + 16)
+  *Univariate> let fs = map func [0..]
   *Univariate> map (a fs) [0..]
-  [1 % 1,2 % 1,3 % 1,4 % 1,*** Exception: Ratio has zero denominator
-\end{verbatim}
+  [1 % 1,2 % 1,3 % 1,4 % 1,*** Exception: Ratio has zero denominator\end{verbatim}
 This is clearly unsafe, so let us think more carefully.
 Observe the reciprocal differences
 \begin{verbatim}
@@ -1615,7 +1620,10 @@ Here is a translator from coefficients lists to rational function.
 \end{verbatim}
 Simply taking numerator and denominator polynomials.
 
-The following \texttt{canonicalizer} reduces the tuple-rep of rational function in canonical form, i.e., the coefficient of the lowest degree term of the denominator to be 1.
+The following \texttt{canonicalizer} reduces the tuple-rep of rational function in canonical form, i.e., the coefficient of the lowest degree term of the denominator to be 1\footnote{
+Here our data point start from 0, i.e., the output data is given by \texttt{map f [0..]}, 0 is not singular, i.e., the denominator should have constant term and that means non empty.
+Therefore, the function firstNonzero is actually \texttt{head}.
+}.
 \begin{verbatim}
 > canonicalizer :: (Integral a) => 
 >   ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
@@ -1640,7 +1648,7 @@ The following \texttt{canonicalizer} reduces the tuple-rep of rational function 
 What we need is a translator from Thiele coefficients to this tuple-rep.
 Since the list of Thiele coefficients is finite, we can naturally think recursively:
 \begin{eqnarray}
-a_0 + \cfrac{z)}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z-2}{\cdots + a_{r-1}+ \cfrac{z-r+1}{a_r}}}} 
+a_0 + \cfrac{z}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z- 2}{ \cfrac{\vdots}{a_{r-1} + \cfrac{z-r+1}{a_r}}}}}
 \end{eqnarray}
 The base case should be
 \begin{eqnarray}
@@ -1659,7 +1667,8 @@ a_{n-1}(z)
 
 
 \begin{verbatim}
-> thiele2ratf :: (Integral a) => [Ratio a] -> ([Ratio a],[Ratio a])
+> thiele2ratf :: (Integral a) => 
+>                [Ratio a] -> ([Ratio a],[Ratio a])
 > thiele2ratf as = t2r as 0
 >   where
 >     t2r [an,an'] n = ([an*an'-n,1],[an'])
