@@ -2,42 +2,7 @@ Univariate.lhs
 
 > module Univariate where
 > import Data.Ratio
->
-> -- polynomials, as coefficients lists
-> instance (Num a, Ord a) => Num [a] where
->   fromInteger c = [fromInteger c] 
->   -- operator overloading
->   negate []     = []
->   negate (f:fs) = negate f : negate fs
-> 
->   signum [] = []
->   signum gs 
->     | signum (last gs) < 0 = negate z
->     | otherwise = z
-> 
->   abs [] = []
->   abs gs 
->     | signum gs == z = gs
->     | otherwise      = negate gs
-> 
->   fs     + []     = fs
->   []     + gs     = gs
->   (f:fs) + (g:gs) = f+g : fs+gs
-> 
->   fs     * []     = []
->   []     * gs     = []
->   (f:fs) * gg@(g:gs) = f*g : (f .* gs + fs * gg)
-> -- the end of Num [a]
->
-> -- scalar multiplication
-> infixl 7 .*
-> (.*) :: Num a => a -> [a] -> [a]
-> c .* []     = []
-> c .* (f:fs) = c*f : c .* fs
->
-> -- z of f(z), variable
-> z :: Num a => [a]
-> z = [0,1]
+> import Polynomials
 
 From the output list
   map f [0..]
@@ -76,14 +41,6 @@ we reconstrunct the canonical form of f.
 > degree :: (Num a, Eq a) => [a] -> Int
 > degree xs = let l = degreeLazy xs in
 >   degree' $ take (l+2) xs
->   
-> 
-> -- Here is safe and lazy degree which can take infinite list.
->
-> -- translator from output list to polynomial (function)
-> p2fct :: Num a => [a] -> (a -> a)
-> p2fct []     x = 0
-> p2fct (a:as) x = a + (x * p2fct as x)
 
 Newton interpolation formula
 First we introduce a new infix symbol for the operation of taking a falling power.
