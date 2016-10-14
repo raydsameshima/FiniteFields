@@ -60,9 +60,9 @@ we reconstrunct the canonical form of f.
 >     isConst (i:jj@(j:js)) = all (==i) jj
 >     isConst _ = error "difLists: lack of data, or not a polynomial"
 >
-> -- This degree function is "strict".
-> degree :: (Eq a, Num a) => [a] -> Int
-> degree xs = length (difLists [xs]) -1
+> -- This degree function is "strict", so only take finite list.
+> degree' :: (Eq a, Num a) => [a] -> Int
+> degree' xs = length (difLists [xs]) -1
 >
 > -- This degree function can compute the degree of infinite list.
 > degreeLazy :: (Eq a, Num a) => [a] -> Int
@@ -71,6 +71,14 @@ we reconstrunct the canonical form of f.
 >     helper as@(a:b:c:_) n
 >       | a==b && b==c = n
 >       | otherwise    = helper (difs as) (n+1)
+>
+> -- This is a hyblid version, safe and lazy.
+> degree :: (Num a, Eq a) => [a] -> Int
+> degree xs = let l = degreeLazy xs in
+>   degree' $ take (l+2) xs
+>   
+> 
+> -- Here is safe and lazy degree which can take infinite list.
 >
 > -- translator from output list to polynomial (function)
 > p2fct :: Num a => [a] -> (a -> a)
