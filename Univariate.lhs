@@ -2,42 +2,7 @@ Univariate.lhs
 
 > module Univariate where
 > import Data.Ratio
->
-> -- polynomials, as coefficients lists
-> instance (Num a, Ord a) => Num [a] where
->   fromInteger c = [fromInteger c] 
->   -- operator overloading
->   negate []     = []
->   negate (f:fs) = negate f : negate fs
-> 
->   signum [] = []
->   signum gs 
->     | signum (last gs) < 0 = negate z
->     | otherwise = z
-> 
->   abs [] = []
->   abs gs 
->     | signum gs == z = gs
->     | otherwise      = negate gs
-> 
->   fs     + []     = fs
->   []     + gs     = gs
->   (f:fs) + (g:gs) = f+g : fs+gs
-> 
->   fs     * []     = []
->   []     * gs     = []
->   (f:fs) * gg@(g:gs) = f*g : (f .* gs + fs * gg)
-> -- the end of Num [a]
->
-> -- scalar multiplication
-> infixl 7 .*
-> (.*) :: Num a => a -> [a] -> [a]
-> c .* []     = []
-> c .* (f:fs) = c*f : c .* fs
->
-> -- z of f(z), variable
-> z :: Num a => [a]
-> z = [0,1]
+> import Polynomials 
 
 From the output list
   map f [0..]
@@ -60,9 +25,9 @@ we reconstrunct the canonical form of f.
 >     isConst (i:jj@(j:js)) = all (==i) jj
 >     isConst _ = error "difLists: lack of data, or not a polynomial"
 >
-> -- This degree function is "strict".
-> degree :: (Eq a, Num a) => [a] -> Int
-> degree xs = length (difLists [xs]) -1
+> -- This degree function is "strict", so only take finite list.
+> degree' :: (Eq a, Num a) => [a] -> Int
+> degree' xs = length (difLists [xs]) -1
 >
 > -- This degree function can compute the degree of infinite list.
 > degreeLazy :: (Eq a, Num a) => [a] -> Int
@@ -72,10 +37,10 @@ we reconstrunct the canonical form of f.
 >       | a==b && b==c = n
 >       | otherwise    = helper (difs as) (n+1)
 >
-> -- translator from output list to polynomial (function)
-> p2fct :: Num a => [a] -> (a -> a)
-> p2fct []     x = 0
-> p2fct (a:as) x = a + (x * p2fct as x)
+> -- This is a hyblid version, safe and lazy.
+> degree :: (Num a, Eq a) => [a] -> Int
+> degree xs = let l = degreeLazy xs in
+>   degree' $ take (l+2) xs
 
 Newton interpolation formula
 First we introduce a new infix symbol for the operation of taking a falling power.
@@ -91,12 +56,11 @@ A polynomial f of degree n is expressed as
 where diff^n(f) is the n-th difference of f.
 
 Example
-Consider a polynomial
-
-> f x = 2*x^3+3*x
+Consider a polynomial f = 2*x^3+3*x.
 
 In general, we have no prior knowledge of this form, but we know the sequences as a list of outputs:
 
+  > let f x = 2*x^3+3*x
   > take 10 $ map f [0..]
   [0,5,22,63,140,265,450,707,1048,1485]
   > degree $ take 10 $ map f [0..]
@@ -130,8 +94,8 @@ Newton interpolation formula gives
        = 5*(x ^- 1) + 6*(x ^- 2) + 2*(x ^- 3)
 So
 
-> f' x = 5*(x ^- 1) + 6*(x ^- 2) + 2*(x ^- 3)
-
+  > let f x = 2*x^3+3*x
+  > let f' x = 5*(x ^- 1) + 6*(x ^- 2) + 2*(x ^- 3)
   > take 10 $ map f [0..]
   [0,5,22,63,140,265,450,707,1048,1485]
   > take 10 $ map f' [0..]
@@ -142,18 +106,19 @@ Assume the differences are given in a list
 where x_i = diff^k(f)(0).
 Then the implementation of the Newton interpolation formula is as follows:
 
-> newton :: Integral a => [a] -> [Ratio a]
-> newton xs = [x % factorial k | (x,k) <- zip xs [0..]]
+> newtonC :: (Fractional t, Enum t) => [t] -> [t]
+> newtonC xs = [x / factorial k | (x,k) <- zip xs [0..]]
 >   where
 >     factorial k = product [1..fromInteger k]
 
+  > let f x = 2*x^3+3*x
   > take 10 $ map f [0..]
   [0,5,22,63,140,265,450,707,1048,1485]
   > difLists [it]
   [[12,12,12,12,12,12,12],[12,24,36,48,60,72,84,96],[5,17,41,77,125,185,257,341,437],[0,5,22,63,140,265,450,707,1048,1485]]
   > reverse $ map head it
   [0,5,12,12]
-  > newton it
+  > newtonC it
   [0 % 1,5 % 1,6 % 1,2 % 1]
 
 The list of first differences can be computed as follows:
@@ -163,8 +128,8 @@ The list of first differences can be computed as follows:
 
 Mapping a list of integers to a Newton representation:
 
-> list2npol :: (Integral a) => [a] -> [Ratio a]
-> list2npol = newton . map fromIntegral . firstDifs
+> list2npol :: (Integral a) => [Ratio a] -> [Ratio a]
+> list2npol = newtonC . firstDifs
 
   > take 10 $ map f [0..]
   [0,5,22,63,140,265,450,707,1048,1485]
@@ -190,7 +155,8 @@ This definition can be used to convert from falling powers to standard powers.
 
 > fall2pol :: (Integral a) => a -> [a]
 > fall2pol 0 = [1]
-> fall2pol n = 0 : [(-1)^(n-k) * stirlingC n k| k<-[1..n]]
+> fall2pol n = 0   -- No constant term. 
+>            : [(-1)^(n-k) * stirlingC n k| k<-[1..n]]
 
 We use this to convert Newton representations to standard polynomials in coefficients list representation.
 Here we have uses sum to collect same order terms in list representation.
@@ -202,7 +168,7 @@ Here we have uses sum to collect same order terms in list representation.
 
 Finally, here is the function for computing a polynomial from an output sequence:
 
-> list2pol :: (Integral a) => [a] -> [Ratio a]
+> list2pol :: (Integral a) => [Ratio a] -> [Ratio a]
 > list2pol = npol2pol . list2npol
 
 Reconstruction as curve fitting
@@ -246,17 +212,15 @@ Note that (%) has the following type,
 > a fs 0 = head fs
 > a fs n = rho fs n 0 - rho fs (n-2) 0
 
-Consider
+Consider the following continuous fraction form.
   (%i25) f(x) := 1+(x/(2+(x-1)/(3+(x-2)/4)));
   (%o25) f(x):=x/(2+(x-1)/(3+(x-2)/4))+1
   (%i26) ratsimp(f(x));
   (%o26) (x^2+16*x+16)/(16+6*x)
 
-
   *Univariate> map (a fs) [0..]
   [1 % 1,2 % 1,3 % 1,4 % 1,*** Exception: Ratio has zero denominator
 
-Consider
   *Univariate> let func x = (x^2 + 16*x + 16)%(6*x + 16)
   *Univariate> let fs = map func [0..]
   *Univariate> take 5 $ map (rho fs 0) [0..]
@@ -286,6 +250,7 @@ Consider
   *Univariate> map (a hs) [0..(tDegree hs)]
   [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
 
+With Maxima,
   (%i35) h(t) := 3+t/((-23/42)+(t-1)/((-28/13)+(t-2)/((767/14)+(t-3)/(7/130))));
 
   (%o35) h(t):=t/((-23)/42+(t-1)/((-28)/13+(t-2)/(767/14+(t-3)/(7/130))))+3
@@ -304,41 +269,32 @@ We need a convertor from this thiele sequence to continuous form of rational fun
 > nextStep [a0,a1] (v:_)  = a0 + v/a1
 > nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
 >
-> thiele' :: Integral a => [Ratio a] -> Ratio a -> Ratio a
-> thiele' fs x
->   | x == 0 = a0
+> -- From thiele sequence to (rational) function.
+> thiele2ratf :: Integral a => [Ratio a] -> (Ratio a -> Ratio a)
+> thiele2ratf as x
+>   | x == 0 = head as
 >   | otherwise = nextStep as [x,x-1 ..]
->   where
->     a0 = head as
->     as = thieleC fs
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
   *Univariate> let hs = map h [0..]
-  *Univariate> let th x = thiele' hs x
-  *Univariate> h 0.1
-
-  <interactive>:28:1: error:
-      • Ambiguous type variable ‘a0’ arising from a use of ‘it’
-        prevents the constraint ‘(Fractional a0)’ from being solved.
-        Probable fix: use a type annotation to specify what ‘a0’ should be.
-        These potential instances exist:
-          instance Integral a => Fractional (Ratio a)
-            -- Defined in ‘GHC.Real’
-          instance Fractional Double -- Defined in ‘GHC.Float’
-        instance Fractional Float -- Defined in ‘GHC.Float’
-      • In the first argument of ‘print’, namely ‘it’
-        In a stmt of an interactive GHCi command: print it
-  *Univariate> th 0.1
-  27 % 10 
+  *Univariate> let as = thieleC hs
+  *Univariate> as
+  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+  *Univariate> let th x = thiele2ratf as x
+  *Univariate> take 5 hs
+  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47]
+  *Univariate> map th [0..5]
+  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47,69 % 73]
 
 We represent a rational function by a tuple of coefficient lists:
   (ns,ds) :: ([Ratio Int],[Ratio Int])
 where ns and ds are coef-list-rep of numerator polynomial and denominator polynomial. 
 Here is a translator from coefficients lists to rational function.
 
-> lists2ratf :: (Integral a) => ([Ratio a],[Ratio a]) -> (Ratio a -> Ratio a)
+> -- similar to p2fct
+> lists2ratf :: (Integral a) => 
+>               ([Ratio a],[Ratio a]) -> (Ratio a -> Ratio a)
 > lists2ratf (ns,ds) x = p2fct ns x / p2fct ds x
-> -- lists2ratf (ns,ds) x = (p2fct ns x)/(p2fct ds x)
 
   *Univariate> let frac x = lists2ratf ([1,1%2,1%3],[2,2%3]) x
   *Univariate> take 10 $ map frac [0..]
@@ -351,8 +307,8 @@ The following canonicalizer reduces the tuple-rep of rational function in canoni
 That is, the coefficien of the lowest degree term of the denominator to be 1.
 However, since our input starts from 0 and this means firstNonzero is the same as head.
 
-> canonicalizer :: (Integral a) => ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
-> canonicalizer rat@(ns,ds)
+> canonicalize :: (Integral a) => ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
+> canonicalize rat@(ns,ds)
 >   | dMin == 1 = rat
 >   | otherwise = (map (/dMin) ns, map (/dMin) ds)
 >   where
@@ -364,18 +320,25 @@ However, since our input starts from 0 and this means firstNonzero is the same a
 
 What we need is a translator from Thiele coefficients to this tuple-rep.
 
-> thiele2ratf :: (Integral a) => [Ratio a] -> ([Ratio a],[Ratio a])
-> thiele2ratf as = t2r as 0
+> thiele2coef :: (Integral a) => [Ratio a] -> ([Ratio a],[Ratio a])
+> thiele2coef as = canonicalize $ t2r as 0
 >   where
 >     t2r [an,an'] n = ([an*an'-n,1],[an'])
 >     t2r (a:as)   n = ((a .* num) + ([-n,1] * den), num)
 >       where
 >         (num, den) = t2r as (n+1)
+>
+> lists2rat :: (Integral a) => [Ratio a] -> ([Ratio a], [Ratio a])
+> lists2rat = thiele2coef . thieleC
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
   *Univariate> let hs = map h [0..]
-  *Univariate> let as = thieleC hs
-  *Univariate> thiele2ratf as
-  ([3 % 20,3 % 10,9 % 10],[1 % 20,1 % 10,1 % 1])
-  *Univariate> canonicalizer it
+  *Univariate> take 5 hs
+  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47]
+  *Univariate> let th x = thiele2ratf as x
+  *Univariate> map th [0..5]
+  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47,69 % 73]
+  *Univariate> as
+  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+  *Univariate> thiele2coef as
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
