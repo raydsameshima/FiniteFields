@@ -9,6 +9,4 @@ Multivariate.lhs
 >                   )
 
 Multivariate Polynomial case
-Example:
-Consider a polynomial of the numeratorin (3.23).
 
