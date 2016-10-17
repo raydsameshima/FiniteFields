@@ -27,7 +27,8 @@
 \section{References}
 \begin{enumerate}
 \item \label{Tiziano}
-Scattering amplitudes over finite fields and multivariate functional reconstruction (Tiziano Peraro)\\
+Scattering amplitudes over finite fields and multivariate functional reconstruction\\
+(Tiziano Peraro)\\
 \url{https://arxiv.org/pdf/1608.01902.pdf}
 
 \item Haskell Language \\
@@ -37,11 +38,13 @@ Scattering amplitudes over finite fields and multivariate functional reconstruct
 (Japanese tech support sns)
 
 \item \label{Haskellroad}
-The Haskell Road to Logic, Maths and Programming (Kees Doets, Jan van Eijck)\\
+The Haskell Road to Logic, Maths and Programming\\ 
+(Kees Doets, Jan van Eijck)\\
 \url{http://homepages.cwi.nl/~jve/HR/}
 
 \item \label{Numerical}
-Introduction to numerical analysis (Stoer Josef, Bulirsch Roland)
+Introduction to numerical analysis\\ 
+(Stoer Josef, Bulirsch Roland)
 
 \end{enumerate}
 
@@ -728,18 +731,27 @@ As another example, we have slightly involved function:
 >   | a == b && b == c = a0
 >   | otherwise        = matches3' bb
 \end{verbatim}
-Let us start from smaller prime, say 101.
-And see the first good guess, Haskell tells us that in order to reconstruct $\frac{331}{739}$, we should take three primes start from 614693:
+Let us see the first good guess, Haskell tells us that in order to reconstruct, say $\frac{331}{739}$, we should take three primes start from 614693:
 \begin{verbatim}
-  *Ffield> let q = (331%739)
-  (0.01 secs, 44,024 bytes)
-  *Ffield> let smallerprimes = dropWhile (<100) $ takeWhile (<978948) primes
-  (0.01 secs, 39,968 bytes)
-  *Ffield> let knownData = zip (map (modp q) smallerprimes) smallerprimes 
-  (0.01 secs, 39,872 bytes)
-  *Ffield> matches3' $ map guess knownData 
+  *Ffield> let knowData q = zip (map (modp q) primes) primes
+  *Ffield> matches3' $ map guess $ knowData (331%739)
   (331 % 739,614693)
-  (17.64 secs, 12,402,878,080 bytes)
+  (18.31 secs, 12,393,394,032 bytes)
+  
+  *Ffield> matches3' $ map guess $ knowData (11%13)
+  (11 % 13,311)
+  (0.02 secs, 2,319,136 bytes)
+  *Ffield> matches3' $ map guess $ knowData (1%13)
+  (1 % 13,191)
+  (0.01 secs, 1,443,704 bytes)
+  *Ffield> matches3' $ map guess $ knowData (1%3)
+  (1 % 3,13)
+  (0.01 secs, 268,592 bytes)
+  *Ffield> matches3' $ map guess $ knowData (11%31)
+  (11 % 31,1129)
+  (0.03 secs, 8,516,568 bytes)
+  *Ffield> matches3' $ map guess $ knowData (12%312)
+  (1 % 26,709)
 \end{verbatim}
 
 \subsection{Chinese remainder theorem}
@@ -912,7 +924,7 @@ Univariate.lhs
 \end{verbatim}
 
 \subsection{A polynomial as a list of coefficients}
-Let us start \texttt{instance} declaration, which enable us to use basic arithmetics:
+Let us start \texttt{instance} declaration, which enable us to use basic arithmetics, e.g., addition and multiplication.
 \begin{verbatim}
 -- Polynomials.hs
 -- http://homepages.cwi.nl/~jve/rcrh/Polynomials.hs
@@ -984,7 +996,7 @@ We can not extend this overloading to scalar multiplication, since Haskell type 
 > c .* []     = []
 > c .* (f:fs) = c*f : c .* fs
 \end{verbatim}
-Let us see few example.
+Let us see few examples.
 If we take a scalar multiplication, say
 \begin{eqnarray}
 3 * \left( 1+2z+3z^2+4z^3\right)
@@ -1755,22 +1767,22 @@ f(x) = \frac{1+ x+ \frac{1}{16}x^2}{1+ \frac{3}{8} x}
 
 In general, we have the following Thiele representation:
 \begin{eqnarray}
-a_0 + \cfrac{z}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z- 2}{ \cfrac{\vdots}{a_{r-1} + \cfrac{z-r+1}{a_r}}}}}
+a_0 + \cfrac{z}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z- 2}{ \cfrac{\vdots}{a_{n} + \cfrac{z-n}{a_{n+1}}}}}}
 \end{eqnarray}
 The base case should be
 \begin{eqnarray}
-a_{r-1}+ \frac{z-r+1}{a_r} &=& \frac{a_r\times a_{r-1}-r+1 + z }{a_r} 
+a_{n}+ \frac{z-n}{a_{n+1}} &=& \frac{a_{n+1}* a_{n}-n + z }{a_{n+1}} 
 \end{eqnarray}
-and induction step should be
+and induction step $0 \leq r \leq n$ should be
 \begin{eqnarray}
-a_{n-1}(z)
-&=&a_{n}+ \frac{z-n}{a_{n+1}(z)} \\
-&=& \frac{a_{n}a_{n+1}(z)+ z -n}{a_{n+1}(z)} \\
-&=& \frac{a_{n}*\texttt{num}\left(a_{n+1}(z) \right)+ \texttt{den}\left(a_{n+1}(z) \right) * \left(z -n\right)}{\texttt{num}\left(a_{n+1}(z) \right)} 
+a_{r}(z)
+&=&a_{r}+ \frac{z-r}{a_{r+1}(z)} \\
+&=& \frac{a_{r}a_{r+1}(z)+ z -r}{a_{r+1}(z)} \\
+&=& \frac{a_{r}*\texttt{num}\left(a_{r+1}(z) \right)+ \texttt{den}\left(a_{r+1}(z) \right) * \left(z -r\right)}{\texttt{num}\left(a_{r+1}(z) \right)} 
 \end{eqnarray}
 where
 \begin{eqnarray}
-a_{n+1}(z) = \frac{\texttt{num}\left(a_{n+1}(z) \right)}{\texttt{den}\left(a_{n+1}(z) \right)}
+a_{r+1}(z) = \frac{\texttt{num}\left(a_{r+1}(z) \right)}{\texttt{den}\left(a_{r+1}(z) \right)}
 \end{eqnarray}
 is a canonical representation of $a_{n+1}(z)$\footnote{
 Not necessary being a canonical representation, it suffices to express $a_{n+1}(z)$ in a polynomial over polynomial form.
@@ -1835,11 +1847,23 @@ as the reconstruction function from the output sequence.
 
 
 \section{Multivariate polynomials}
+\begin{verbatim}
+Multivariate.lhs
+
+> module Multivariate 
+>   where
+
+> import Data.Ratio
+> import Univariate 
+>   ( degree, list2pol
+>   , thiele2ratf, lists2ratf, thiele2coef, lists2rat
+>   )
+\end{verbatim}
 
 \subsection{Foldings as recursive applications}
 Consider an arbitrary multivariate polynomial
 \begin{eqnarray}
-f(z_1,\cdots, z_n) \in \mathbb{F}[z_1,\cdots, z_n].
+f(z_1,\cdots, z_n) \in \mathbb{K}[z_1,\cdots, z_n].
 \end{eqnarray}
 First, fix all the variable but 1st and apply the univariate Newton's reconstruction:
 \begin{eqnarray}
@@ -1851,7 +1875,7 @@ a_r(z_2, \cdots, z_n) = \sum_{s=0}^{S} b_s (z_3,\cdots, z_n) \prod_{j=0}^{s-1}(z
 \end{eqnarray}
 The terminate cotndition should be the univariate case.
 
-\subsection{Experiment, binary case}
+\subsection{Experiments, 2 variables case}
 Let us take a polynomial from the denominator in eq.(3.23) of ref.\ref{Tiziano}.
 \begin{eqnarray}
 f(z_1,z_2) = 3 + 2z_1 + 4z_2 + 7z_1^2 + 5z_1z_2 + 6z_2^2
@@ -1984,12 +2008,7 @@ and
 g(x,y) = (1+7x+10x^2) + (8+x)y + 9y^2
 \end{eqnarray}
 
-% \subsection{Haskell implementation TBA}
-
-
-
-
-
+% \subsection{Haskell implementation, 2 variables case}
 
 \section{Multivariate rational functions}
 \subsection{The canonical normalization}
@@ -2031,7 +2050,7 @@ p_r(1, z_2, \cdots, z_n)
 \end{eqnarray}
 instead of $p_r(z_1, z_2, \cdots, z_n)$, reconstruct it using multivariate Newton's method, and homogenize with $z_1$.
 
-\subsection{Experiment}
+\subsection{Experiments, 2 variables case}
 Consider the equation (3.23) in ref.\ref{Tiziano}.
 \begin{verbatim}
   *Multivariate> let f x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2)%(1+7*x+8*y+10*x^2+x*y+9*y^2)
@@ -2127,6 +2146,11 @@ h(1,y,t) = \frac{3 + (2+4y)t + (7+5y+6y^2)t^2}{1 + (7+8y)t + (10+y+9y^2)t^2}
 Finally, we use the homogeneous property for each powers:
 \begin{eqnarray}
 h(x,y,t) = \frac{3 + (2x+4y)t + (7x^2+5xy+6y^2)t^2}{1 + (7x+8y)t + (10x^2+xy+9y^2)t^2}
+\end{eqnarray}
+Putting $t=1$, we get
+\begin{eqnarray}
+f(x,y) &=& h(x,y,1) \\
+&=& \frac{3 + (2x+4y) + (7x^2+5xy+6y^2)}{1 + (7x+8y) + (10x^2+xy+9y^2)}
 \end{eqnarray}
 
 
