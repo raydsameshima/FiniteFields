@@ -984,6 +984,46 @@ We can not extend this overloading to scalar multiplication, since Haskell type 
 > c .* []     = []
 > c .* (f:fs) = c*f : c .* fs
 \end{verbatim}
+Let us see few example.
+If we take a scalar multiplication, say
+\begin{eqnarray}
+3 * \left( 1+2z+3z^2+4z^3\right)
+\end{eqnarray}
+the result should be
+\begin{eqnarray}
+3 * \left( 1+2z+3z^2+4z^3\right)
+=
+3+6z+9z^2+12z^3
+\end{eqnarray}
+In Haskell 
+\begin{verbatim}
+  *Univariate> 3 .* [1,2,3,4]
+  [3,6,9,12]
+\end{verbatim}
+and this is exactly same as map with section:
+\begin{verbatim}
+  *Univariate> map (3*) [1,2,3,4]
+  [3,6,9,12]
+\end{verbatim}
+When we multiply two polynomials, say
+\begin{eqnarray}
+(1+2z) * (3+4z+5z^2+6z^3)
+\end{eqnarray}
+the result should be
+\begin{eqnarray}
+\nonumber
+(1+2z) * (3+4z+5z^2+6z^3)
+&=& 1*(3+4z+5z^2+6z^3) + 2z*(3+4z+5z^2+6z^3) \\
+\nonumber
+&=& 3+(4+2*3)z+(5+2*4)z^2+(6+2*5)z^3 + 2*6 z^4 \\
+&=& 3+ 10z + 13z^2 + 16 z^3 + 12 z^4 
+\end{eqnarray}
+In Haskell,
+\begin{verbatim}
+  *Univariate> [1,2] * [3,4,5,6]
+  [3,10,13,16,12]
+\end{verbatim}
+
 Now the (dummy) variable is given as 
 \begin{verbatim}
 > -- z of f(z), variable
