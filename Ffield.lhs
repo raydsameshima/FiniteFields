@@ -100,7 +100,7 @@ Example Z_{11}
   *Ffield> zip [1..10] it
   [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
 
-> inverses :: Int -> Maybe [(Int, Int)]
+> inverses :: Integral a => a -> Maybe [(a,a)]
 > inverses n
 >   | isPrime n = Just lst -- isPrime n
 >   | otherwise = Nothing
@@ -108,7 +108,7 @@ Example Z_{11}
 >     lst' = map ((`mod` n) . (\(_,_,c)->c) . exGcd n) [1..(n-1)]
 >     lst = zip [1..] lst'
 >     
-> inversep :: Int -> Int -> Maybe Int
+> inversep :: Integral a => a -> a -> Maybe a
 > inversep p a = let (_,x,y) = exGcd p a in
 >   if isPrime p then Just (y `mod` p)
 >                else Nothing
@@ -119,7 +119,7 @@ Example Z_{11}
 A map from Q to Z_p.
 
 > -- p should be prime.
-> modp :: Ratio Int -> Int -> Int
+> modp :: Integral a => Ratio a -> a -> a
 > q `modp` p = (a * (bi `mod` p)) `mod` p
 >   where
 >     (a,b) = (numerator q, denominator q)
@@ -170,8 +170,9 @@ Reconstruction Z_p -> Q
   *Ffield> rec 107
   ([0,2,1,35],[36,107,36,35,1],[1,0,1,-2,3,-107],[0,1,0,1,-1,36])  
 
-> guess :: (Int, Int)       -- (q `modp` p, p)
->       -> (Ratio Int, Int)
+> guess :: Integral t => 
+>          (t, t)       -- (q `modp` p, p)
+>       -> (Ratio t, t)
 > guess (a, p) = let (_,rs,ss,_) = exGCD' a p in
 >   (select rs ss p, p)
 >     where
@@ -197,8 +198,9 @@ What we know is a list of (q `modp` p) and prime p.
   *Ffield> matches3 $  map (fst . guess) knownData 
   10 % 19
 
-> reconstruct :: [(Int,Int)] -- In [(Z_p, primes)]
->             -> Ratio Int
+> reconstruct :: Integral a => 
+>                [(a, a)]  -- :: [(Z_p, primes)]
+>             -> Ratio a
 > reconstruct aps = matches3 $ map (fst . guess) aps
 
 Here is a naive test:

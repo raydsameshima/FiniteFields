@@ -34,8 +34,8 @@ Scattering amplitudes over finite fields and multivariate functional reconstruct
 \item Haskell Language \\
 \url{www.haskell.org}
 
-\item \url{http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7}\\
-(Japanese tech support sns)
+%\item \url{http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7}\\
+% (Japanese tech support sns)
 
 \item \label{Haskellroad}
 The Haskell Road to Logic, Maths and Programming\\ 
@@ -247,7 +247,7 @@ As another example, consider $15$ and $25$:
 &\texttt{==}& \texttt{5}
 \end{eqnarray}
 
-\subsubsection{Example, by Haskell}
+\subsubsection{Example, with Haskell}
 Let us check simple example using Haskell:
 \begin{verbatim}
   *Ffield> myGCD 7 13
@@ -505,9 +505,9 @@ Using Maybe is a good way to deal with errors or exceptional cases without resor
 \end{quotation}
 }:
 \begin{verbatim}
-> inverses :: Int -> Maybe [(Int, Int)]
+> inverses :: Integral a => a -> Maybe [(a,a)]
 > inverses n
->   | isField n = Just lst -- isPrime n
+>   | isPrime n = Just lst -- isPrime n
 >   | otherwise = Nothing
 >   where
 >     lst' = map ((`mod` n) . (\(_,_,c)->c) . exGcd n) [1..(n-1)]
@@ -537,10 +537,11 @@ Note that, here we use our Haskell code as a script, and we have not compile it.
 Hopefully after compile our code, it become much faster.
 }
 \begin{verbatim}
-> inversep :: Int -> Int -> Maybe Int
+> inversep :: Integral a => a -> a -> Maybe a
 > inversep p a = let (_,x,y) = exGcd p a in
 >   if isPrime p then Just (y `mod` p)
 >                else Nothing
+
 
   map (inversep' 10007) [1..10006]
   (12.99 secs, 17,194,752,504 bytes)
@@ -587,7 +588,8 @@ For example,
 \begin{verbatim}
 A map from Q to Z_p.
 
-> modp :: Ratio Int -> Int -> Int
+> -- p should be prime.
+> modp :: Integral a => Ratio a -> a -> a
 > q `modp` p = (a * (bi `mod` p)) `mod` p
 >   where
 >     (a,b) = (numerator q, denominator q)
@@ -674,15 +676,16 @@ They give us the same guess $\frac{1}{3}$, and that the reconstructed number.
 
 From the above observations we can make a simple "guess" function:
 \begin{verbatim}
-> guess :: (Int, Int)       -- (q `modp` p, p)
->       -> (Ratio Int, Int)
+> guess :: Integral t =>
+>          (t, t)       -- (q `modp` p, p)
+>       -> (Ratio t, t)
 > guess (a, p) = let (_,rs,ss,_) = exGCD' a p in
 >   (select rs ss p, p)
 >     where
 >       select :: Integral t => [t] -> [t] -> t -> Ratio t
 >       select [] _ _ = 0%1
 >       select (r:rs) (s:ss) p
->         | s /= 0 && r^2 <= p && s^2 <= p = (r%s)
+>         | s /= 0 && r^2 <= p && s^2 <= p = r%s
 >         | otherwise = select rs ss p
 \end{verbatim}
 We have put a list of big primes as follows.
@@ -709,7 +712,9 @@ What we know is a list of (q `modp` p) and prime p for several (big) primes.
 \end{verbatim}
 The following is the function we need, its input is the list of tuple which first element is the image in $\mathbb{Z}_p$ and second element is that prime $p$.
 \begin{verbatim}
-> reconstruct :: [(Int,Int)] -> Ratio Int
+> reconstruct :: Integral a =>
+>                [(a, a)]  -- :: [(Z_p, primes)]
+>             -> Ratio a
 > reconstruct aps = matches3 $ map (fst . guess) aps
 
 Here is a naive test:
@@ -1321,8 +1326,8 @@ f(z) &=& 5(x)_1 + \frac{12}{2}(x)_2 + \frac{12}{3!}(x)_3 \\
 \label{exOfNewton} &=&  5(x)_1 + 6(x)_2 + 2(x)_3.
 \end{eqnarray}
 
-\subsection{Haskell implementation}
-\subsubsection{Newton interpolation formula}
+\section{Univariate polynomial reconstruction with Haskell}
+\subsection{Newton interpolation formula with Haskell}
 First, the falling power is naturally given by recursively:
 \begin{verbatim}
 > infixr 8 ^- -- falling power
@@ -1388,7 +1393,7 @@ Mapping a list of integers to a Newton representation:
 \end{verbatim}
 Therefore, we get the Newton coefficients from the output list.
 
-\subsubsection{Stirling numbers of the first kind}
+\subsection{Stirling numbers of the first kind}
 We need to map Newton falling powers to standard powers to get the canonical representation.  
 This is a matter of applying combinatorics, by means of a convention formula that uses the so-called Stirling cyclic numbers 
 \begin{eqnarray}
@@ -1465,7 +1470,7 @@ Here we have uses \verb+sum+ to collect same order terms in list representation.
 >                   ]
 \end{verbatim}
 
-\subsubsection{\texttt{list2pol}: from output list to canonical coefficients}
+\subsection{\texttt{list2pol}: from output list to canonical coefficients}
 Finally, here is the function for computing a polynomial from an output sequence:
 \begin{verbatim}
 > list2pol :: (Integral a) => [Ratio a] -> [Ratio a]
@@ -1517,17 +1522,6 @@ a_r &=&\cfrac{1}{\cfrac{2}{\cfrac{3}{\cfrac{\vdots}{\cfrac{r}{f(r)-a_0}-a_1}-a_2
 &=& \left( \left( \left( f(r)-a_0 \right)^{-1} r - a_1 \right)^{-1} (r - 1) - \cdots - a_{r-1} \right)^{-1} 1 \qquad\qquad
 \end{eqnarray}
 
-%\subsubsection{Termination condition(s)}
-%We choose our termination conditions as several agreements among new reconstructed function:\footnote{
-%Note that, this does not simply mean
-%\begin{eqnarray}
-%a_{n} = a_{n+1} = a_{n+2} = \cdots = 0.
-%\end{eqnarray}
-%}
-%\begin{eqnarray}
-%f_{n-1}(z) \neq f_n(z) = f_{n+1}(z) = f_{n+2}(z) = \cdots.
-%\end{eqnarray}
-
 \subsection{Towards canonical representations}
 In order to get a unique representation of canonical form
 \begin{eqnarray}
@@ -1539,9 +1533,13 @@ d_{\min r'} = 1
 \end{eqnarray}
 as a normalization, instead of $d_0$.
 However, if we meet 0 as a singular value, then we can shift s.t. the new $d_0 \neq 0$.
-So without loss of generality, we can assume $f(0)$ is not singular, i.e., the denominator of $f$ has a nonzero constant term.
+So without loss of generality, we can assume $f(0)$ is not singular, i.e., the denominator of $f$ has a nonzero constant term:
+\begin{eqnarray}
+d_0 &=& 1\\
+f(z) &=& \frac{\sum_i n_i z^i}{1 + \sum_{j >0} d_ z^j}.
+\end{eqnarray}
 
-\subsection{Haskell implementation}
+\section{Univariate rational function reconstruction with Haskell}
 Here we the same notion of
 \begin{quotation}
 \url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula}
@@ -1551,7 +1549,7 @@ and especially
 \url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C}
 \end{quotation}
  
-\subsubsection{Claim}
+\subsection{Reciprocal difference}
 We claim, without proof\footnote{
 See the ref.\ref{Numerical}, Theorem (2.2.2.5) in 2nd edition.
 }, that the Thiele coefficients are given by
@@ -1591,7 +1589,7 @@ Note that (%) has the following type,
 > a fs n = rho fs n 0 - rho fs (n-2) 0
 \end{verbatim}
 
-\subsubsection{Example}
+\subsection{Example}
 Now let us consider a simple example which is given by the following Thiele coefficients
 \begin{eqnarray}
 a_0 = 1, a_1 = 2, a_2 = 3, a_3=4.
@@ -1601,7 +1599,9 @@ The function is now
 f(x) &:=& 1 + \cfrac{x}{2+\cfrac{x-1}{3+\cfrac{x-2}{4}}} \\
 &=& \frac{x^2+16x+16}{16+6x}
 \end{eqnarray}
-Using Maxima, we can verify this:
+Using Maxima\footnote{
+\url{http://maxima.sourceforge.net}
+}, we can verify this:
 \begin{verbatim}
   (%i25) f(x) := 1+(x/(2+(x-1)/(3+(x-2)/4)));
   (%o25) f(x):=x/(2+(x-1)/(3+(x-2)/4))+1
@@ -1642,7 +1642,7 @@ So, the constancy of the reciprocal differences can be used to get the depth of 
 \end{verbatim}
 Using this \verb+tDegree+ function, we can safely take the (finite) Thiele sequence.
 
-\subsubsection{Another example}
+\subsection{Another example}
 From the equation (3.26) of ref.\ref{Tiziano},
 \begin{verbatim}
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
@@ -1657,7 +1657,7 @@ So we get the Thiele coefficients
 \end{verbatim}
 Plug these in the continued fraction, and simplify with Maxima
 \begin{verbatim}
-  (%i35) h(t) := 3+t/((-23/42)+(t-1)/((-28/13)+(t-2)/((767/14)+(t-3)/(7/130))));
+  (%i35) h(t):=3+t/((-23/42)+(t-1)/((-28/13)+(t-2)/((767/14)+(t-3)/(7/130))));
   (%o35) h(t):=t/((-23)/42+(t-1)/((-28)/13+(t-2)/(767/14+(t-3)/(7/130))))+3
   (%i36) ratsimp(h(t));
   (%o36) (18*t^2+6*t+3)/(1+2*t+20*t^2)
@@ -1698,7 +1698,7 @@ The following example shows that, the given output lists \verb+hs+, we can inter
   3 % 2
 \end{verbatim}
 
-\subsubsection{Haskell representation for rational functions}
+\subsection{Haskell representation for rational functions}
 We represent a rational function by a tuple of coefficient lists, say,
 \begin{eqnarray}
 \texttt{(ns,ds) :: ([Ratio Int],[Ratio Int])}
@@ -1785,7 +1785,7 @@ where
 a_{r+1}(z) = \frac{\texttt{num}\left(a_{r+1}(z) \right)}{\texttt{den}\left(a_{r+1}(z) \right)}
 \end{eqnarray}
 is a canonical representation of $a_{n+1}(z)$\footnote{
-Not necessary being a canonical representation, it suffices to express $a_{n+1}(z)$ in a polynomial over polynomial form.
+Not necessary being a canonical representation, it suffices to express $a_{n+1}(z)$ in a polynomial over polynomial form, that is, two lists in Haskell.
 }.
 
 Thus, the implementation is the followings.
@@ -1829,7 +1829,7 @@ From the other example, equation (3.26) of ref.\ref{Tiziano},
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
 \end{verbatim}
 
-\subsubsection{\texttt{lists2rat}: from output lists to canonical coefficients}
+\subsection{\texttt{lists2rat}: from output lists to canonical coefficients}
 Finally, we get
 \begin{verbatim}
 > lists2rat :: (Integral a) => [Ratio a] -> ([Ratio a], [Ratio a])
@@ -1842,11 +1842,8 @@ as the reconstruction function from the output sequence.
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
 \end{verbatim}
 
-
-
-
-
 \section{Multivariate polynomials}
+From now on, we will use only the following functions from univariate cases.
 \begin{verbatim}
 Multivariate.lhs
 
@@ -2053,7 +2050,8 @@ instead of $p_r(z_1, z_2, \cdots, z_n)$, reconstruct it using multivariate Newto
 \subsection{Experiments, 2 variables case}
 Consider the equation (3.23) in ref.\ref{Tiziano}.
 \begin{verbatim}
-  *Multivariate> let f x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2)%(1+7*x+8*y+10*x^2+x*y+9*y^2)
+  *Multivariate> let f x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2)
+                              % (1+7*x+8*y+10*x^2+x*y+9*y^2)
   *Multivariate> :t f
   f :: Integral a => a -> a -> Ratio a
   *Multivariate> let h x y t = f (t*x) (t*y)
@@ -2070,7 +2068,6 @@ Consider the equation (3.23) in ref.\ref{Tiziano}.
 Here we have introduced the auxiliary $t$ as third argument.
 
 We take $(x,y) = (1,0), (1,1), (1,2), (1,3)$ and reconstruct them\footnote{Eq.(3.26) in ref.\ref{Tiziano} is different from our reconstruction.
-It should be $(x=1, y=0)$ case.
 }.
 \begin{verbatim}
   *Multivariate> lists2rat $ hs 1 0
@@ -2084,9 +2081,13 @@ It should be $(x=1, y=0)$ case.
 \end{verbatim}
 So we have
 \begin{eqnarray}
+\label{tizianoExample1}
 h(1,0,t) &=& \frac{3+2t+7t^2}{1+7t+10t^2} \\
+\label{tizianoExample2}
 h(1,1,t) &=& \frac{3+6t+18t^2}{1+15t+20t^2} \\
+\label{tizianoExample3}
 h(1,2,t) &=& \frac{3+10t+41t^2}{1+23t+48t^2} \\
+\label{tizianoExample4}
 h(1,3,t) &=& \frac{3+14t+76t^2}{1+31t+94t^2}
 \end{eqnarray}
 Our next targets are the coefficients as polynomials in $y$ \footnote{
@@ -2094,6 +2095,7 @@ In our example, we take $x=1$ fixed and reproduce $x$-dependence using homogeniz
 }.
 
 Let us consider numerator first.
+This \texttt{list} is Haskell representation for eq.(\ref{tizianoExample1}), eq.(\ref{tizianoExample2}), eq.(\ref{tizianoExample3}) and eq.(\ref{tizianoExample4}).
 \begin{verbatim}
   *Multivariate> let list = map (lists2rat . (hs 1)) [0..4]
   *Multivariate> let numf = map fst list
