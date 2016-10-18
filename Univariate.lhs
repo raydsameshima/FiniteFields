@@ -272,7 +272,7 @@ We need a convertor from this thiele sequence to continuous form of rational fun
 > -- From thiele sequence to (rational) function.
 > thiele2ratf :: Integral a => [Ratio a] -> (Ratio a -> Ratio a)
 > thiele2ratf as x
->   | x == 0 = head as
+>   | x == 0    = head as
 >   | otherwise = nextStep as [x,x-1 ..]
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
@@ -315,7 +315,7 @@ However, since our input starts from 0 and this means firstNonzero is the same a
 >     dMin = firstNonzero ds
 >     firstNonzero [a] = a -- head
 >     firstNonzero (a:as)
->       | a /= 0 = a
+>       | a /= 0    = a
 >       | otherwise = firstNonzero as
 
 What we need is a translator from Thiele coefficients to this tuple-rep.
@@ -342,4 +342,5 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
   [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
   *Univariate> thiele2coef as
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
+
 
