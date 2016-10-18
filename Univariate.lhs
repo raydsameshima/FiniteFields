@@ -342,3 +342,4 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
   [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
   *Univariate> thiele2coef as
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
+
