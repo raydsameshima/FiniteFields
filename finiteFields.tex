@@ -589,7 +589,11 @@ An easy implementation is the followings:\footnote{
 The backquotes makes any binary function infix operator.
 For example,
 \begin{eqnarray}
-\texttt{add a b == a `add` b}
+\texttt{add 1 2 == 1 `add` 2}
+\end{eqnarray}
+Similarly, use parenthesis we can use an infix binary operator to a function:
+\begin{eqnarray}
+\texttt{(+) 1 2 == 1 + 2}
 \end{eqnarray}
 }
 \begin{verbatim}
@@ -1198,8 +1202,7 @@ Here is the hybrid version:
 >   degree' $ take (l+2) xs
 \end{verbatim}
 
-
-\chapter{Functional reconstruction}
+\chapter{Functional reconstruction over $\mathbb{Q}$}
 The goal of a functional reconstruction algorithm is to identify the monomials appearing in their definition and the corresponding coefficients.
 
 From here, we use $\mathbb{Q}$ as our base field, but every algorithm can be computed on any field, e.g., finite field $\mathbb{Z}_p$.
@@ -1596,7 +1599,7 @@ Note that (%) has the following type,
 > a fs n = rho fs n 0 - rho fs (n-2) 0
 \end{verbatim}
 
-\subsection{Example}
+\subsection{\texttt{tDegree} for termination}
 Now let us consider a simple example which is given by the following Thiele coefficients
 \begin{eqnarray}
 a_0 = 1, a_1 = 2, a_2 = 3, a_3=4.
@@ -1649,7 +1652,7 @@ So, the constancy of the reciprocal differences can be used to get the depth of 
 \end{verbatim}
 Using this \verb+tDegree+ function, we can safely take the (finite) Thiele sequence.
 
-\subsection{Another example}
+\subsection{\texttt{thieleC}}
 From the equation (3.26) of ref.\ref{Tiziano},
 \begin{verbatim}
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
@@ -1669,6 +1672,7 @@ Plug these in the continued fraction, and simplify with Maxima
   (%i36) ratsimp(h(t));
   (%o36) (18*t^2+6*t+3)/(1+2*t+20*t^2)
 \end{verbatim}
+
 Finally we make a function \verb+thieleC+ that returns the Thiele coefficients:
 \begin{verbatim}
 > thieleC :: [Ratio Int] -> [Ratio Int]
@@ -1706,7 +1710,7 @@ The following example shows that, the given output lists \verb+hs+, we can inter
 \end{verbatim}
 
 \subsection{Haskell representation for rational functions}
-We represent a rational function by a tuple of coefficient lists, say,
+We represent a rational function by a tuple of coefficient lists, like,
 \begin{eqnarray}
 \texttt{(ns,ds) :: ([Ratio Int],[Ratio Int])}
 \end{eqnarray}
@@ -2032,11 +2036,11 @@ d'_0 = d_{s} \neq 0.
 \subsection{An auxiliary $t$}
 Introducing an auxiliary variable $t$, let us define
 \begin{eqnarray}
-h(t,z) := f(tz_1, \cdots, tz_n),
+h(z,t) := f(tz_1, \cdots, tz_n),
 \end{eqnarray}
 and reconstruct $h(t,z)$ as a univariate rational function of $t$:
 \begin{eqnarray}
-h(t,z) = \frac{\sum_{r=0}^R p_r(z) t^r}{1+ \sum_{r'=1}^{R'} q_{r'}(z) t^{r'}}
+h(z, t) = \frac{\sum_{r=0}^R p_r(z) t^r}{1+ \sum_{r'=1}^{R'} q_{r'}(z) t^{r'}}
 \end{eqnarray}
 where
 \begin{eqnarray}
@@ -2161,6 +2165,13 @@ Putting $t=1$, we get
 f(x,y) &=& h(x,y,1) \\
 &=& \frac{3 + (2x+4y) + (7x^2+5xy+6y^2)}{1 + (7x+8y) + (10x^2+xy+9y^2)}
 \end{eqnarray}
+
+\chapter{TBA Functional reconstruction over finite fields}
+
+
+
+
+%%%%%%%%%%
 
 \chapter{Codes}
 \section{\texttt{Ffield.lhs}}
