@@ -4,6 +4,7 @@
 \usepackage{graphicx}
 \usepackage[all]{xy}
 \usepackage[yyyymmdd]{datetime}
+\usepackage{listings}
 
 \usepackage{hyperref}
 
@@ -11,6 +12,12 @@
 \DeclareMathOperator*{\coker}{coker}
 
 \begin{document}
+
+\lstset{ language = Haskell
+         , numbers = left
+         , breaklines = true
+         , basicstyle = \small\ttfamily
+         }
 
 \newcommand{\Slash}[1]{{\ooalign{\hfil/\crcr$#1$}}}
 
@@ -2155,8 +2162,18 @@ f(x,y) &=& h(x,y,1) \\
 &=& \frac{3 + (2x+4y) + (7x^2+5xy+6y^2)}{1 + (7x+8y) + (10x^2+xy+9y^2)}
 \end{eqnarray}
 
+\chapter{Codes}
+\section{\texttt{Ffield.lhs}}
+\lstinputlisting[caption=Ffield.lhs,label=Ffield]{Ffield.lhs}
+
+\section{\texttt{Polynomials.hs}}
+\lstinputlisting[caption=Polynomials.hs,label=Polynomials]{Polynomials.hs}
+
+\section{\texttt{Univariate.lhs}}
+\lstinputlisting[caption=Univariate.lhs,label=Univariate]{Univariate.lhs}
 
 
-
+\section{\texttt{Multivariate.lhs}}
+\lstinputlisting[caption=Multivariate.lhs,label=Multivariate]{Multivariate.lhs}
 
 \end{document}
