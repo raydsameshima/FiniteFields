@@ -93,7 +93,9 @@ Example Z_{11}
   *Ffield> isField 11
   True
   *Ffield> map (exGcd 11) [0..10]
-  [(11,1,0),(1,0,1),(1,1,-5),(1,-1,4),(1,-1,3),(1,1,-2),(1,-1,2),(1,2,-3),(1,3,-4),(1,-4,5),(1,1,-1)]
+  [(11,1,0),(1,0,1),(1,1,-5),(1,-1,4),(1,-1,3)
+  ,(1,1,-2),(1,-1,2),(1,2,-3),(1,3,-4),(1,-4,5),(1,1,-1)
+  ]
 
   *Ffield> map ((`mod` 11) . (\(_,_,x)->x) . exGcd 11) [1..10] 
   [1,6,4,3,9,2,8,7,5,10]
@@ -138,7 +140,7 @@ Consider (3 % 7).
   *Ffield Data.Ratio> 7*8 == 11*5+1
   True
 
-on Z_{11}, (7^{-1} `mod` 11) is equal to (8 `mod` 11) and
+On Z_{11}, (7^{-1} `mod` 11) is equal to (8 `mod` 11) and
   (3%7) |-> (3 * (7^{-1} `mod` 11) `mod` 11)
              == (3*8 `mod` 11) 
              == 2 ` mod 11
@@ -204,11 +206,15 @@ What we know is a list of (q `modp` p) and prime p.
 > reconstruct aps = matches3 $ map (fst . guess) aps
 
 Here is a naive test:
-  > let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
+  > let qs = [1 % 3, 10 % 19, 41 % 17, 30 % 311, 311 % 32
+             ,869 % 232, 778 % 123, 331 % 739
+             ]
   > let func q = zip (map (modp q) bigPrimes) bigPrimes 
   > let longList = map func qs
   > map reconstruct longList 
-  [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32,869 % 232,778 % 123,331 % 739]
+  [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32
+  ,869 % 232,778 % 123,331 % 739
+  ]
   > it == qs
   True
 
@@ -218,12 +224,9 @@ Here is a naive test:
 >   | otherwise        = matches3' bb
 
   *Ffield> let q = (331%739)
-  (0.01 secs, 44,024 bytes)
-  *Ffield> let smallerprimes = dropWhile (<100) $ takeWhile (<978948) primes
-  (0.01 secs, 39,968 bytes)
-  *Ffield> let knownData = zip (map (modp q) smallerprimes) smallerprimes 
-  (0.01 secs, 39,872 bytes)
+  (0.01 secs, 48,472 bytes)
+  *Ffield> let knownData = zip (map (modp q) primes) primes
+  (0.02 secs, 39,976 bytes)
   *Ffield> matches3' $ map guess knownData 
   (331 % 739,614693)
-  (17.64 secs, 12,402,878,080 bytes)
-
+  (19.92 secs, 12,290,852,136 bytes)
