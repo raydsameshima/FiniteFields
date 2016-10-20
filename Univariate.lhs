@@ -132,13 +132,18 @@ The list of first differences can be computed as follows:
 
 Mapping a list of integers to a Newton representation:
 
+> -- This implementation can take infinite list.
 > list2npol :: (Integral a) => [Ratio a] -> [Ratio a]
-> list2npol = newtonC . firstDifs
+> list2npol xs = newtonC . firstDifs $ take n xs
+>   where n = (degree xs) + 2
 
-  Univariate> take 10 $ map f [0..]
-  [0,5,22,63,140,265,450,707,1048,1485]
-  Univariate> list2npol it
-  [0 % 1,5 % 1,6 % 1,2 % 1]
+  *Univariate> let f x = 2*x^3 + 3*x + 1%5
+  *Univariate> take 10 $ map f [0..]
+  [1 % 5,26 % 5,111 % 5,316 % 5,701 % 5,1326 % 5,2251 % 5,3536 % 5,5241 % 5,7426 % 5]
+  *Univariate> list2npol it
+  [1 % 5,5 % 1,6 % 1,2 % 1]
+  *Univariate> list2npol $ map f [0..]
+  [1 % 5,5 % 1,6 % 1,2 % 1]
 
 We need to map Newton falling powers to standard powers.  
 This is a matter of applying combinatorics, by means of a convention formula that uses the so-called Stirling cyclic numbers (of the first kind.)
@@ -176,16 +181,19 @@ Finally, here is the function for computing a polynomial from an output sequence
 > list2pol = npol2pol . list2npol
 
 Reconstruction as curve fitting
-  Univariate> list2pol $ map (\n -> 7*n^2+3*n-4) [0..100]
-  [(-4) % 1,3 % 1,7 % 1]
-
-  Univariate> list2pol [0,1,5,14,30]
+  *Univariate> let f x = 2*x^3 + 3*x + 1%5
+  *Univariate> take 10 $ map f [0..]
+  [1 % 5,26 % 5,111 % 5,316 % 5,701 % 5,1326 % 5,2251 % 5,3536 % 5,5241 % 5,7426 % 5]
+  *Univariate> list2npol it
+  [1 % 5,5 % 1,6 % 1,2 % 1]
+  *Univariate> list2npol $ map f [0..]
+  [1 % 5,5 % 1,6 % 1,2 % 1]
+  *Univariate> list2pol $ map (\n -> 1%3 + (3%5)*n + (5%7)*n^2) [0..]
+  [1 % 3,3 % 5,5 % 7]
+  *Univariate>  list2pol [0,1,5,14,30,55]
   [0 % 1,1 % 6,1 % 2,1 % 3]
-  Univariate> map (\n -> n%6 + n^2%2 + n^3%3) [0..4]
-  [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1]
-
-  Univariate> map (p2fct $ list2pol [0,1,5,14,30]) [0..8]
-  [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1,55 % 1,91 % 1,140 % 1,204 % 1]
+  *Univariate> map (p2fct $ list2pol [0,1,5,14,30,55]) [0..6]
+  [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1,55 % 1,91 % 1]
 
 --
 
