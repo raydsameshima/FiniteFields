@@ -170,7 +170,9 @@ This definition can be used to convert from falling powers to standard powers.
 We use this to convert Newton representations to standard polynomials in coefficients list representation.
 Here we have uses sum to collect same order terms in list representation.
 
-> npol2pol :: (Integral a) => [Ratio a] -> [Ratio a]
+> -- For later convenience, we relax the type annotation.
+> -- npol2pol :: (Integral a) => [Ratio a] -> [Ratio a]
+> npol2pol :: (Ord t, Num t) => [t] -> [t]
 > npol2pol xs = sum [ [x] * map fromInteger (fall2pol k)
 >                   | (x,k) <- zip xs [0..]
 >                   ]
