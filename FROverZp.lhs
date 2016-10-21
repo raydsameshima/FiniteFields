@@ -11,7 +11,7 @@ Functional Reconstruction over finite field Z_p
 Univariate Polynomial case
 Our target is a univariate polynomial
   f :: (Integral a) =>
-       Ratio a -> Ratio
+       Ratio a -> Ratio a -- Real?
 
 Let us consider
 
@@ -58,13 +58,15 @@ Difference analysis over Z_p
 > difsp p xs = map (`mod` p) (zipWith (-) (tail xs) xs)
 
   *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> let fps = map (f `fmodp` 101) [0..]
-  *FROverZp> take 5 fps
+  *FROverZp> let fs = map f [0..]
+  *FROverZp> accessibleData' fs 101 == accessibleData f 101
+  True
+  *FROverZp> take 5 $ accessibleData f 101
   [34,82,43,18,7]
   *FROverZp> difsp 101 it
   [48,62,76,90]
   *FROverZp> difsp 101 it
-  [14,14,14]
+  [14,14,14] 
 
 > difListsp :: Integral b => b -> [[b]] -> [[b]]
 > difListsp _ [] = []
@@ -85,7 +87,7 @@ Degree, eager and lazy versions
 > degreep'Lazy p xs = helper xs 0
 >   where
 >     helper as@(a:b:c:_) n
->       | a==b && b==c = n
+>       | a==b && b==c = n -- two times matching
 >       | otherwise    = helper (difsp p as) (n+1)
 >
 > degreep :: Integral b => b -> [b] -> Int
@@ -100,22 +102,6 @@ Degree, eager and lazy versions
   2
   *FROverZp> myDeg 107
   2
-  
-> newtonCp :: (Integral a, Integral t) => a -> [t] -> [t]
-> newtonCp p xs = [x `div` factorial k | (x,k) <- zip xs [0..(p-1)]]
->   where
->     factorial k = product [1.. fromIntegral k]
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> difListsp 101 [take 10 $ accessibleData f 101]
-  [[14,14,14,14,14,14,14,14]
-  ,[48,62,76,90,3,17,31,45,59]
-  ,[34,82,43,18,7,10,27,58,2,61]
-  ]
-  *FROverZp> reverse $ map head it
-  [34,48,14]
-  *FROverZp> newtonCp 101 it
-  [34,48,7]
 
 > firstDifsp :: Integral a => a -> [a] -> [a]
 > firstDifsp p xs = reverse $ map head $ difListsp p [xs]
@@ -124,84 +110,63 @@ Degree, eager and lazy versions
   *FROverZp> firstDifsp 101 $ accessibleData f 101
   [34,48,14]
 
-> list2npolp :: Integral t => t -> [t] -> [t]
-> list2npolp p xs = newtonCp p $ firstDifsp p $ take n xs
->   where n = (degreep p xs) + 2
+> newtonCp :: (Integral a, Integral t) => a -> [t] -> [t]
+> newtonCp p xs = [x `div` factorial k | (x,k) <- zip xs [0..(p-1)]]
+>   where
+>     factorial k = product [1.. fromIntegral k]
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> let fsp p = list2npolp p $ accessibleData f p
-  *FROverZp> fsp 101
-  [34,48,7]
-  *FROverZp> npol2pol $ fsp 101
-  [34,41,7]
-  *FROverZp> npol2pol $ fsp 103
-  [69,83,7]
-  *FROverZp> npol2pol $ fsp 107
-  [36,22,7]
 
-> list2polp' :: Integral t => t -> [t] -> [t]
-> list2polp' p xs = npol2pol $ list2npolp p xs
 
-  *FROverZp> list2polp' 101 $ map (f `fmodp` 101) [0..]
-  [34,41,7]
-  *FROverZp> list2polp' 103 $ map (f `fmodp` 103) [0..]
-  [69,83,7]
-  *FROverZp> list2polp' 107 $ map (f `fmodp` 107) [0..]
-  [36,22,7]
+
+We guess these differences (at 0) then transform it as canonical form.
+
+
+
+
+
 
 We ready to guess these data:
 
+  *FROverZp> map (\p -> zip (npol2pol . fsp $ p) (repeat p)) [101,103,107]
+  [[(34,101),(41,101),(7,101)],[(69,103),(83,103),(7,103)],[(36,107),(22,107),(7,107)]]
+  *FROverZp> :t reconstruct
+  reconstruct :: Integral a => [(a, a)] -> Ratio a
+  *FROverZp> map head it
+  [(34,101),(69,103),(36,107)]
+  *FROverZp> reconstruct it
+  1 % 3
+  *FROverZp> map (\p -> zip (npol2pol . fsp $ p) (repeat p)) [101,103,107]
+  [[(34,101),(41,101),(7,101)],[(69,103),(83,103),(7,103)],[(36,107),(22,107),(7,107)]]
 
+  *FROverZp> map (head . tail) it
+  [(41,101),(83,103),(22,107)]
+  *FROverZp> reconstruct it
+  3 % 5
+  *FROverZp> map (\p -> zip (npol2pol . fsp $ p) (repeat p)) [101,103,107]
+  [[(34,101),(41,101),(7,101)],[(69,103),(83,103),(7,103)],[(36,107),(22,107),(7,107)]]
+  *FROverZp> map last it
+  [(7,101),(7,103),(7,107)]
+  *FROverZp> reconstruct it
+  7 % 1
 
+> wellOrd :: Eq a => [[a]] -> [[a]]
+> wellOrd xs 
+>   | head xs == [] = [] 
+>   | otherwise     = map head xs : wellOrd (map tail xs)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-> guessPol' :: Integral t => t -> [t] -> [Ratio t]
-> guessPol' p xs = map (fst . (\a -> guess (a, p))) $ list2polp' p xs  
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> guessPol' 101 $ map (f `fmodp` 101) [0..]
-  [1 % 3,3 % 5,7 % 1]
-  *FROverZp> guessPol' 103 $ map (f `fmodp` 103) [0..]
-  [1 % 3,3 % 5,7 % 1]
-  *FROverZp> guessPol' 107 $ map (f `fmodp` 107) [0..]
+  *FROverZp> wellOrd [[(34,101),(41,101),(7,101)],[(69,103),(83,103),(7,103)],[(36,107),(22,107),(7,107)]]
+  [[(34,101),(69,103),(36,107)],[(41,101),(83,103),(22,107)],[(7,101),(7,103),(7,107)]]
+  *FROverZp> map reconstruct it
   [1 % 3,3 % 5,7 % 1]
 
-  *FROverZp> map (\p -> guessPol' p  (map (`fmodp f p) [0..])) [101,103,107]
-  [[1 % 3,3 % 5,7 % 1],[1 % 3,3 % 5,7 % 1],[1 % 3,3 % 5,7 % 1]]
-  *FROverZp> matches3 $ map (\p -> guessPol' p  (map (f `fmodp` p) [0..])) primes
-  [1 % 3,3 % 5,7 % 1]
+Here is the step-by-step usage of above functions:
 
-> reconstructPol fs = 
->   matches3 $ map (\p -> guessPol' p (accessibleData' fs p)) bigPrimes
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> let fs = map f [0..]
-  *FROverZp> reconstructPol fs
-  [1 % 3,3 % 5,7 % 1]
-  
-
-
-
-
-
+  *FROverZp> let g x = (1%3) + (3%5)*x + (5%7)*x^2 + (7%9)*x^3
+  *FROverZp> let gs = map g [0..]
+  *FROverZp> let gsp p = list2npolp p $ accessibleData g p
+  *FROverZp> let gData = map (\p -> zip (npol2pol . gsp $ p) (repeat p)) bigPrimes 
+  *FROverZp> let gData' = wellOrd gData 
+  *FROverZp> map reconstruct gData'
+  [1 % 3,1 % 10,19 % 7,7 % 9]
 
 
