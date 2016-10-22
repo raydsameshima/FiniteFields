@@ -7,7 +7,6 @@ https://arxiv.org/pdf/1608.01902.pdf
 > import Data.Ratio 
 > import Data.Maybe
 > import Data.Numbers.Primes
-
 > import System.Random
 
 > coprime :: Integral a => a -> a -> Bool
@@ -15,35 +14,15 @@ https://arxiv.org/pdf/1608.01902.pdf
 
 Consider a finite ring
   Z_n := [0..(n-1)]
-
-> haveInverse :: Integral a => a -> [Bool]
-> haveInverse n = map (coprime n) [0..(n-1)]
-
-  *Ffield> haveInverse 8
-  [False,True,False,True,False,True,False,True]
-  *Ffield> zip [0..] $ haveInverse 8
-  [(0,False),(1,True),(2,False),(3,True),(4,False),(5,True),(6,False),(7,True)]
-
 If any non-zero element has its multiplication inverse, then the ring is a field:
-
-> isField' :: Integral a => a -> Bool
-> isField' n = and $ tail $ haveInverse n
-
-Or more efficiently,
 
 > isField :: Integral a => a -> Bool
 > isField = isPrime
-
-  zip [2..] $ map isField [2..13]
-  [(2,True),(3,True),(4,False),(5,True),(6,False),(7,True),(8,False),(9,False),(10,False),(11,True),(12,False),(13,True)]
 
 Here we would like to implement the extended Euclidean algorithm.
 See the algorithm, examples, and pseudo code at:
 
   https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
-
-I've asked at Qiita and get some solutions:
-
   http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7
 
 > exGCD' :: (Integral n) => n -> n -> ([n], [n], [n], [n])
@@ -68,57 +47,50 @@ I've asked at Qiita and get some solutions:
 This example is from wikipedia:
 
   *Ffield> exGCD' 240 46
-  ([5,4,1,1,2],[240,46,10,6,4,2],[1,0,1,-4,5,-9,23],[0,1,-5,21,-26,47,-120])
+  ([5,4,1,1,2]
+  ,[240,46,10,6,4,2]
+  ,[1,0,1,-4,5,-9,23]
+  ,[0,1,-5,21,-26,47,-120]
+  )
   *Ffield> gcd 240 46
   2
   *Ffield> 240*(-9) + 46*(47)
   2
 
 > -- a*x + b*y = gcd a b
-> exGcd :: Integral t => t -> t -> (t, t, t)
-> exGcd a b = (g, x, y)
+> exGCD :: Integral t => t -> t -> (t, t, t)
+> exGCD a b = (g, x, y)
 >   where
 >     (_,r,s,t) = exGCD' a b
 >     g = last r
 >     x = last . init $ s
 >     y = last . init $ t
 
-  *Ffield> exGcd 46 240
-  (2,47,-9)
-  *Ffield> 46*47 + 240*(-9)
-  2
-  *Ffield> gcd 46 240
-  2
-
 Example Z_{11}
 
   *Ffield> isField 11
   True
-  *Ffield> map (exGcd 11) [0..10]
+  *Ffield> map (exGCD 11) [0..10]
   [(11,1,0),(1,0,1),(1,1,-5),(1,-1,4),(1,-1,3)
   ,(1,1,-2),(1,-1,2),(1,2,-3),(1,3,-4),(1,-4,5),(1,1,-1)
   ]
 
-  *Ffield> map ((`mod` 11) . (\(_,_,x)->x) . exGcd 11) [1..10] 
+  *Ffield> map ((`mod` 11) . (\(_,_,x)->x) . exGCD 11) [1..10] 
   [1,6,4,3,9,2,8,7,5,10]
+
+We get non-zero elements with its inverse:
+
   *Ffield> zip [1..10] it
   [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
-
-> inverses :: Integral a => a -> Maybe [(a,a)]
-> inverses n
->   | isPrime n = Just lst -- isPrime n
->   | otherwise = Nothing
->   where
->     lst' = map ((`mod` n) . (\(_,_,c)->c) . exGcd n) [1..(n-1)]
->     lst = zip [1..] lst'
->     
+     
+> -- a^{-1} (in Z_p) == a `inversep` p
 > inversep :: Integral a => a -> a -> Maybe a
-> inversep p a = let (_,x,y) = exGcd p a in
+> a `inversep` p = let (_,x,y) = exGCD p a in
 >   if isPrime p then Just (y `mod` p)
 >                else Nothing
-
-  map (inversep 10007) [1..10006]
-  (1.74 secs, 771,586,416 bytes)
+>
+> inversesp :: Integral a => a -> [Maybe a]
+> inversesp p = map (`inversep` p) [1..(p-1)]
 
 A map from Q to Z_p.
 
@@ -127,7 +99,7 @@ A map from Q to Z_p.
 > q `modp` p = (a * (bi `mod` p)) `mod` p
 >   where
 >     (a,b) = (numerator q, denominator q)
->     bi = fromJust $ inversep p b
+>     bi = fromJust (a `inversep` p)
 
 Example: on Z_{11}
 Consider (3 % 7).
@@ -160,7 +132,8 @@ Example: on Z_{5}
   *Ffield Data.Ratio> modp q 5 
   4
 
-Reconstruction Z_p -> Q
+Example of reconstruction Z_p -> Q
+
   *Ffield> let q = (1%3)
   *Ffield> take 3 $ dropWhile (<100) primes
   [101,103,107]
@@ -174,6 +147,7 @@ Reconstruction Z_p -> Q
   *Ffield> rec 107
   ([0,2,1,35],[36,107,36,35,1],[1,0,1,-2,3,-107],[0,1,0,1,-1,36])  
 
+> -- This is guess function without Chinese Reminder Theorem.
 > guess :: Integral t => 
 >          (t, t)       -- (q `modp` p, p)
 >       -> (Ratio t, t)
@@ -310,7 +284,7 @@ Chinese Remeinder Theorem, and its usage
   *Ffield> take 2 knownData 
   [(882873,897473),(365035,897497)]
   *Ffield> let [(a1,p1),(a2,p2)] = it
-  *Ffield> (inversep p1 p2)
+  *Ffield> (inversep p2 p1)
   Just 261763
   *Ffield> 261763 `mod` p1
   f261763
@@ -322,7 +296,7 @@ Chinese Remeinder Theorem, and its usage
   *Ffield> let m1 = (261763 `mod` p1) * p2
   *Ffield> m1
   234931507211
-  *Ffield> inversep p2 p1
+  *Ffield> inversep p1 p2
   Just 635727
   *Ffield> let m2 = (635727 `mod` p2) * p1
   *Ffield> m2
@@ -346,8 +320,8 @@ Chinese Remeinder Theorem, and its usage
   *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData 
   *Ffield> it
   (895 % 922,805479325081)
-  *Ffield> let m1 = (fromJust $ inversep p1 p2)*p2
-  *Ffield> let m2 = (fromJust $ inversep p2 p1)*p1
+  *Ffield> let m1 = (fromJust $ inversep p2 p1)*p2
+  *Ffield> let m2 = (fromJust $ inversep p1 p2)*p1
   *Ffield> let a = (m1*a1 + m2*a2) `mod` (p1*p2)
   *Ffield> a
   86488560937
