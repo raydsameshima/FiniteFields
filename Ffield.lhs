@@ -8,6 +8,8 @@ https://arxiv.org/pdf/1608.01902.pdf
 > import Data.Maybe
 > import Data.Numbers.Primes
 
+> import System.Random
+
 > coprime :: Integral a => a -> a -> Bool
 > coprime a b = gcd a b == 1
 
@@ -230,3 +232,55 @@ Here is a naive test:
   *Ffield> matches3' $ map guess knownData 
   (331 % 739,614693)
   (19.92 secs, 12,290,852,136 bytes)
+
+> trial = do
+>   n <- randomRIO (0,1000) :: IO Int
+>   d <- randomRIO (1,1000) :: IO Int
+>   putStrLn $ "input: " ++ show (n%d)
+>   let knownData = zip (map (modp (n%d)) bigPrimes) bigPrimes
+>   return $ matches3' $ map guess knownData
+>   putStrLn $ show $ (n%d) == fst (matches3' $ map guess knownData)
+
+Our choice of bigPrimes are sometimes fail:
+
+  *Ffield> trial
+  input: 895 % 922
+  ^[[A^?^?*** Exception: Ffield.lhs:(224,3)-(226,37): Non-exhaustive patterns in function matches3'
+
+> trial' = do
+>   n <- randomRIO (0,1000) :: IO Int
+>   d <- randomRIO (1,1000) :: IO Int
+>   putStrLn $ "input: " ++ show (n%d)
+>   let knownData = zip (map (modp (n%d)) bigger) bigger
+>   return $ matches3' $ map guess knownData
+>   putStrLn $ show (matches3' $ map guess knownData) 
+>   putStrLn $ show $ (n%d) == fst (matches3' $ map guess knownData)
+ 
+> bigger = dropWhile (<897473) primes
+  
+  *Ffield> trial'
+  input: 125 % 399
+  (125 % 399,897473)
+  True
+  (0.25 secs, 310,621,352 bytes)
+  *Ffield> trial'
+  input: 112 % 939
+  (112 % 939,909383)
+  True
+  (0.40 secs, 378,062,424 bytes)
+  *Ffield> trial'
+  input: 297 % 391
+  (297 % 391,897473)
+  True
+  (0.01 secs, 2,101,240 bytes)
+  *Ffield> trial'
+  input: 17 % 16
+  (17 % 16,897473)
+  True
+  (0.01 secs, 2,103,728 bytes)
+  *Ffield> trial'
+  input: 125 % 102
+  (125 % 102,897473)
+  True
+  (0.01 secs, 2,103,848 bytes)
+
