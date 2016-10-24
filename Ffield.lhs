@@ -85,9 +85,10 @@ We get non-zero elements with its inverse:
      
 > -- a^{-1} (in Z_p) == a `inversep` p
 > inversep :: Integral a => a -> a -> Maybe a
-> a `inversep` p = let (_,x,_) = exGCD a p in
->   if isPrime p then Just (x `mod` p)
->                else Nothing
+> a `inversep` p = let (g,x,_) = exGCD a p in
+> --  if isPrime p then Just (x `mod` p)
+>   if (g == 1) then Just (x `mod` p)
+>               else Nothing
 >
 > inversesp :: Integral a => a -> [Maybe a]
 > inversesp p = map (`inversep` p) [1..(p-1)]
@@ -149,9 +150,10 @@ Example of reconstruction Z_p -> Q
 >         | s /= 0 && r*r <= p && s*s <= p = r%s
 >         | otherwise = select rs ss p
 >
-> -- Hard code of big primes.
-> -- bigPrimes :: [Int]
-> bigPrimes = dropWhile (< (897473 :: Integer)) $ takeWhile (< (978948 :: Integer)) primes  
+> -- Hard code of big primes
+> -- For chinese reminder theorem we declare it as [Integer].
+> bigPrimes :: [Integer]
+> bigPrimes = dropWhile (< 897473) $ takeWhile (< 978948) primes  
 >
 > matches3 :: Eq a => [a] -> a
 > matches3 (a:bb@(b:c:cs))
@@ -255,88 +257,9 @@ Our choice of bigPrimes are sometimes fail:
 
 --
 Chinese Remeinder Theorem, and its usage
-
-  *Ffield> let q = 895 % 922
-  *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes 
-  *Ffield> take 10 knownData 
-  [(882873,897473),(365035,897497),(705735,897499),(511060,897517),(526641,897527),(30179,897553),(760296,897557),(330016,897563),(567554,897571),(137266,897577)]
-  *Ffield> map guess it
-  [((-854) % 123,897473),((-656) % 327,897497),((-192) % 805,897499),((-491) % 497,897517),((-856) % 121,897527),((-194) % 803,897553),((-161) % 837,897557),((-559) % 427,897563),((-493) % 495,897571),((-891) % 85,897577)]
-  *Ffield> last knownData 
-  (491598,978947)
-  *Ffield> guess it
-  ((-391) % 691,978947)
-  *Ffield> uncurry exGCD' (882873,897473)
-  ([0,1,60,2,8,20,1,4,1,6]
-  ,[882873,897473,882873,14600,6873,854,41,34,7,6,1]
-  ,[1,0,1,-1,61,-123,1045,-21023,22068,-109295,131363,-897473]
-  ,[0,1,0,1,-60,121,-1028,20681,-21709,107517,-129226,882873]
-  )
-
-  *Ffield> take 2 knownData 
-  [(882873,897473),(365035,897497)]
-  *Ffield> let [(a1,p1),(a2,p2)] = it
-  *Ffield> (inversep p2 p1)
-  Just 261763
-  *Ffield> 261763 `mod` p1
-  f261763
-  *Ffield> it * p2
-  234931507211
-  *Ffield> let m1 = it * p2
-  *Ffield> m1
-  210850322927350867
-  *Ffield> let m1 = (261763 `mod` p1) * p2
-  *Ffield> m1
-  234931507211
-  *Ffield> inversep p1 p2
-  Just 635727
-  *Ffield> let m2 = (635727 `mod` p2) * p1
-  *Ffield> m2
-  570547817871
-  *Ffield> let a = m1*a1 + m2*a2
-  *Ffield> a
-  415684607262437688
-  *Ffield> p1*p2
-  805479325081
-  *Ffield> a `mod` (p1*p2)
-  86488560937
-  *Ffield> guess (86488560937, p1*p2)
-  (86488560937 % 1,805479325081)
-  *Ffield> uncurry exGCD' (86488560937, p1*p2)
-  ([0,9,3,5,6,976113,1,1,1,1,2,1,1,1,8,2]
-  ,[86488560937,805479325081,86488560937,27082276648,5241730993,873621683,895,548,347,201,146,55,36,19,17,2,1]
-  ,[1,0,1,-9,28,-149,922,-899976335,899977257,-1799953592,2699930849,-4499884441,11699699731,-16199584172,27899283903,-44098868075,380690228503,-805479325081]
-  ,[0,1,0,1,-3,16,-99,96635203,-96635302,193270505,-289905807,483176312,-1256258431,1739434743,-2995693174,4735127917,-40876716510,86488560937]
-  )
-  *Ffield> uncurry exGCD' (a, p1*p2)
-  ([516071,9,3,5,6,976113,1,1,1,1,2,1,1,1,8,2],[415684607262437688,805479325081,86488560937,27082276648,5241730993,873621683,895,548,347,201,146,55,36,19,17,2,1],[1,0,1,-9,28,-149,922,-899976335,899977257,-1799953592,2699930849,-4499884441,11699699731,-16199584172,27899283903,-44098868075,380690228503,-805479325081],[0,1,-516071,4644640,-14449991,76894595,-475817561,464451783814988,-464452259632549,928904043447537,-1393356303080086,2322260346527623,-6037876996135332,8360137342662955,-14398014338798287,22758151681461242,-196463227790488223,415684607262437688])
-
-  *Ffield> let q = (895%922)
-  *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes 
-  *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData 
-  *Ffield> it
-  (895 % 922,805479325081)
-  *Ffield> let m1 = (fromJust $ inversep p2 p1)*p2
-  *Ffield> let m2 = (fromJust $ inversep p1 p2)*p1
-  *Ffield> let a = (m1*a1 + m2*a2) `mod` (p1*p2)
-  *Ffield> a
-  86488560937
-  *Ffield> let p = p1*p2
-  *Ffield> p
-  805479325081
-  *Ffield> guess (a,p)
-  (86488560937 % 1,805479325081)
-  *Ffield> p
-  805479325081
-  *Ffield> a
-  86488560937
-  *Ffield> guess (86488560937, 805479325081)
-  (895 % 922,805479325081)
-
-> {-
-> imagesAndPrimes :: Ratio Int -> [(Int, Int)]
+ 
+> imagesAndPrimes ::  Rational-> [(Integer, Integer)]
 > imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
-> -}
 
   *Ffield> let q = 895%922
   *Ffield> let knownData = imagesAndPrimes q
@@ -365,12 +288,40 @@ Chinese Remeinder Theorem, and its usage
 
 > crtRec' (a1,p1) (a2,p2) = (a,p)
 >   where
->     a = (m1*a1 + m2*a2) `mod` p
->     m1 = fromJust (p2 `inversep` p1) * p2
->     m2 = fromJust (p1 `inversep` p2) * p1
+> --  a = (m1*a1 + m2*a2) `mod` p
+>     a = (a1*p2*m2 + a2*p1*m1) `mod` p
+>     m1 = fromJust (p1 `inversep` p2) 
+>     m2 = fromJust (p2 `inversep` p1)
 >     p = p1*p2
 >
 > pile :: (a -> a -> a) -> [a] -> [a]
 > pile f [] = []
-> pile f dd@(d:ds) = d : zipWith f (pile f dd) ds
+> pile f dd@(d:ds) = d : zipWith' f (pile f dd) ds
+>
+> -- Strict zipWith, from:
+> --   http://d.hatena.ne.jp/kazu-yamamoto/touch/20100624/1277348961
+> zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
+> zipWith' f (a:as) (b:bs) = (x `seq` x) : zipWith' f as bs
+>   where x = f a b
+> zipWith' _ _      _      = []
 
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> take 4 knownData 
+  [(882873,897473)
+  ,(365035,897497)
+  ,(705735,897499)
+  ,(511060,897517)
+  ]
+  *Ffield> pile crtRec' it
+  [(882873,897473)
+  ,(86488560937,805479325081)
+  ,(397525881357811624,722916888780872419)
+  ,(232931448259966259937614,648830197267942270883623)
+  ]
+  *Ffield> map guess it
+  [((-854) % 123,897473)
+  ,(895 % 922,805479325081)
+  ,(895 % 922,722916888780872419)
+  ,(895 % 922,648830197267942270883623)
+  ]

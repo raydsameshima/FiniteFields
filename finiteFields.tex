@@ -859,6 +859,79 @@ where
 \end{eqnarray}
 
 \subsubsection{TBA: IMPLEMENTATION}
+\begin{verbatim}
+Chinese Remeinder Theorem, and its usage
+ 
+> imagesAndPrimes ::  Rational-> [(Integer, Integer)]
+> imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
+
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData 
+  *Ffield> take 2 knownData 
+  [(882873,897473),(365035,897497)]
+  *Ffield> map guess it
+  [((-854) % 123,897473),((-656) % 327,897497)]
+  
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData 
+  *Ffield> let m1 = fromJust (p2 `inversep` p1) * p2
+  *Ffield> let m2 = fromJust (p1 `inversep` p2) * p1
+  *Ffield> let p = p1*p2
+  *Ffield> let a = (m1*a1 + m2*a2) `mod` p
+  *Ffield> a
+  86488560937
+  *Ffield> p
+  805479325081
+  *Ffield> guess (a,p)
+  (86488560937 % 1,805479325081) -- overflow!
+
+  *Ffield> guess (86488560937, 805479325081)
+  (895 % 922,805479325081)
+
+> crtRec' (a1,p1) (a2,p2) = (a,p)
+>   where
+> --  a = (m1*a1 + m2*a2) `mod` p
+>     a = (a1*p2*m2 + a2*p1*m1) `mod` p
+>     m1 = fromJust (p1 `inversep` p2) 
+>     m2 = fromJust (p2 `inversep` p1)
+>     p = p1*p2
+>
+> pile :: (a -> a -> a) -> [a] -> [a]
+> pile f [] = []
+> pile f dd@(d:ds) = d : zipWith' f (pile f dd) ds
+>
+> -- Strict zipWith, from:
+> --   http://d.hatena.ne.jp/kazu-yamamoto/touch/20100624/1277348961
+> zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
+> zipWith' f (a:as) (b:bs) = (x `seq` x) : zipWith' f as bs
+>   where x = f a b
+> zipWith' _ _      _      = []
+
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> take 4 knownData 
+  [(882873,897473)
+  ,(365035,897497)
+  ,(705735,897499)
+  ,(511060,897517)
+  ]
+  *Ffield> pile crtRec' it
+  [(882873,897473)
+  ,(86488560937,805479325081)
+  ,(397525881357811624,722916888780872419)
+  ,(232931448259966259937614,648830197267942270883623)
+  ]
+  *Ffield> map guess it
+  [((-854) % 123,897473)
+  ,(895 % 922,805479325081)
+  ,(895 % 922,722916888780872419)
+  ,(895 % 922,648830197267942270883623)
+  ]
+\end{verbatim}
+
+
 
 \section{Polynomials and rational functions}
 The following discussion on an arbitrary field $\mathbb{K}$.
