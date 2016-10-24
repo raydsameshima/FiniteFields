@@ -85,8 +85,8 @@ We get non-zero elements with its inverse:
      
 > -- a^{-1} (in Z_p) == a `inversep` p
 > inversep :: Integral a => a -> a -> Maybe a
-> a `inversep` p = let (_,x,y) = exGCD p a in
->   if isPrime p then Just (y `mod` p)
+> a `inversep` p = let (_,x,_) = exGCD a p in
+>   if isPrime p then Just (x `mod` p)
 >                else Nothing
 >
 > inversesp :: Integral a => a -> [Maybe a]
@@ -99,38 +99,27 @@ A map from Q to Z_p.
 > q `modp` p = (a * (bi `mod` p)) `mod` p
 >   where
 >     (a,b) = (numerator q, denominator q)
->     bi = fromJust (a `inversep` p)
+>     bi = fromJust (b `inversep` p)
 
 Example: on Z_{11}
 Consider (3 % 7).
 
-  *Ffield Data.Ratio> let q = 3 % 7
-  *Ffield Data.Ratio> 3 `mod` 11
+  *Ffield> let q = 3%7
+  *Ffield> 3 `mod` 11
   3
-  *Ffield Data.Ratio> 7 `mod` 11
-  7
-  *Ffield Data.Ratio> inverses 11
-  Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
-  *Ffield Data.Ratio> 7*8 == 11*5+1
-  True
+  *Ffield> 7 `inversep` 11
+  Just 8
+  *Ffield> fromJust it * 3 `mod` 11
+  2
 
 On Z_{11}, (7^{-1} `mod` 11) is equal to (8 `mod` 11) and
+
   (3%7) |-> (3 * (7^{-1} `mod` 11) `mod` 11)
              == (3*8 `mod` 11) 
              == 2 ` mod 11
 
-  *Ffield Data.Ratio> modp q 11
+  *Ffield> (3%7) `modp` 11
   2
-
-Example: on Z_{5}
-  *Ffield Data.Ratio> 3 `mod` 5
-  3
-  *Ffield Data.Ratio> 7 `mod` 5
-  2
-  *Ffield Data.Ratio> inverses 5
-  Just [(1,1),(2,3),(3,2),(4,4)]
-  *Ffield Data.Ratio> modp q 5 
-  4
 
 Example of reconstruction Z_p -> Q
 
@@ -157,12 +146,12 @@ Example of reconstruction Z_p -> Q
 >       select :: Integral t => [t] -> [t] -> t -> Ratio t
 >       select [] _ _ = 0%1
 >       select (r:rs) (s:ss) p
->         | s /= 0 && r^2 <= p && s^2 <= p = r%s
+>         | s /= 0 && r*r <= p && s*s <= p = r%s
 >         | otherwise = select rs ss p
 >
 > -- Hard code of big primes.
-> bigPrimes :: [Int]
-> bigPrimes = dropWhile (< 897473) $ takeWhile (< 978948) primes  
+> -- bigPrimes :: [Int]
+> bigPrimes = dropWhile (< (897473 :: Integer)) $ takeWhile (< (978948 :: Integer)) primes  
 >
 > matches3 :: Eq a => [a] -> a
 > matches3 (a:bb@(b:c:cs))
@@ -176,6 +165,7 @@ What we know is a list of (q `modp` p) and prime p.
   *Ffield> matches3 $  map (fst . guess) knownData 
   10 % 19
 
+> -- This function does not use CRT, so it can fail (O(10^3)%O(10^3)).
 > reconstruct :: Integral a => 
 >                [(a, a)]  -- :: [(Z_p, primes)]
 >             -> Ratio a
@@ -210,6 +200,7 @@ Here is a naive test:
 --
 Test, we first tried to use QuickCheck, but it does not work.
 
+> {-
 > trial = do
 >   n <- randomRIO (0,1000) :: IO Int
 >   d <- randomRIO (1,1000) :: IO Int
@@ -234,6 +225,7 @@ Our choice of bigPrimes are sometimes fail:
 >   putStrLn $ show $ (n%d) == fst (matches3' $ map guess knownData)
  
 > bigger = dropWhile (<897473) primes
+> -}
   
   *Ffield> trial'
   input: 125 % 399
@@ -311,7 +303,11 @@ Chinese Remeinder Theorem, and its usage
   *Ffield> guess (86488560937, p1*p2)
   (86488560937 % 1,805479325081)
   *Ffield> uncurry exGCD' (86488560937, p1*p2)
-  ([0,9,3,5,6,976113,1,1,1,1,2,1,1,1,8,2],[86488560937,805479325081,86488560937,27082276648,5241730993,873621683,895,548,347,201,146,55,36,19,17,2,1],[1,0,1,-9,28,-149,922,-899976335,899977257,-1799953592,2699930849,-4499884441,11699699731,-16199584172,27899283903,-44098868075,380690228503,-805479325081],[0,1,0,1,-3,16,-99,96635203,-96635302,193270505,-289905807,483176312,-1256258431,1739434743,-2995693174,4735127917,-40876716510,86488560937])
+  ([0,9,3,5,6,976113,1,1,1,1,2,1,1,1,8,2]
+  ,[86488560937,805479325081,86488560937,27082276648,5241730993,873621683,895,548,347,201,146,55,36,19,17,2,1]
+  ,[1,0,1,-9,28,-149,922,-899976335,899977257,-1799953592,2699930849,-4499884441,11699699731,-16199584172,27899283903,-44098868075,380690228503,-805479325081]
+  ,[0,1,0,1,-3,16,-99,96635203,-96635302,193270505,-289905807,483176312,-1256258431,1739434743,-2995693174,4735127917,-40876716510,86488560937]
+  )
   *Ffield> uncurry exGCD' (a, p1*p2)
   ([516071,9,3,5,6,976113,1,1,1,1,2,1,1,1,8,2],[415684607262437688,805479325081,86488560937,27082276648,5241730993,873621683,895,548,347,201,146,55,36,19,17,2,1],[1,0,1,-9,28,-149,922,-899976335,899977257,-1799953592,2699930849,-4499884441,11699699731,-16199584172,27899283903,-44098868075,380690228503,-805479325081],[0,1,-516071,4644640,-14449991,76894595,-475817561,464451783814988,-464452259632549,928904043447537,-1393356303080086,2322260346527623,-6037876996135332,8360137342662955,-14398014338798287,22758151681461242,-196463227790488223,415684607262437688])
 
@@ -336,3 +332,45 @@ Chinese Remeinder Theorem, and its usage
   86488560937
   *Ffield> guess (86488560937, 805479325081)
   (895 % 922,805479325081)
+
+> {-
+> imagesAndPrimes :: Ratio Int -> [(Int, Int)]
+> imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
+> -}
+
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData 
+  *Ffield> take 2 knownData 
+  [(882873,897473),(365035,897497)]
+  *Ffield> map guess it
+  [((-854) % 123,897473),((-656) % 327,897497)]
+  
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData 
+  *Ffield> let m1 = fromJust (p2 `inversep` p1) * p2
+  *Ffield> let m2 = fromJust (p1 `inversep` p2) * p1
+  *Ffield> let p = p1*p2
+  *Ffield> let a = (m1*a1 + m2*a2) `mod` p
+  *Ffield> a
+  86488560937
+  *Ffield> p
+  805479325081
+  *Ffield> guess (a,p)
+  (86488560937 % 1,805479325081) -- overflow!
+
+  *Ffield> guess (86488560937, 805479325081)
+  (895 % 922,805479325081)
+
+> crtRec' (a1,p1) (a2,p2) = (a,p)
+>   where
+>     a = (m1*a1 + m2*a2) `mod` p
+>     m1 = fromJust (p2 `inversep` p1) * p2
+>     m2 = fromJust (p1 `inversep` p2) * p1
+>     p = p1*p2
+>
+> pile :: (a -> a -> a) -> [a] -> [a]
+> pile f [] = []
+> pile f dd@(d:ds) = d : zipWith f (pile f dd) ds
+
