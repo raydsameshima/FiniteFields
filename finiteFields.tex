@@ -112,7 +112,7 @@ Instead of loops, we use (implicit) recursions in functional language.\footnote{
 \chapter{Basics}
 We have assumed living knowledge on (axiomatic, i.e., ZFC) set theory, algebraic structures.
 
-\section{Finite field}
+\section{Finite fields}
 \begin{verbatim}
 Ffield.lhs
 
@@ -332,7 +332,7 @@ r_i &=& r_{i-2}  - q_i * r_{i-1} \\
 \end{eqnarray}
 Therefore, inductively we get
 \begin{eqnarray}
-\gcd(a,b) = r_{k-1} = a*s_{k-1} + b*t_{k-1}. =: a*s + b*t.
+\gcd(a,b) = r_{k-1} = a*s_{k-1} + b*t_{k-1}. =: a*x + b*y.
 \end{eqnarray}
 This prove B\'ezout's lemma. \\
 $\blacksquare$
@@ -394,11 +394,11 @@ It works, and we have other simpler examples:
   *Ffield> 15*7 + (-4)*26
   1
 \end{verbatim}
-Now what we should do is extract gcd of $a$ and $b$, and $(s,t)$ from the tuple of lists:
+Now what we should do is extract gcd of $a$ and $b$, and $(x, y)$ from the tuple of lists:
 \begin{verbatim}
 > -- a*x + b*y = gcd a b
-> exGcd :: Integral t => t -> t -> (t, t, t)
-> exGcd a b = (g, x, y)
+> exGCD :: Integral t => t -> t -> (t, t, t)
+> exGCD a b = (g, x, y)
 >   where
 >     (_,r,s,t) = exGCD' a b
 >     g = last r
@@ -406,9 +406,9 @@ Now what we should do is extract gcd of $a$ and $b$, and $(s,t)$ from the tuple 
 >     y = last . init $ t
 \end{verbatim}
 where the underscore \verb+_+ is a special symbol in Haskell that hits every pattern, since we do not need the quotient list.
-So, in order to get gcd and $(s,t)$ we don't need quotients list.
+So, in order to get gcd and $(x, y)$ we don't need quotients list.
 \begin{verbatim}
-  *Ffield> exGcd 46 240
+  *Ffield> exGCD 46 240
   (2,47,-9)
   *Ffield> 46*47 + 240*(-9)
   2
@@ -448,6 +448,7 @@ This $s$, by taking its modulo $n$ is our $b = a^{-1}$:
 \begin{eqnarray}
 a*s = 1 \mod n.
 \end{eqnarray}
+We will make a Haskell implementation in \S\ref{inverses}.\\
 $\blacksquare$
 
 \subsection{Corollary (Finite field $\mathbb{Z}_p$)}
@@ -470,16 +471,16 @@ so all non-zero element has its inverse in $ \mathbb{Z}_p$.\\
 $\blacksquare$
 
 \subsubsection{Example and implementation}
+\label{inverses}
 Let us pick 11 as a prime and consider $\mathbb{Z}_{11}$:
 \begin{verbatim}
-Example Z_{11}
+  Example Z_{11}
 
   *Ffield> isField 11
   True
-  *Ffield> map (exGcd 11) [0..10]
+  *Ffield> map (exGCD 11) [0..10]
   [(11,1,0),(1,0,1),(1,1,-5),(1,-1,4),(1,-1,3)
-  ,(1,1,-2),(1,-1,2),(1,2,-3),(1,3,-4),(1,-4,5)
-  ,(1,1,-1)
+  ,(1,1,-2),(1,-1,2),(1,2,-3),(1,3,-4),(1,-4,5),(1,1,-1)
   ]
 \end{verbatim}
 This list of three-tuple let us know the candidate of inverse.
@@ -500,12 +501,14 @@ In fact,
 \end{eqnarray}
 So, picking up the third elements in tuple and zipping with nonzero elements, we have a list of inverses:
 \begin{verbatim}
-  *Ffield> map ((`mod` 11) . (\(_,_,x)->x) . exGcd 11) [1..10] 
+  *Ffield> map ((`mod` 11) . (\(_,_,x)->x) . exGCD 11) [1..10] 
   [1,6,4,3,9,2,8,7,5,10]
+
+We get non-zero elements with its inverse:
+
   *Ffield> zip [1..10] it
   [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
 \end{verbatim}
-
 Let us generalize these flow into a function\footnote{
 From \url{https://hackage.haskell.org/package/base-4.9.0.0/docs/Data-Maybe.html}:
 \begin{quotation}
@@ -514,52 +517,26 @@ A value of type Maybe a either contains a value of type a (represented as Just a
 Using Maybe is a good way to deal with errors or exceptional cases without resorting to drastic measures such as error.
 \end{quotation}
 }:
-\begin{verbatim}
-> inverses :: Integral a => a -> Maybe [(a,a)]
-> inverses n
->   | isPrime n = Just lst -- isPrime n
->   | otherwise = Nothing
->   where
->     lst' = map ((`mod` n) . (\(_,_,c)->c) . exGcd n) [1..(n-1)]
->     lst = zip [1..] lst'
-\end{verbatim}
-The function \texttt{inverses} returns a list of nonzero number with their inverses if $p$ is prime.
-
-Now we define \texttt{inversep'}\footnote{
-Here we have used do-notation, a syntactic sugar for use with monadic expressions.
-From \url{https://wiki.haskell.org/Monad}:
-\begin{quotation}
-Monads in Haskell can be thought of as composable computation descriptions.
-\end{quotation}
-} whose 1st input is the base $p$ of our ring(field) and 2nd input is an element in $\mathbb{Z}_p$.
-\begin{verbatim}
-> inversep' :: Int -> Int -> Maybe Int
-> inversep' p a = do
->   l <- inverses p
->   let a' = (a `mod` p)
->   return (snd $ l !! (a'-1)) 
-   
-  *Ffield> inverses' 11
-  Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
-\end{verbatim}
-However, this is not efficient, and we refactor it as follows:\footnote{
-Note that, here we use our Haskell code as a script, and we have not compile it.
-Hopefully after compile our code, it become much faster.
-}
-\begin{verbatim}
+\begin{verbatim}  
+> -- a^{-1} (in Z_p) == a `inversep` p
 > inversep :: Integral a => a -> a -> Maybe a
-> inversep p a = let (_,x,y) = exGcd p a in
->   if isPrime p then Just (y `mod` p)
->                else Nothing
+> a `inversep` p = let (g,x,_) = exGCD a p in
+>   if (g == 1) then Just (x `mod` p)
+>               else Nothing
+\end{verbatim}
+This \texttt{inversep} function returns the inverse with respect to second argument, if they are coprime, i.e. $\gcd$ is 1.
+So the second argument should not be prime.
+\begin{verbatim}
+> inversesp :: Integral a => a -> [Maybe a]
+> inversesp p = map (`inversep` p) [1..(p-1)]
 
-
-  map (inversep' 10007) [1..10006]
-  (12.99 secs, 17,194,752,504 bytes)
-  map (inversep 10007) [1..10006]
-  (1.74 secs, 771,586,416 bytes)
+  *Ffield> inversesp 11
+  [Just 1,Just 6,Just 4,Just 3,Just 9,Just 2,Just 8,Just 7,Just 5,Just 10]
+  *Ffield> inversesp 9
+  [Just 1,Just 5,Nothing,Just 7,Just 2,Nothing,Just 4,Just 8]
 \end{verbatim}
 
-
+\section{Rational number reconstruction}
 \subsection{A map from $\mathbb{Q}$ to $\mathbb{Z}_p$}
 Let $p$ be a prime.
 Now we have a map
@@ -607,24 +584,24 @@ A map from Q to Z_p.
 > q `modp` p = (a * (bi `mod` p)) `mod` p
 >   where
 >     (a,b) = (numerator q, denominator q)
->     bi = fromJust $ inversep p b
+>     bi = fromJust (b `inversep` p)
 \end{verbatim}
 Let us consider a rational number $\frac{3}{7}$ on a finite field $\mathbb{Z}_{11}$:
 \begin{verbatim}
 Example: on Z_{11}
 Consider (3 % 7).
 
-  *Ffield Data.Ratio> let q = 3 % 7
-  *Ffield Data.Ratio> 3 `mod` 11
+  *Ffield> let q = 3%7
+  *Ffield> 3 `mod` 11
   3
-  *Ffield Data.Ratio> 7 `mod` 11
-  7
-  *Ffield Data.Ratio> inverses 11
-  Just [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
+  *Ffield> 7 `inversep` 11
+  Just 8
+  *Ffield> (3*8) `mod` 11
+  2
 \end{verbatim}
 For example, pick 7:
 \begin{verbatim}  
-  *Ffield Data.Ratio> 7*8 == 11*5+1
+  *Ffield> 7*8 == 11*5+1
   True
 \end{verbatim}
 Therefore, on $\mathbb{Z}_{11}$, $(7^{-1} \mod 11)$ is equal to $(8 \mod 11)$ and
@@ -636,7 +613,7 @@ Therefore, on $\mathbb{Z}_{11}$, $(7^{-1} \mod 11)$ is equal to $(8 \mod 11)$ an
 \end{eqnarray}
 Haskell returns the same result
 \begin{verbatim}  
-  *Ffield Data.Ratio> q `modp` 11
+  *Ffield> q `modp` 11
   2
 \end{verbatim}
 and consistent.
@@ -704,9 +681,10 @@ From the above observations we can make a simple "guess" function:
 \end{verbatim}
 We have put a list of big primes as follows.
 \begin{verbatim}
-> -- Hard code of big primes.
-> bigPrimes :: [Int]
-> bigPrimes = dropWhile (< 897473) $ takeWhile (<978948) primes  
+> -- Hard code of big primes
+> -- For chinese reminder theorem we declare it as [Integer].
+> bigPrimes :: [Integer]
+> bigPrimes = dropWhile (< 897473) $ takeWhile (< 978948) primes  
 \end{verbatim}
 We choose 3 times match as the termination condition.
 \begin{verbatim}
@@ -720,8 +698,10 @@ Finally, we can check our gadgets.
 What we know is a list of (q `modp` p) and prime p for several (big) primes.
 \begin{verbatim}
   *Ffield> let q = 10%19
-  *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes  
-  *Ffield> matches3 $  map (fst . guess) knownData 
+  *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes 
+  *Ffield> take 3 knownData 
+  [(614061,897473),(377894,897497),(566842,897499)]
+  *Ffield> matches3 $  map (fst . guess) knownData
   10 % 19
 \end{verbatim}
 The following is the function we need, its input is the list of tuple which first element is the image in $\mathbb{Z}_p$ and second element is that prime $p$.
@@ -742,6 +722,13 @@ Here is a naive test:
   > it == qs
   True
 \end{verbatim}
+
+For later use, let us define
+\begin{verbatim}
+> imagesAndPrimes ::  Rational-> [(Integer, Integer)]
+> imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
+\end{verbatim}
+to generate a list of images (of our target rational number) in $Z_p$ and the base primes.
 
 As another example, we have slightly involved function:
 \begin{verbatim}
@@ -772,6 +759,30 @@ Let us see the first good guess, Haskell tells us that in order to reconstruct, 
   *Ffield> matches3' $ map guess $ knowData (12%312)
   (1 % 26,709)
 \end{verbatim}
+
+\subsubsection{A problem}
+Since our choice of \texttt{bigPrimes} are order $10^6$, our reconstruction can fail for rational numbers of
+\begin{eqnarray}
+\frac{O(10^3)}{O(10^3)},
+\end{eqnarray}
+say
+\begin{verbatim}
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> take 4 knownData 
+  [(882873,897473)
+  ,(365035,897497)
+  ,(705735,897499)
+  ,(511060,897517)
+  ]
+  *Ffield> map guess it
+  [((-854) % 123,897473)
+  ,((-656) % 327,897497)
+  ,((-192) % 805,897499)
+  ,((-491) % 497,897517)
+  ]
+\end{verbatim}
+We can solve this by introducing the following theorem.
 
 \subsection{Chinese remainder theorem}
 From wikipedia\footnote{
@@ -816,7 +827,10 @@ Now we have
 n_1 * m_1 &=& 1 \mod n_2 \\
 n_2 * m_2 &=& 1 \mod n_1
 \end{eqnarray}
-that is
+that is\footnote{
+Here we have used slightly different notions from \ref{Tiziano}.
+$m_1$ in \ref{Tiziano} is our $m_2$ times our $n_2$.
+}
 \begin{eqnarray}
 m_1 &=& n_1^{-1} \mod n_2 \\
 m_2 &=& n_2^{-1} \mod n_1.
@@ -858,9 +872,10 @@ where
 \left. m_i = \left( \frac{n_i}{n} \mod n_i \right) \frac{n}{n_i} \right|_{i=1}^k.
 \end{eqnarray}
 
-\subsubsection{TBA: IMPLEMENTATION}
+\subsubsection{Haskell implementation}
+Let us see how our naive \texttt{guess} function fail one more time:
 \begin{verbatim}
-Chinese Remeinder Theorem, and its usage
+Chinese Remainder Theorem, and its usage
  
 > imagesAndPrimes ::  Rational-> [(Integer, Integer)]
 > imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
@@ -872,43 +887,45 @@ Chinese Remeinder Theorem, and its usage
   [(882873,897473),(365035,897497)]
   *Ffield> map guess it
   [((-854) % 123,897473),((-656) % 327,897497)]
-  
-  *Ffield> let q = 895%922
-  *Ffield> let knownData = imagesAndPrimes q
-  *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData 
-  *Ffield> let m1 = fromJust (p2 `inversep` p1) * p2
-  *Ffield> let m2 = fromJust (p1 `inversep` p2) * p1
-  *Ffield> let p = p1*p2
-  *Ffield> let a = (m1*a1 + m2*a2) `mod` p
-  *Ffield> a
-  86488560937
-  *Ffield> p
-  805479325081
-  *Ffield> guess (a,p)
-  (86488560937 % 1,805479325081) -- overflow!
+\end{verbatim}
 
-  *Ffield> guess (86488560937, 805479325081)
-  (895 % 922,805479325081)
-
+It suffices to make a binary version of Chinese Remainder theorem in Haskell:
+\begin{verbatim}
+> crtRec' :: Integral t => (t, t) -> (t, t) -> (t, t)
 > crtRec' (a1,p1) (a2,p2) = (a,p)
 >   where
-> --  a = (m1*a1 + m2*a2) `mod` p
 >     a = (a1*p2*m2 + a2*p1*m1) `mod` p
 >     m1 = fromJust (p1 `inversep` p2) 
 >     m2 = fromJust (p2 `inversep` p1)
 >     p = p1*p2
->
+\end{verbatim}
+\texttt{crtRec'} function takes two tuples of image in $\mathbb{Z}_p$ and primes, and returns these combination.
+Now let us fold.
+\begin{verbatim}
 > pile :: (a -> a -> a) -> [a] -> [a]
 > pile f [] = []
 > pile f dd@(d:ds) = d : zipWith' f (pile f dd) ds
->
+\end{verbatim}
+Schematically, this \texttt{pile} function takes
+\begin{eqnarray}
+\left[d_0, d_1, d_2, d_3, \cdots \right]
+\end{eqnarray}
+and returns
+\begin{eqnarray}
+\left[d_0, f(d_0,d_1), f(f(d_0,d_1),d_2), f(f(f(d_0,d_1),d_2), d_3), \cdots \right]
+\end{eqnarray}
+We have used another higher order function which is slightly modified from standard definition:
+\begin{verbatim}
 > -- Strict zipWith, from:
 > --   http://d.hatena.ne.jp/kazu-yamamoto/touch/20100624/1277348961
 > zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
 > zipWith' f (a:as) (b:bs) = (x `seq` x) : zipWith' f as bs
 >   where x = f a b
 > zipWith' _ _      _      = []
+\end{verbatim}
 
+Let us check our implementation.
+\begin{verbatim}
   *Ffield> let q = 895%922
   *Ffield> let knownData = imagesAndPrimes q
   *Ffield> take 4 knownData 
@@ -928,9 +945,50 @@ Chinese Remeinder Theorem, and its usage
   ,(895 % 922,805479325081)
   ,(895 % 922,722916888780872419)
   ,(895 % 922,648830197267942270883623)
-  ]
 \end{verbatim}
 
+\subsection{\texttt{recCRT}: from image in $\mathbb{Z}_p$ to rational numbers}
+From above discussion, here we can define a function which takes a list of images in $\mathbb{Z}_p$ and returns the rational number.
+\begin{verbatim}
+> recCRT :: Integral a => [(a,a)] -> Ratio a
+> recCRT = reconstruct . pile crtRec'
+
+> recCRT' = matches3' . map guess . pile crtRec'
+
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> recCRT knownData 
+  895 % 922
+  *Ffield> recCRT' knownData 
+  (895 % 922,805479325081)
+\end{verbatim}
+Here is some random checks and results.
+\begin{verbatim}
+todo: use QuickCheck
+
+> trial = do
+>   n <- randomRIO (0,10000) :: IO Integer
+>   d <- randomRIO (1,10000) :: IO Integer
+>   let q = (n%d)
+>   putStrLn $ "input: " ++ show q
+>   return $ recCRT' . imagesAndPrimes $ q
+
+  *Ffield> trial
+  input: 1080 % 6931
+  (1080 % 6931,805479325081)
+  *Ffield> trial
+  input: 2323 % 1248
+  (2323 % 1248,805479325081)
+  *Ffield> trial
+  input: 6583 % 1528
+  (6583 % 1528,805479325081)
+  *Ffield> trial
+  input: 721 % 423
+  (721 % 423,897473)
+  *Ffield> trial
+  input: 9967 % 7410
+  (9967 % 7410,805479325081)
+\end{verbatim}
 
 
 \section{Polynomials and rational functions}

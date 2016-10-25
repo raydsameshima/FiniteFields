@@ -7,6 +7,8 @@ https://arxiv.org/pdf/1608.01902.pdf
 > import Data.Ratio 
 > import Data.Maybe
 > import Data.Numbers.Primes
+>
+> import Test.QuickCheck
 > import System.Random
 
 > coprime :: Integral a => a -> a -> Bool
@@ -100,7 +102,7 @@ A map from Q to Z_p.
 > q `modp` p = (a * (bi `mod` p)) `mod` p
 >   where
 >     (a,b) = (numerator q, denominator q)
->     bi = fromJust (b `inversep` p)
+>     bi    = fromJust (b `inversep` p)
 
 Example: on Z_{11}
 Consider (3 % 7).
@@ -152,7 +154,7 @@ Example of reconstruction Z_p -> Q
 >
 > -- Hard code of big primes
 > -- For chinese reminder theorem we declare it as [Integer].
-> bigPrimes :: [Integer]
+> bigPrimes :: (Integral a) => [a]
 > bigPrimes = dropWhile (< 897473) $ takeWhile (< 978948) primes  
 >
 > matches3 :: Eq a => [a] -> a
@@ -200,65 +202,9 @@ Here is a naive test:
   (19.92 secs, 12,290,852,136 bytes)
 
 --
-Test, we first tried to use QuickCheck, but it does not work.
-
-> {-
-> trial = do
->   n <- randomRIO (0,1000) :: IO Int
->   d <- randomRIO (1,1000) :: IO Int
->   putStrLn $ "input: " ++ show (n%d)
->   let knownData = zip (map (modp (n%d)) bigPrimes) bigPrimes
->   return $ matches3' $ map guess knownData
->   putStrLn $ show $ (n%d) == fst (matches3' $ map guess knownData)
-
-Our choice of bigPrimes are sometimes fail:
-
-  *Ffield> trial
-  input: 895 % 922
-  ^[[A^?^?*** Exception: Ffield.lhs:(224,3)-(226,37): Non-exhaustive patterns in function matches3'
-
-> trial' = do
->   n <- randomRIO (0,1000) :: IO Int
->   d <- randomRIO (1,1000) :: IO Int
->   putStrLn $ "input: " ++ show (n%d)
->   let knownData = zip (map (modp (n%d)) bigger) bigger
->   return $ matches3' $ map guess knownData
->   putStrLn $ show (matches3' $ map guess knownData) 
->   putStrLn $ show $ (n%d) == fst (matches3' $ map guess knownData)
+Chinese Remainder Theorem, and its usage
  
-> bigger = dropWhile (<897473) primes
-> -}
-  
-  *Ffield> trial'
-  input: 125 % 399
-  (125 % 399,897473)
-  True
-  (0.25 secs, 310,621,352 bytes)
-  *Ffield> trial'
-  input: 112 % 939
-  (112 % 939,909383)
-  True
-  (0.40 secs, 378,062,424 bytes)
-  *Ffield> trial'
-  input: 297 % 391
-  (297 % 391,897473)
-  True
-  (0.01 secs, 2,101,240 bytes)
-  *Ffield> trial'
-  input: 17 % 16
-  (17 % 16,897473)
-  True
-  (0.01 secs, 2,103,728 bytes)
-  *Ffield> trial'
-  input: 125 % 102
-  (125 % 102,897473)
-  True
-  (0.01 secs, 2,103,848 bytes)
-
---
-Chinese Remeinder Theorem, and its usage
- 
-> imagesAndPrimes ::  Rational-> [(Integer, Integer)]
+> -- imagesAndPrimes :: (Integral a) =>  a -> [(a, a)]
 > imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
 
   *Ffield> let q = 895%922
@@ -269,26 +215,9 @@ Chinese Remeinder Theorem, and its usage
   *Ffield> map guess it
   [((-854) % 123,897473),((-656) % 327,897497)]
   
-  *Ffield> let q = 895%922
-  *Ffield> let knownData = imagesAndPrimes q
-  *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData 
-  *Ffield> let m1 = fromJust (p2 `inversep` p1) * p2
-  *Ffield> let m2 = fromJust (p1 `inversep` p2) * p1
-  *Ffield> let p = p1*p2
-  *Ffield> let a = (m1*a1 + m2*a2) `mod` p
-  *Ffield> a
-  86488560937
-  *Ffield> p
-  805479325081
-  *Ffield> guess (a,p)
-  (86488560937 % 1,805479325081) -- overflow!
-
-  *Ffield> guess (86488560937, 805479325081)
-  (895 % 922,805479325081)
-
+> crtRec' :: Integral t => (t, t) -> (t, t) -> (t, t)
 > crtRec' (a1,p1) (a2,p2) = (a,p)
 >   where
-> --  a = (m1*a1 + m2*a2) `mod` p
 >     a = (a1*p2*m2 + a2*p1*m1) `mod` p
 >     m1 = fromJust (p1 `inversep` p2) 
 >     m2 = fromJust (p2 `inversep` p1)
@@ -325,3 +254,47 @@ Chinese Remeinder Theorem, and its usage
   ,(895 % 922,722916888780872419)
   ,(895 % 922,648830197267942270883623)
   ]
+
+  *Ffield> reconstruct knownData'
+  895 % 922
+  *Ffield> let knownData' = pile crtRec' knownData 
+  *Ffield> matches3' $ map guess knownData'
+  (895 % 922,805479325081)
+
+> recCRT :: Integral a => [(a,a)] -> Ratio a
+> recCRT = reconstruct . pile crtRec'
+
+> recCRT' = matches3' . map guess . pile crtRec'
+
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> recCRT knownData 
+  895 % 922
+  *Ffield> recCRT' knownData 
+  (895 % 922,805479325081)
+
+--
+todo: use QuickCheck
+
+> trial = do
+>   n <- randomRIO (0,10000) :: IO Integer
+>   d <- randomRIO (1,10000) :: IO Integer
+>   let q = (n%d)
+>   putStrLn $ "input: " ++ show q
+>   return $ recCRT' . imagesAndPrimes $ q
+
+  *Ffield> trial
+  input: 1080 % 6931
+  (1080 % 6931,805479325081)
+  *Ffield> trial
+  input: 2323 % 1248
+  (2323 % 1248,805479325081)
+  *Ffield> trial
+  input: 6583 % 1528
+  (6583 % 1528,805479325081)
+  *Ffield> trial
+  input: 721 % 423
+  (721 % 423,897473)
+  *Ffield> trial
+  input: 9967 % 7410
+  (9967 % 7410,805479325081)
