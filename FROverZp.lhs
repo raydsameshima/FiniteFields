@@ -3,9 +3,11 @@
 Functional Reconstruction over finite field Z_p
 
 > import Data.Ratio
+> import Data.Maybe
 > import Data.Numbers.Primes
+> import Data.List (null)
 >
-> import Ffield (modp, guess, matches3, bigPrimes, reconstruct)
+> import Ffield (modp, inversep, guess, matches3, bigPrimes, recCRT)
 > import Univariate ((^-), stirlingC, fall2pol, npol2pol)
 
 Univariate Polynomial case
@@ -13,40 +15,19 @@ Our target is a univariate polynomial
   f :: (Integral a) =>
        Ratio a -> Ratio a -- Real?
 
-Let us consider
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> let fs = map f [0..]
-
-So fs is our accessible data.
-First, we should map (`modp` p) over this list, and take p elements from fs.
-
-  *FROverZp> let fsp p = map (`modp` p) $ take p fs
-  *FROverZp> take 10 $ fsp 101
-  [34,82,43,18,7,10,27,58,2,61]
-  *FROverZp> map (`mod` 101) $ difs it
-  [48,62,76,90,3,17,31,45,59]
-  *FROverZp> map (`mod` 101) $ difs it
-  [14,14,14,14,14,14,14,14]
-  
-So, on Z_101, f is 2nd degree polynomial and is 
-  34*(x ^- 0) + 48*(x ^- 1) + 14/(2!) * (x ^- 2)
-   == 34 + 48*x + 7*(x ^-2)
-   == 34 + 48*x + 7*x*(x-1)
-   == 34 + 41*x + 7*x^2 (mod 101)
-
 > -- Function-modular.
 > fmodp :: Integral c => (a -> Ratio c) -> c -> a -> c
 > f `fmodp` p = (`modp` p) . f
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> let fp = f `fmodp` 101
-  *FROverZp> :t fp 
-  fp :: Integral c => Ratio c -> c
-  *FROverZp> take 10 $ map (f `fmodp` 101) [0..]
-  [34,82,43,18,7,10,27,58,2,61]
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+  *FROverZp> let fs = map f [0..]
+  *FROverZp> take 5 $ map (f `fmodp` 101) [0..]
+  [34,93,87,16,82]
+  *FROverZp> take 5 $ map (`modp` 101) fs
+  [34,93,87,16,82]
 
 Difference analysis over Z_p
+Every arithmetic should be on Z_p, i.e., (`mod` p).
 
 > accessibleData :: (Ratio Int -> Ratio Int) -> Int -> [Int]
 > accessibleData f p = take p $ map (f `fmodp` p) [0..]
@@ -57,16 +38,15 @@ Difference analysis over Z_p
 > difsp :: Integral b => b -> [b] -> [b]
 > difsp p xs = map (`mod` p) (zipWith (-) (tail xs) xs)
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> let fs = map f [0..]
-  *FROverZp> accessibleData' fs 101 == accessibleData f 101
-  True
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
   *FROverZp> take 5 $ accessibleData f 101
-  [34,82,43,18,7]
+  [34,93,87,16,82]
   *FROverZp> difsp 101 it
-  [48,62,76,90]
+  [59,95,30,66]
   *FROverZp> difsp 101 it
-  [14,14,14] 
+  [36,36,36]
+  *FROverZp> difsp 101 it
+  [0,0]
 
 > difListsp :: Integral b => b -> [[b]] -> [[b]]
 > difListsp _ [] = []
@@ -77,9 +57,9 @@ Difference analysis over Z_p
 >     isConst (i:jj@(j:js)) = all (==i) jj
 >     isConst _ = error "difListsp: "
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> map head $ difListsp 101 [(accessibleData f 101)]
-  [14,48,34]
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+  *FROverZp> map head $ difListsp 101 [accessibleData f 101]
+  [36,59,34]
 
 Degree, eager and lazy versions
 
@@ -94,7 +74,7 @@ Degree, eager and lazy versions
 > degreep p xs = let l = degreep'Lazy p xs in
 >   degreep' p $ take (l+2) xs
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
   *FROverZp> let myDeg p = degreep p $ accessibleData f p
   *FROverZp> myDeg 101
   2
@@ -102,71 +82,64 @@ Degree, eager and lazy versions
   2
   *FROverZp> myDeg 107
   2
+  *FROverZp> degreep 101 $ accessibleData (\n -> (1%2)+(2%3)*n+(3%4)*n^2+(6%7)*n^7) 101
+  7
 
 > firstDifsp :: Integral a => a -> [a] -> [a]
-> firstDifsp p xs = reverse $ map head $ difListsp p [xs]
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + 7*x^2
-  *FROverZp> firstDifsp 101 $ accessibleData f 101
-  [34,48,14]
-
-> newtonCp :: (Integral a, Integral t) => a -> [t] -> [t]
-> newtonCp p xs = [x `div` factorial k | (x,k) <- zip xs [0..(p-1)]]
+> firstDifsp p xs = reverse $ map head $ difListsp p [xs']
 >   where
->     factorial k = product [1.. fromIntegral k]
+>     xs' = take n xs
+>     n   = 2+ degreep p xs
 
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+  *FROverZp> firstDifsp 101 $ accessibleData f 101
+  [34,59,36]
+  *FROverZp> firstDifsp 101 $ accessibleData (\n -> (1%2)+(2%3)*n+(3%4)*n^2+(6%7)*n^7) 101
+  [51,66,59,33,29,58,32,78]
 
+Our target is this diff-list, since once we reconstruct the diflists from several prime fields to rational field, we can fully convert it to canonical form in Q, by applying Univariate.npol2pol.
 
+> wellOrd :: [[a]] -> [[a]]
+> wellOrd xss 
+>   | null (head xss) = [] 
+>   | otherwise       = map head xss : wellOrd (map tail xss)
 
-We guess these differences (at 0) then transform it as canonical form.
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+  *FROverZp> let fps p = accessibleData f p
+  *FROverZp> let ourData p = firstDifsp p (fps p)
+  *FROverZp> let fivePrimes = take 5 bigPrimes 
+  *FROverZp> map (\p -> zip (ourData p) (repeat p)) fivePrimes 
+  [[(299158,897473),(867559,897473),(299160,897473)]
+  ,[(299166,897497),(329084,897497),(299168,897497)]
+  ,[(598333,897499),(388918,897499),(598335,897499)]
+  ,[(598345,897517),(29919,897517),(598347,897517)]
+  ,[(299176,897527),(329095,897527),(299178,897527)]
+  ]
+  *FROverZp> wellOrd it
+  [[(299158,897473),(299166,897497),(598333,897499)
+   ,(598345,897517),(299176,897527)]
+  ,[(867559,897473),(329084,897497),(388918,897499)
+   ,(29919,897517),(329095,897527)]
+  ,[(299160,897473),(299168,897497),(598335,897499)
+   ,(598347,897517),(299178,897527)]
+  ]
+  *FROverZp> :t it
+  it :: [[(Int, Int)]]
 
+  *FROverZp> let impCasted = 
+  [[(299158,897473),(299166,897497),(598333,897499)
+   ,(598345,897517),(299176,897527)]
+  ,[(867559,897473),(329084,897497),(388918,897499)
+   ,(29919,897517),(329095,897527)]
+  ,[(299160,897473),(299168,897497),(598335,897499)
+   ,(598347,897517),(299178,897527)]
+  ]
+  *FROverZp> :t impCasted 
+  impCasted :: (Num t1, Num t) => [[(t, t1)]]
+  *FROverZp> map recCRT impCasted 
+  [1 % 3,53 % 30,7 % 3]
 
-
-
-
-
-We ready to guess these data:
-
-  *FROverZp> map (\p -> zip (npol2pol . fsp $ p) (repeat p)) [101,103,107]
-  [[(34,101),(41,101),(7,101)],[(69,103),(83,103),(7,103)],[(36,107),(22,107),(7,107)]]
-  *FROverZp> :t reconstruct
-  reconstruct :: Integral a => [(a, a)] -> Ratio a
-  *FROverZp> map head it
-  [(34,101),(69,103),(36,107)]
-  *FROverZp> reconstruct it
-  1 % 3
-  *FROverZp> map (\p -> zip (npol2pol . fsp $ p) (repeat p)) [101,103,107]
-  [[(34,101),(41,101),(7,101)],[(69,103),(83,103),(7,103)],[(36,107),(22,107),(7,107)]]
-
-  *FROverZp> map (head . tail) it
-  [(41,101),(83,103),(22,107)]
-  *FROverZp> reconstruct it
-  3 % 5
-  *FROverZp> map (\p -> zip (npol2pol . fsp $ p) (repeat p)) [101,103,107]
-  [[(34,101),(41,101),(7,101)],[(69,103),(83,103),(7,103)],[(36,107),(22,107),(7,107)]]
-  *FROverZp> map last it
-  [(7,101),(7,103),(7,107)]
-  *FROverZp> reconstruct it
-  7 % 1
-
-> wellOrd :: Eq a => [[a]] -> [[a]]
-> wellOrd xs 
->   | head xs == [] = [] 
->   | otherwise     = map head xs : wellOrd (map tail xs)
-
-  *FROverZp> wellOrd [[(34,101),(41,101),(7,101)],[(69,103),(83,103),(7,103)],[(36,107),(22,107),(7,107)]]
-  [[(34,101),(69,103),(36,107)],[(41,101),(83,103),(22,107)],[(7,101),(7,103),(7,107)]]
-  *FROverZp> map reconstruct it
-  [1 % 3,3 % 5,7 % 1]
-
-Here is the step-by-step usage of above functions:
-
-  *FROverZp> let g x = (1%3) + (3%5)*x + (5%7)*x^2 + (7%9)*x^3
-  *FROverZp> let gs = map g [0..]
-  *FROverZp> let gsp p = list2npolp p $ accessibleData g p
-  *FROverZp> let gData = map (\p -> zip (npol2pol . gsp $ p) (repeat p)) bigPrimes 
-  *FROverZp> let gData' = wellOrd gData 
-  *FROverZp> map reconstruct gData'
-  [1 % 3,1 % 10,19 % 7,7 % 9]
-
-
+This result is consistent:
+  *Univariate> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+  *Univariate> firstDifs (map f [0..10])
+  [1 % 3,53 % 30,7 % 3] 
