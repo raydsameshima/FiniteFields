@@ -190,7 +190,10 @@ Let us try another example:
   *FROverZp> let fps p = accessibleData f p
   *FROverZp> let longList = map (map toInteger2) $ wellOrd $ map (\p -> zip (firstDifsp p (fps p)) (repeat p)) bigPrimes 
   *FROverZp> map recCRT' longList 
-  [(895 % 922,805479325081),(17448553 % 8649888,722916888780872419),(2323 % 624,805479325081)]
+  [(895 % 922,805479325081)
+  ,(17448553 % 8649888,722916888780872419)
+  ,(2323 % 624,805479325081)
+  ]
 
 This result is consistent to that of on Q:
 
@@ -202,4 +205,10 @@ This result is consistent to that of on Q:
   *Univariate> firstDifs (map f [0..20])
   [895 % 922,17448553 % 8649888,2323 % 624]
 
+> list2firstDifZp' fs = map recCRT' $ map (map toInteger2) $ wellOrd $ map helper bigPrimes
+>   where helper p = zip (firstDifsp p (accessibleData' fs p)) (repeat p)
 
+  *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
+  *FROverZp> let fs = map f [0..]
+  *FROverZp> list2firstDifZp' fs
+  [(895 % 922,805479325081),(17448553 % 8649888,722916888780872419),(2323 % 624,805479325081)]
