@@ -8,8 +8,8 @@ https://arxiv.org/pdf/1608.01902.pdf
 > import Data.Maybe
 > import Data.Numbers.Primes
 >
-> import Test.QuickCheck
 > import System.Random
+> import Test.QuickCheck
 
 > coprime :: Integral a => a -> a -> Bool
 > coprime a b = gcd a b == 1
@@ -88,8 +88,7 @@ We get non-zero elements with its inverse:
 > -- a^{-1} (in Z_p) == a `inversep` p
 > inversep :: Integral a => a -> a -> Maybe a
 > a `inversep` p = let (g,x,_) = exGCD a p in
-> --  if isPrime p then Just (x `mod` p)
->   if (g == 1) then Just (x `mod` p)
+>   if (g == 1) then Just (x `mod` p) -- g==1 <=> coprime a p
 >               else Nothing
 >
 > inversesp :: Integral a => a -> [Maybe a]
@@ -204,7 +203,7 @@ Here is a naive test:
 --
 Chinese Remainder Theorem, and its usage
  
-> -- imagesAndPrimes :: (Integral a) =>  a -> [(a, a)]
+> imagesAndPrimes :: (Integral b, Integral a) => Ratio a -> [(a, b)]
 > imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
 
   *Ffield> let q = 895%922
@@ -226,6 +225,7 @@ Chinese Remainder Theorem, and its usage
 > pile :: (a -> a -> a) -> [a] -> [a]
 > pile f [] = []
 > pile f dd@(d:ds) = d : zipWith' f (pile f dd) ds
+> -- pile f [d0,d1,d2 ..] == [d0, (f d0 d1), (f (f d0 d1) d2) ..]
 >
 > -- Strict zipWith, from:
 > --   http://d.hatena.ne.jp/kazu-yamamoto/touch/20100624/1277348961

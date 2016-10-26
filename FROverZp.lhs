@@ -7,7 +7,7 @@ Functional Reconstruction over finite field Z_p
 > import Data.Numbers.Primes
 > import Data.List (null)
 >
-> import Ffield (modp, inversep, guess, matches3, bigPrimes, recCRT)
+> import Ffield (modp, inversep, bigPrimes, recCRT, recCRT')
 > import Univariate ((^-), stirlingC, fall2pol, npol2pol)
 
 Univariate Polynomial case
@@ -126,6 +126,10 @@ Our target is this diff-list, since once we reconstruct the diflists from severa
   *FROverZp> :t it
   it :: [[(Int, Int)]]
 
+We need to transform
+  Int -> Integer
+to use recCRT :: Integral a => [(a, a)] -> Ratio a
+
   *FROverZp> let impCasted = 
   [[(299158,897473),(299166,897497),(598333,897499)
    ,(598345,897517),(299176,897527)]
@@ -138,8 +142,64 @@ Our target is this diff-list, since once we reconstruct the diflists from severa
   impCasted :: (Num t1, Num t) => [[(t, t1)]]
   *FROverZp> map recCRT impCasted 
   [1 % 3,53 % 30,7 % 3]
+  *FROverZp> map recCRT' impCastet 
+  [(1 % 3,897473),(53 % 30,897473),(7 % 3,897473)]
 
 This result is consistent:
   *Univariate> let f x = (1%3) + (3%5)*x + (7%6)*x^2
   *Univariate> firstDifs (map f [0..10])
   [1 % 3,53 % 30,7 % 3] 
+
+Let us define above casting function
+
+> toInteger2 :: (Integral a1, Integral a) => (a, a1) -> (Integer, Integer)
+> toInteger2 (a,b) = (toInteger a, toInteger b)
+
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+  *FROverZp> let fps p = accessibleData f p
+  *FROverZp> let ourData p = firstDifsp p (fps p)
+  *FROverZp> let longList' = map (\p -> zip (ourData p) (repeat p)) bigPrimes 
+  *FROverZp> let longList = wellOrd longList' 
+  *FROverZp> :t longList
+  longList :: [[(Int, Int)]]
+  *FROverZp> let longList'' = map (map toInteger2) longList
+  *FROverZp> :t longList''
+  longList'' :: [[(Integer, Integer)]]
+  *FROverZp> map recCRT longList''
+  [1 % 3,53 % 30,7 % 3]
+  *FROverZp> map recCRT' longList''
+  [(1 % 3,897473),(53 % 30,897473),(7 % 3,897473)]
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+  *FROverZp> let fps p = accessibleData f p
+  *FROverZp> let ourData p = firstDifsp p (fps p)
+  *FROverZp> let longList' = map (\p -> zip (ourData p) (repeat p)) bigPrimes 
+  *FROverZp> let longList = wellOrd longList' 
+  *FROverZp> :t longList
+  longList :: [[(Int, Int)]]
+  *FROverZp> let longList'' = map (map toInteger2) longList
+  *FROverZp> :t longList''
+  longList'' :: [[(Integer, Integer)]]
+  *FROverZp> map recCRT longList''
+  [1 % 3,53 % 30,7 % 3]
+  *FROverZp> map recCRT' longList''
+  [(1 % 3,897473),(53 % 30,897473),(7 % 3,897473)]
+
+Let us try another example:
+
+  *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
+  *FROverZp> let fps p = accessibleData f p
+  *FROverZp> let longList = map (map toInteger2) $ wellOrd $ map (\p -> zip (firstDifsp p (fps p)) (repeat p)) bigPrimes 
+  *FROverZp> map recCRT' longList 
+  [(895 % 922,805479325081),(17448553 % 8649888,722916888780872419),(2323 % 624,805479325081)]
+
+This result is consistent to that of on Q:
+
+  *FROverZp> :l Univariate
+  [1 of 2] Compiling Polynomials      ( Polynomials.hs, interpreted )
+  [2 of 2] Compiling Univariate       ( Univariate.lhs, interpreted )
+  Ok, modules loaded: Univariate, Polynomials.
+  *Univariate> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
+  *Univariate> firstDifs (map f [0..20])
+  [895 % 922,17448553 % 8649888,2323 % 624]
+
+
