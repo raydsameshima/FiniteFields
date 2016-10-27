@@ -211,9 +211,9 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 >        [Ratio a] -- A list of output of f :: a -> Ratio a 
 >     -> a -> Int -> Ratio a
 > rho fs 0 i = fs !! i
-> rho fs n _ 
->   | n < 0 = 0
-> rho fs n i = (n*den)%num + rho fs (n-2) (i+1)
+> rho fs n i 
+>   | n < 0     = 0
+>   | otherwise = (n*den)%num + rho fs (n-2) (i+1)
 >   where
 >     num  = numerator next
 >     den  = denominator next
@@ -342,8 +342,8 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
 >       where
 >         (num, den) = t2r as (n+1)
 >
-> lists2rat :: (Integral a) => [Ratio a] -> ([Ratio a], [Ratio a])
-> lists2rat = thiele2coef . thieleC
+> list2rat :: (Integral a) => [Ratio a] -> ([Ratio a], [Ratio a])
+> list2rat = thiele2coef . thieleC
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
   *Univariate> let hs = map h [0..]

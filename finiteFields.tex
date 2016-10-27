@@ -416,7 +416,7 @@ So, in order to get gcd and $(x, y)$ we don't need quotients list.
   2
 \end{verbatim}
 
-\subsection{Coprime}
+\subsection{Coprime as a binary relation}
 Let us define a binary relation as follows:
 \begin{verbatim}
   coprime :: Integral a => a -> a -> Bool
@@ -631,7 +631,7 @@ a*s_i + p*t_i = r_i
 \end{eqnarray}
 Therefore
 \begin{eqnarray}
-r_i = a*s_i \mod p \Leftrightarrow \frac{r_i}{s_i} \mod p = a.
+r_i = a*s_i \mod p. %\Leftrightarrow \frac{r_i}{s_i} \mod p = a.
 \end{eqnarray}
 Hence $\frac{r_i}{s_i}$ is a possible guess for $q$.
 We take
@@ -903,7 +903,7 @@ Now let us fold.
 > pile f [] = []
 > pile f dd@(d:ds) = d : zipWith' f (pile f dd) ds
 \end{verbatim}
-Schematically, this \texttt{pile} function takes
+Schematically, this \texttt{pile f} function takes
 \begin{eqnarray}
 \left[d_0, d_1, d_2, d_3, \cdots \right]
 \end{eqnarray}
@@ -945,7 +945,7 @@ Let us check our implementation.
 \end{verbatim}
 So on a product ring $\mathbb{Z}_{805479325081}$, we get the right answer.
 
-\subsection{\texttt{recCRT}: from image in $\mathbb{Z}_p$ to rational numbers}
+\subsection{\texttt{recCRT}: from image in $\mathbb{Z}_p$ to rational number}
 From above discussion, here we can define a function which takes a list of images in $\mathbb{Z}_p$ and returns the rational number.
 What we do is, basically, to take a list of image (of our target rational number) and primes, then applying Chinese Remainder theorem recursively, return several guess of rational number.
 \begin{verbatim}
@@ -1464,7 +1464,7 @@ so we get
 \label{exOfDiff}
 \left[0,5,12,12\right]
 \end{eqnarray}
-as the difference list.
+as the first difference list.
 Therefore, we get the falling power representation of $f$:
 \begin{eqnarray}
 f(z) &=& 5(x)_1 + \frac{12}{2}(x)_2 + \frac{12}{3!}(x)_3 \\
@@ -1787,7 +1787,7 @@ So, the constancy of the reciprocal differences can be used to get the depth of 
 \end{verbatim}
 Using this \verb+tDegree+ function, we can safely take the (finite) Thiele sequence.
 
-\subsection{\texttt{thieleC}}
+\subsection{\texttt{thieleC}: from output list to Thiele coefficients}
 From the equation (3.26) of ref.\ref{Tiziano},
 \begin{verbatim}
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
@@ -1975,16 +1975,16 @@ From the other example, equation (3.26) of ref.\ref{Tiziano},
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
 \end{verbatim}
 
-\subsection{\texttt{lists2rat}: from output lists to canonical coefficients}
+\subsection{\texttt{list2rat}: from output list to canonical coefficients}
 Finally, we get
 \begin{verbatim}
-> lists2rat :: (Integral a) => [Ratio a] -> ([Ratio a], [Ratio a])
-> lists2rat = thiele2Coef . thieleC
+> list2rat :: (Integral a) => [Ratio a] -> ([Ratio a], [Ratio a])
+> list2rat = thiele2Coef . thieleC
 \end{verbatim}
 as the reconstruction function from the output sequence.
 \begin{verbatim}
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
-  *Univariate> lists2rat $ map h [0..]
+  *Univariate> list2rat $ map h [0..]
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
 \end{verbatim}
 
@@ -2482,7 +2482,8 @@ This result is consistent to that of on Q:
 \subsection{\texttt{list2polZp}: from the output list to coefficient lists}
 Finally we get the function which takes an output list of our unknown univariate polynomial and returns the coefficient.
 \begin{verbatim}
-> list2firstDifZp' fs = map recCRT' $ map (map toInteger2) $ wellOrd $ map helper bigPrimes
+> list2firstDifZp' fs = 
+>   map recCRT' $ map (map toInteger2) $ wellOrd $ map helper bigPrimes
 >   where helper p = zip (firstDifsp p (accessibleData' fs p)) (repeat p)
 
   *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
