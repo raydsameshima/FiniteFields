@@ -67,14 +67,14 @@ Every arithmetic should be on Z_p, i.e., (`mod` p).
 Degree, eager and lazy versions
 
 > degreep' p xs = length (difListsp p [xs]) -1
-> degreep'Lazy p xs = helper xs 0
+> degreepLazy p xs = helper xs 0
 >   where
 >     helper as@(a:b:c:_) n
 >       | a==b && b==c = n -- two times matching
 >       | otherwise    = helper (difsp p as) (n+1)
 >
 > degreep :: Integral b => b -> [b] -> Int
-> degreep p xs = let l = degreep'Lazy p xs in
+> degreep p xs = let l = degreepLazy p xs in
 >   degreep' p $ take (l+2) xs
 
   *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
@@ -208,8 +208,9 @@ This result is consistent to that of on Q:
   *Univariate> firstDifs (map f [0..20])
   [895 % 922,17448553 % 8649888,2323 % 624]
 
-> list2firstDifZp' fs = map recCRT' $ map (map toInteger2) $ wellOrd $ map helper bigPrimes
->   where helper p = zip (firstDifsp p (accessibleData' fs p)) (repeat p)
+> list2firstDifZp' fs = map (recCRT' . map toInteger2) $ wellOrd $ map helper bigPrimes
+>   where 
+>     helper p = zip (firstDifsp p (accessibleData' fs p)) (repeat p)
 
   *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
   *FROverZp> let fs = map f [0..]
@@ -227,3 +228,42 @@ This result is consistent to that of on Q:
 
 > list2polZp :: [Ratio Int] -> [Ratio Integer]
 > list2polZp = npol2pol . newtonC . (map fst) . list2firstDifZp'
+
+--
+Univariate Rational function case
+Since thiele2coef uses only (*) and (+) operations, we don't have to do these calculation over prime fields.
+So, our target should be rho function (matrix?) calculation.
+
+Reciprocal difference
+
+> rhoZp :: Integral a => [Ratio a] -> a -> Int -> a -> a
+> rhoZp fs 0 i p = (fs !! i) `modp` p
+> rhoZp fs n i p 
+>   | n <= 0     = 0
+>   | otherwise = (n*inv + rhoZp fs (n-2) (i+1) p) `mod` p
+>   where
+>     inv = fromJust inv'
+>     inv'= (rhoZp fs (n-1) (i+1) p - rhoZp fs (n-1) i p) `inversep` p
+>
+> aZp :: Integral a => [Ratio a] -> a -> a -> a
+> aZp fs 0 p = head fs `modp` p
+> aZp fs n p = (rhoZp fs n 0 p - rhoZp fs (n-2) 0 p) `mod` p
+>
+> tDegreeZp fs p = helper fs 0 p
+>   where
+>     helper fs n p
+>       | isConst fs' = n
+>       | otherwise   = helper fs (n+1) p
+>       where
+>         fs' = map (rhoZp fs n p) [0..]
+>     isConst (i:j:_) = i==j
+
+  *FROverZp> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+  *FROverZp> let hs = map h [0..]
+  *FROverZp> take 5 $ map (\n -> rhoZp hs 0 n 101) [0..]
+  [3,89,64,8,16]
+  *FROverZp> take 5 $ map (\n -> rhoZp hs 1 n 101) [0..]
+  [74,4,9,38,65]
+  *FROverZp> take 5 $ map (\n -> rhoZp hs 2 n 101) [0..]
+  [*** Exception: Maybe.fromJust: Nothing
+
