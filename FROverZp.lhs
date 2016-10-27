@@ -1,3 +1,5 @@
+FROverZp.lhs
+
 > module FROverZp where
 
 Functional Reconstruction over finite field Z_p
@@ -8,7 +10,7 @@ Functional Reconstruction over finite field Z_p
 > import Data.List (null)
 >
 > import Ffield (modp, inversep, bigPrimes, recCRT, recCRT')
-> import Univariate ((^-), stirlingC, fall2pol, npol2pol)
+> import Univariate (npol2pol, newtonC)
 
 Univariate Polynomial case
 Our target is a univariate polynomial
@@ -37,6 +39,7 @@ Every arithmetic should be on Z_p, i.e., (`mod` p).
 >
 > difsp :: Integral b => b -> [b] -> [b]
 > difsp p xs = map (`mod` p) (zipWith (-) (tail xs) xs)
+> -- Maight be need to upgrade zipWith by strict zipWith'.
 
   *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
   *FROverZp> take 5 $ accessibleData f 101
@@ -211,4 +214,16 @@ This result is consistent to that of on Q:
   *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
   *FROverZp> let fs = map f [0..]
   *FROverZp> list2firstDifZp' fs
-  [(895 % 922,805479325081),(17448553 % 8649888,722916888780872419),(2323 % 624,805479325081)]
+  [(895 % 922,805479325081)
+  ,(17448553 % 8649888,722916888780872419)
+  ,(2323 % 624,805479325081)
+  ]
+  *FROverZp> map fst it
+  [895 % 922,17448553 % 8649888,2323 % 624]
+  *FROverZp> newtonC it
+  [895 % 922,17448553 % 8649888,2323 % 1248]
+  *FROverZp> npol2pol it
+  [895 % 922,1080 % 6931,2323 % 1248]
+
+> list2polZp :: [Ratio Int] -> [Ratio Integer]
+> list2polZp = npol2pol . newtonC . (map fst) . list2firstDifZp'
