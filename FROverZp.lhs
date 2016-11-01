@@ -231,7 +231,7 @@ This result is consistent to that of on Q:
 
 --
 Univariate Rational function case
-Since thiele2coef uses only (*) and (+) operations, we don't have to do these calculation over prime fields.
+Since thiele2coef uses only (*), (+) and (-) operations, we don't have to do these calculation over prime fields.
 So, our target should be rho function (matrix?) calculation.
 
 Reciprocal difference
