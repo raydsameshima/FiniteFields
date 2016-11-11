@@ -175,51 +175,42 @@ In order to use CRT, we should cast its type.
 >   | otherwise        = matches3 bb
 > matches3 _ = Nothing
  
+   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
+   *Ffield> let ds = knownData (1123%1135)
+   *Ffield> let dsI = toInteger2 ds
+   *Ffield> :t ds
+   ds :: [(Maybe Int, Int)]
+   *Ffield> :t dsI
+   dsI :: [(Maybe Integer, Integer)]
+   *Ffield> map guess $ pile crtRec' dsI
+   [Just ((-138) % 751,1000003)
+   ,Just (1123 % 1135,1000036000099)
+   ,Just (1123 % 1135,1000073001431003663)
+   ,Just (1123 % 1135,1000112004278059472142857) ..
+   *Ffield> matches3 it
+   Just (1123 % 1135,1000036000099)
 
+The final reconstruction function takes a list of Z_p values and returns the three times matched guess.
 
-> {-
-> -- Before we apply matches3, (filter isJust)
-> matches3 (a0@(a,_):bb@((b,_):(c,_):cs)) 
->   | a == b && b == c = a0
->   | otherwise        = matches3 bb
-
-
-> recCRT :: Integral a => [(a,a)] -> Ratio a
-> recCRT = reconstruct . pile crtRec'
-
-> recCRT' = matches3' . map guess . pile crtRec'
-
-  *Ffield> let q = 895%922
-  *Ffield> let knownData = imagesAndPrimes q
-  *Ffield> recCRT knownData 
-  895 % 922
-  *Ffield> recCRT' knownData 
-  (895 % 922,805479325081)
+> reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer, Integer)
+> reconstruct = matches3 . map guess . pile crtRec' . toInteger2 
 
 --
 todo: use QuickCheck
 
-> trial = do
->   n <- randomRIO (0,10000) :: IO Integer
->   d <- randomRIO (1,10000) :: IO Integer
->   let q = (n%d)
->   putStrLn $ "input: " ++ show q
->   return $ recCRT' . imagesAndPrimes $ q
+> {-
+> prop_rec (n,d) =
+>  (n%d) == (fromRational . fst . fromJust . reconstruct $ knownData)
+>    where
+>      types = (n,d) :: (Int, Int)
+>      knownData = zip (map (modp (n%d)) bigPrimes) bigPrimes
 
-  *Ffield> trial
-  input: 1080 % 6931
-  (1080 % 6931,805479325081)
-  *Ffield> trial
-  input: 2323 % 1248
-  (2323 % 1248,805479325081)
-  *Ffield> trial
-  input: 6583 % 1528
-  (6583 % 1528,805479325081)
-  *Ffield> trial
-  input: 721 % 423
-  (721 % 423,897473)
-  *Ffield> trial
-  input: 9967 % 7410
-  (9967 % 7410,805479325081)
+> prop_rec q = q == (fromRational . fst . fromJust . reconstruct $ knownData)
+>   where
+>     q = types :: Ratio Int
+>     knownData = zip (map (modp q) bigPrimes) bigPrimes
+
+   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
+
 
 > -}
