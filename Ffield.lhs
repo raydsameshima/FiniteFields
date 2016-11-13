@@ -47,6 +47,7 @@ See the algorithm, examples, and pseudo code at:
 >     func x xs 
 >       | p x       = []
 >       | otherwise = x : xs
+>
 > -- a*x + b*y = gcd a b
 > exGCD :: Integral t => t -> t -> (t, t, t)
 > exGCD a b = (g, x, y)
@@ -92,7 +93,8 @@ See the algorithm, examples, and pseudo code at:
 >
 > -- Hard code of big primes
 > bigPrimes :: [Int]
-> bigPrimes = take 10 $ dropWhile (<10^6) primes
+> -- bigPrimes = take 10 $ dropWhile (<10^6) primes
+> bigPrimes = take 1000 $ dropWhile (<10^6) primes
 > -- 10 is just for "practical" reason.
 
   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
@@ -139,10 +141,6 @@ In order to use CRT, we should cast its type.
 >   where 
 >     helper (x,y) = (fmap toInteger x, toInteger y)
 >
-> pile :: (a -> a -> a) -> [a] -> [a]
-> pile f [] = []
-> pile f dd@(d:ds) = d : zipWith f (pile f dd) ds
->
 > crtRec':: Integral a => (Maybe a, a) -> (Maybe a, a) -> (Maybe a, a)
 > crtRec' (Nothing,p) (_,q)       = (Nothing, p*q)
 > crtRec' (_,p)       (Nothing,q) = (Nothing, p*q)
@@ -157,7 +155,7 @@ In order to use CRT, we should cast its type.
   *Ffield> let ds = knownData (1123%1135)
   *Ffield> let dsI = toInteger2 ds
 
-  *Ffield> pile crtRec' dsI
+  *Ffield> scanl1 crtRec' dsI
   [(Just 294275,1000003)
   ,(Just 451998650266,1000036000099)
   ,(Just 386812376764943268,1000073001431003663) ..
@@ -166,7 +164,8 @@ In order to use CRT, we should cast its type.
   [Just ((-138) % 751,1000003)
   ,Just (1123 % 1135,1000036000099)
   ,Just (1123 % 1135,1000073001431003663)
-  ,Just (1123 % 1135,1000112004278059472142857) ..
+  ,Just (1123 % 1135,1000112004278059472142857)
+  ,Just (1123 % 1135,1000193013350405994960100571417) ..
 
 > -- Here is super auxiliary function.
 > matches3 :: Eq a => [Maybe (a,b)] -> Maybe (a,b)
@@ -193,24 +192,19 @@ In order to use CRT, we should cast its type.
 The final reconstruction function takes a list of Z_p values and returns the three times matched guess.
 
 > reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer, Integer)
-> reconstruct = matches3 . map guess . pile crtRec' . toInteger2 
+> reconstruct = matches3 . map guess . scanl1 crtRec' . toInteger2 
 
 --
 todo: use QuickCheck
 
-> {-
-> prop_rec (n,d) =
->  (n%d) == (fromRational . fst . fromJust . reconstruct $ knownData)
->    where
->      types = (n,d) :: (Int, Int)
->      knownData = zip (map (modp (n%d)) bigPrimes) bigPrimes
-
-> prop_rec q = q == (fromRational . fst . fromJust . reconstruct $ knownData)
+> aux :: [(Maybe Int, Int)] -> Ratio Int
+> aux = fromRational . fst . fromJust . reconstruct
+>
+> prop_rec :: Ratio Int -> Bool
+> prop_rec q = q == aux ds
 >   where
->     q = types :: Ratio Int
->     knownData = zip (map (modp q) bigPrimes) bigPrimes
-
-   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
+>     ds = zip (map (modp q) bigPrimes) bigPrimes
 
 
+> {-
 > -}
