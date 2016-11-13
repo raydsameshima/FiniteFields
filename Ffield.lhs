@@ -7,8 +7,6 @@ https://arxiv.org/pdf/1608.01902.pdf
 > import Data.Ratio 
 > import Data.Maybe
 > import Data.Numbers.Primes
->
-> import System.Random
 > import Test.QuickCheck
 
 > coprime :: Integral a => a -> a -> Bool
@@ -93,8 +91,8 @@ See the algorithm, examples, and pseudo code at:
 >
 > -- Hard code of big primes
 > bigPrimes :: [Int]
+> bigPrimes = take 10 $ dropWhile (<10^4) primes
 > -- bigPrimes = take 10 $ dropWhile (<10^6) primes
-> bigPrimes = take 1000 $ dropWhile (<10^6) primes
 > -- 10 is just for "practical" reason.
 
   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
@@ -167,27 +165,11 @@ In order to use CRT, we should cast its type.
   ,Just (1123 % 1135,1000112004278059472142857)
   ,Just (1123 % 1135,1000193013350405994960100571417) ..
 
-> -- Here is super auxiliary function.
 > matches3 :: Eq a => [Maybe (a,b)] -> Maybe (a,b)
 > matches3  (b1@(Just (q1,p1)):bb@((Just (q2,_)):(Just (q3,_)):_))
 >   | q1==q2 && q2==q3 = b1
 >   | otherwise        = matches3 bb
 > matches3 _ = Nothing
- 
-   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
-   *Ffield> let ds = knownData (1123%1135)
-   *Ffield> let dsI = toInteger2 ds
-   *Ffield> :t ds
-   ds :: [(Maybe Int, Int)]
-   *Ffield> :t dsI
-   dsI :: [(Maybe Integer, Integer)]
-   *Ffield> map guess $ pile crtRec' dsI
-   [Just ((-138) % 751,1000003)
-   ,Just (1123 % 1135,1000036000099)
-   ,Just (1123 % 1135,1000073001431003663)
-   ,Just (1123 % 1135,1000112004278059472142857) ..
-   *Ffield> matches3 it
-   Just (1123 % 1135,1000036000099)
 
 The final reconstruction function takes a list of Z_p values and returns the three times matched guess.
 
@@ -203,8 +185,10 @@ todo: use QuickCheck
 > prop_rec :: Ratio Int -> Bool
 > prop_rec q = q == aux ds
 >   where
->     ds = zip (map (modp q) bigPrimes) bigPrimes
+>     ds = imagesAndPrimes q
 
+  *Ffield> quickCheck prop_rec 
+  +++ OK, passed 100 tests.
 
 > {-
 > -}
