@@ -172,7 +172,6 @@ The final reconstruction function takes a list of Z_p values and returns the thr
 > reconstruct = matches3 . map guess . scanl1 crtRec' . toInteger2 
 
 --
-todo: use QuickCheck
 
 > aux :: [(Maybe Int, Int)] -> Ratio Int
 > aux = fromRational . fst . fromJust . reconstruct
