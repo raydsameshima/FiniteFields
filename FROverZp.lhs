@@ -9,35 +9,58 @@ Functional Reconstruction over finite field Z_p
 > import Data.Numbers.Primes
 > import Data.List (null)
 >
-> import Ffield (modp, inversep, bigPrimes, recCRT, recCRT')
-> import Univariate (npol2pol, newtonC)
+> import Ffield (modp)
+> -- , inversep, bigPrimes, recCRT, recCRT')
+> -- import Univariate (npol2pol, newtonC)
 
 Univariate Polynomial case
 Our target is a univariate polynomial
   f :: (Integral a) =>
        Ratio a -> Ratio a -- Real?
 
-> -- Function-modular.
-> fmodp :: Integral c => (a -> Ratio c) -> c -> a -> c
+> -- Function-modular, now our modp function is wrapped by Maybe.
+> fmodp :: (a -> Ratio Int) -> Int -> a -> Maybe Int
 > f `fmodp` p = (`modp` p) . f
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> let fs = map f [0..]
-  *FROverZp> take 5 $ map (f `fmodp` 101) [0..]
-  [34,93,87,16,82]
-  *FROverZp> take 5 $ map (`modp` 101) fs
-  [34,93,87,16,82]
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
+  *FROverZp> take 10 $ map (f `fmodp` 13)  [0..]
+  [Just 9,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
+  *FROverZp> take 10 $ map (f `fmodp` 19)  [0..]
+  [Just 13,Just 8,Just 7,Just 10,Just 17,Just 9,Just 5,Just 5,Just 9,Just 17]
 
 Difference analysis over Z_p
 Every arithmetic should be on Z_p, i.e., (`mod` p).
 
-> accessibleData :: (Ratio Int -> Ratio Int) -> Int -> [Int]
+> -- accessibleData :: (a -> Ratio Int) -> Int -> [Maybe Int]
+> accessibleData :: (Num a, Enum a) => (a -> Ratio Int) -> Int -> [Maybe Int]
 > accessibleData f p = take p $ map (f `fmodp` p) [0..]
 > 
-> accessibleData' :: [Ratio Int] -> Int -> [Int]
+> accessibleData' :: [Ratio Int] -> Int -> [Maybe Int]
 > accessibleData' fs p = take p $ map (`modp` p) fs
 >
-> difsp :: Integral b => b -> [b] -> [b]
+
+  *FROverZp> let helper x y = (-) <$> x <*> y
+  *FROverZp> :t helper 
+  helper :: (Applicative f, Num b) => f b -> f b -> f b
+  *FROverZp> :t helper 
+  helper :: (Applicative f, Num b) => f b -> f b -> f b
+  *FROverZp> :t map he
+  head    helper
+  *FROverZp> :t map helper 
+  map helper :: (Applicative f, Num b) => [f b] -> [f b -> f b]
+  *FROverZp> let myDif xs = zipWith helper (tail xs) xs
+  *FROverZp> :t myDif
+  myDif :: (Applicative f, Num b) => [f b] -> [f b]
+  *FROverZp> myDif [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3]
+  [Just (-5),Just 2,Just 2,Just 2,Just (-5),Just 2]
+  *FROverZp> myDif [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3, Nothing]
+  [Just (-5),Just 2,Just 2,Just 2,Just (-5),Just 2,Nothing]
+  *FROverZp> myDif [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3, Nothing, Just 1]
+  [Just (-5),Just 2,Just 2,Just 2,Just (-5),Just 2,Nothing,Nothing]
+  *FROverZp> myDif [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3, Nothing, Just 1, Just 2]
+  [Just (-5),Just 2,Just 2,Just 2,Just (-5),Just 2,Nothing,Nothing,Just 1]
+
+> -- difsp :: Integral b => b -> [b] -> [b]
 > difsp p xs = map (`mod` p) (zipWith (-) (tail xs) xs)
 > -- Maight be need to upgrade zipWith by strict zipWith'.
 
@@ -51,6 +74,7 @@ Every arithmetic should be on Z_p, i.e., (`mod` p).
   *FROverZp> difsp 101 it
   [0,0]
 
+> {-
 > difListsp :: Integral b => b -> [[b]] -> [[b]]
 > difListsp _ [] = []
 > difListsp p xx@(xs:xxs) =
@@ -267,3 +291,4 @@ Reciprocal difference
   *FROverZp> take 5 $ map (\n -> rhoZp hs 2 n 101) [0..]
   [*** Exception: Maybe.fromJust: Nothing
 
+> -}

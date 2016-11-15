@@ -91,8 +91,8 @@ See the algorithm, examples, and pseudo code at:
 >
 > -- Hard code of big primes
 > bigPrimes :: [Int]
-> bigPrimes = take 10 $ dropWhile (<10^4) primes
-> -- bigPrimes = take 10 $ dropWhile (<10^6) primes
+> bigPrimes = dropWhile (<10^4) primes
+> -- bigPrimes = take 10 $ dropWhile (<10^4) primes
 > -- 10 is just for "practical" reason.
 
   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
