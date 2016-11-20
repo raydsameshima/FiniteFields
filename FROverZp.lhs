@@ -8,6 +8,7 @@ Functional Reconstruction over finite field Z_p
 > import Data.Maybe
 > import Data.Numbers.Primes
 > import Data.List (null)
+> import Control.Monad (sequence)
 >
 > import Ffield (modp)
 > -- , inversep, bigPrimes, recCRT, recCRT')
@@ -31,100 +32,133 @@ Our target is a univariate polynomial
 Difference analysis over Z_p
 Every arithmetic should be on Z_p, i.e., (`mod` p).
 
-> -- accessibleData :: (a -> Ratio Int) -> Int -> [Maybe Int]
 > accessibleData :: (Num a, Enum a) => (a -> Ratio Int) -> Int -> [Maybe Int]
 > accessibleData f p = take p $ map (f `fmodp` p) [0..]
 > 
 > accessibleData' :: [Ratio Int] -> Int -> [Maybe Int]
 > accessibleData' fs p = take p $ map (`modp` p) fs
->
 
   *FROverZp> let helper x y = (-) <$> x <*> y
-  *FROverZp> :t helper 
+  *FROverZp> :type helper 
   helper :: (Applicative f, Num b) => f b -> f b -> f b
-  *FROverZp> :t helper 
-  helper :: (Applicative f, Num b) => f b -> f b -> f b
-  *FROverZp> :t map he
-  head    helper
-  *FROverZp> :t map helper 
+  *FROverZp> :t map helper
   map helper :: (Applicative f, Num b) => [f b] -> [f b -> f b]
   *FROverZp> let myDif xs = zipWith helper (tail xs) xs
-  *FROverZp> :t myDif
-  myDif :: (Applicative f, Num b) => [f b] -> [f b]
   *FROverZp> myDif [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3]
   [Just (-5),Just 2,Just 2,Just 2,Just (-5),Just 2]
-  *FROverZp> myDif [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3, Nothing]
-  [Just (-5),Just 2,Just 2,Just 2,Just (-5),Just 2,Nothing]
-  *FROverZp> myDif [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3, Nothing, Just 1]
-  [Just (-5),Just 2,Just 2,Just 2,Just (-5),Just 2,Nothing,Nothing]
-  *FROverZp> myDif [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3, Nothing, Just 1, Just 2]
-  [Just (-5),Just 2,Just 2,Just 2,Just (-5),Just 2,Nothing,Nothing,Just 1]
+  *FROverZp> map (fmap (`mod` 13)) it
+  [Just 8,Just 2,Just 2,Just 2,Just 8,Just 2]
+  *FROverZp> map (fmap (`mod` 13)) . myDif $ [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3, Nothing, Just 1, Just 2]
+  [Just 8,Just 2,Just 2,Just 2,Just 8,Just 2,Nothing,Nothing,Just 1]
 
-> -- difsp :: Integral b => b -> [b] -> [b]
-> difsp p xs = map (`mod` p) (zipWith (-) (tail xs) xs)
-> -- Maight be need to upgrade zipWith by strict zipWith'.
+> -- difsp :: (Applicative f, Integral b) => b -> [f b] -> [f b]
+> difsp :: Applicative f => Int -> [f Int] -> [f Int]
+> difsp p = map (fmap (`mod` p)) . difsp' 
+>   where
+>     difsp' :: (Applicative f, Num b) => [f b] -> [f b]
+>     difsp' xs = zipWith helper (tail xs) xs
+>     helper :: (Applicative f, Num b) => f b -> f b -> f b
+>     helper x y = (-) <$> x <*> y
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> take 5 $ accessibleData f 101
-  [34,93,87,16,82]
-  *FROverZp> difsp 101 it
-  [59,95,30,66]
-  *FROverZp> difsp 101 it
-  [36,36,36]
-  *FROverZp> difsp 101 it
-  [0,0]
+  *FROverZp> difsp 13 [Just 5,Just 0,Just 2,Just 4,Just 6,Just 1,Just 3, Nothing, Just 1, Just 2]
+  [Just 8,Just 2,Just 2,Just 2,Just 8,Just 2,Nothing,Nothing,Just 1]
 
-> {-
-> difListsp :: Integral b => b -> [[b]] -> [[b]]
+> difListsp :: (Applicative f, Eq (f Int)) => Int -> [[f Int]] -> [[f Int]]
 > difListsp _ [] = []
-> difListsp p xx@(xs:xxs) =
->   if isConst xs then xx
->                 else difListsp p $ difsp p xs : xx
+> difListsp p xx@(xs:xss) =
+>   if isConst xs
+>     then xx
+>     else difListsp p $ difsp p xs : xx
 >   where
 >     isConst (i:jj@(j:js)) = all (==i) jj
 >     isConst _ = error "difListsp: "
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> map head $ difListsp 101 [accessibleData f 101]
-  [36,59,34]
+  
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
+  *FROverZp> let ds = accessibleData f 101
+  *FROverZp> map head $ difListsp 101 [ds]
+  [Just 71,Just 26,Just 34]
 
 Degree, eager and lazy versions
 
+> degreep' :: (Applicative f, Eq (f Int)) => Int -> [f Int] -> Int
 > degreep' p xs = length (difListsp p [xs]) -1
+>
+> degreepLazy :: (Applicative f, Num t, Eq (f Int)) => Int -> [f Int] -> t
 > degreepLazy p xs = helper xs 0
 >   where
 >     helper as@(a:b:c:_) n
 >       | a==b && b==c = n -- two times matching
 >       | otherwise    = helper (difsp p as) (n+1)
 >
-> degreep :: Integral b => b -> [b] -> Int
+> degreep :: (Applicative f, Eq (f Int)) => Int -> [f Int] -> Int
 > degreep p xs = let l = degreepLazy p xs in
 >   degreep' p $ take (l+2) xs
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> let myDeg p = degreep p $ accessibleData f p
-  *FROverZp> myDeg 101
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
+  *FROverZp> degreep 101 $ accessibleData f 101
   2
-  *FROverZp> myDeg 103
+  *FROverZp> degreep 103 $ accessibleData f 103
   2
-  *FROverZp> myDeg 107
+  *FROverZp> degreep 107 $ accessibleData f 107
   2
-  *FROverZp> degreep 101 $ accessibleData (\n -> (1%2)+(2%3)*n+(3%4)*n^2+(6%7)*n^7) 101
-  7
+  *FROverZp> degreep 11 $ accessibleData f 11
+  2
+  *FROverZp> degreep 13 $ accessibleData f 13
+  1
+  *FROverZp> degreep 17 $ accessibleData f 17
+  2
 
-> firstDifsp :: Integral a => a -> [a] -> [a]
+> -- firstDifsp :: Integral a => a -> [a] -> [a]
+> firstDifsp :: (Applicative f, Eq (f Int)) => Int -> [f Int] -> [f Int]
 > firstDifsp p xs = reverse $ map head $ difListsp p [xs']
 >   where
 >     xs' = take n xs
->     n   = 2+ degreep p xs
+>     n   = 2 + degreep p xs
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> firstDifsp 101 $ accessibleData f 101
-  [34,59,36]
-  *FROverZp> firstDifsp 101 $ accessibleData (\n -> (1%2)+(2%3)*n+(3%4)*n^2+(6%7)*n^7) 101
-  [51,66,59,33,29,58,32,78]
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
+  *FROverZp> let fs p = accessibleData f p
+  *FROverZp> firstDifsp 101 (fs 101)
+  [Just 34,Just 26,Just 71]
+  *FROverZp> firstDifsp 103 (fs 103)
+  [Just 69,Just 36,Just 9]
+  *FROverZp> firstDifsp 107 (fs 107)
+  [Just 36,Just 39,Just 34]
 
-Our target is this diff-list, since once we reconstruct the diflists from several prime fields to rational field, we can fully convert it to canonical form in Q, by applying Univariate.npol2pol.
+  *FROverZp> map ourData [11,13,17,19,101,103,107]
+  [[Just 4,Just 3,Just 7]
+  ,[Just 9,Nothing]
+  ,[Just 6,Just 15,Just 5]
+  ,[Just 13,Just 14,Just 4]
+  ,[Just 34,Just 26,Just 71]
+  ,[Just 69,Just 36,Just 9]
+  ,[Just 36,Just 39,Just 34]
+  ]
+
+  *FROverZp> let ourData' = sequence . ourData
+  *FROverZp> map ourData' ourPrimes 
+  [Just [4,3,7]
+  ,Nothing
+  ,Just [6,15,5]
+  ,Just [13,14,4]
+  ,Just [34,26,71]
+  ,Just [69,36,9]
+  ,Just [36,39,34]
+  ]
+
+  *FROverZp> zip (map (sequence . ourData) smallPrimes) smallPrimes 
+  [(Just [4,3,7],11)
+  ,(Nothing,13)
+  ,(Just [6,15,5],17)
+  ,(Just [13,14,4],19)
+  ,(Just [34,26,71],101)
+  ,(Just [69,36,9],103)
+  ,(Just [36,39,34],107)
+  ]
+
+
+
+
+  Our target is this diff-list, since once we reconstruct the diflists from several prime fields to rational field, we can fully convert it to canonical form in Q, by applying Univariate.npol2pol.
 
 > wellOrd :: [[a]] -> [[a]]
 > wellOrd xss 
@@ -232,6 +266,7 @@ This result is consistent to that of on Q:
   *Univariate> firstDifs (map f [0..20])
   [895 % 922,17448553 % 8649888,2323 % 624]
 
+> {-
 > list2firstDifZp' fs = map (recCRT' . map toInteger2) $ wellOrd $ map helper bigPrimes
 >   where 
 >     helper p = zip (firstDifsp p (accessibleData' fs p)) (repeat p)
