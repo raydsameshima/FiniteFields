@@ -158,6 +158,8 @@ Degree, eager and lazy versions
 
 
 
+
+
   Our target is this diff-list, since once we reconstruct the diflists from several prime fields to rational field, we can fully convert it to canonical form in Q, by applying Univariate.npol2pol.
 
 > wellOrd :: [[a]] -> [[a]]
