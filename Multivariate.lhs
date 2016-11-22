@@ -3,11 +3,8 @@ Multivariate.lhs
 > module Multivariate where
 
 > import Data.Ratio
-> import Data.List(transpose)
-> import Univariate 
->   ( degree, list2pol
->   , thiele2ratf, lists2ratf, thiele2coef, list2rat
->   )
+> import Data.List (transpose)
+> import Univariate (list2pol, list2rat)
 
 Let us start 2-variate polynomials.
 
@@ -135,6 +132,7 @@ and the denominator is
   *Multivariate> map list2pol . transpose . map (snd . list2rat) $ auxhs
   [[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]]
 
+> table2ratf :: Integral a => [[Ratio a]] -> ([[Ratio a]], [[Ratio a]])
 > table2ratf table = (t2r fst table, t2r snd table)
 >   where
 >     t2r third = map list2pol . transpose . map (third . list2rat)
@@ -150,25 +148,25 @@ It is interesting but this Thiele reconstruction does work even if the target is
   *Multivariate> table2ratf auxfs
   ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[0 % 1]])
 
-> tablizer' :: (Num a, Enum a) => (a -> a -> b) -> a -> [[b]]
-> tablizer' f n = [map (f_t 1 y) [0..(n-1)] | y <- [1..(n-1)]]
+> tablizer :: (Num a, Enum a) => (a -> a -> b) -> a -> [[b]]
+> tablizer f n = [map (f_t 1 y) [0..(n-1)] | y <- [1..(n-1)]]
 >   where
 >     f_t x y t = f (t*x) (t*y)
   
   *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
-  *Multivariate> table2ratf $ tablizer' f 10
+  *Multivariate> table2ratf $ tablizer f 10
   ([[3 % 1],[6 % 1,4 % 1],[18 % 1,17 % 1,6 % 1]]
   ,[[1 % 1],[0 % 1]]
   )
   *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
-  *Multivariate> table2ratf $ tablizer' h 10
+  *Multivariate> table2ratf $ tablizer h 10
   ([[3 % 1],[6 % 1,4 % 1],[18 % 1,17 % 1,6 % 1]]
   ,[[1 % 1],[15 % 1,8 % 1],[20 % 1,19 % 1,9 % 1]]
   )
 
 Note that, the sampling points for n=10 case are
   
-  *Multivariate> tablizer' (\x y -> (x,y)) 10
+  *Multivariate> tablizer (\x y -> (x,y)) 10
   [[(0,0),(1,1),(2,2),(3,3),(4,4),(5,5),(6,6),(7,7),(8,8),(9,9)]
   ,[(0,0),(1,2),(2,4),(3,6),(4,8),(5,10),(6,12),(7,14),(8,16),(9,18)]
   ,[(0,0),(1,3),(2,6),(3,9),(4,12),(5,15),(6,18),(7,21),(8,24),(9,27)]

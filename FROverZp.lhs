@@ -7,11 +7,11 @@ Functional Reconstruction over finite field Z_p
 > import Data.Ratio
 > import Data.Maybe
 > import Data.Numbers.Primes
-> import Data.List (null)
+> import Data.List (null, transpose)
 > import Control.Monad (sequence)
 >
-> import Ffield (modp)
-> -- , inversep, bigPrimes, recCRT, recCRT')
+> import Ffield 
+>   (modp, inversep, bigPrimes, reconstruct)
 > -- import Univariate (npol2pol, newtonC)
 
 Univariate Polynomial case
@@ -32,7 +32,8 @@ Our target is a univariate polynomial
 Difference analysis over Z_p
 Every arithmetic should be on Z_p, i.e., (`mod` p).
 
-> accessibleData :: (Num a, Enum a) => (a -> Ratio Int) -> Int -> [Maybe Int]
+> accessibleData :: (Num a, Enum a) => 
+>                   (a -> Ratio Int) -> Int -> [Maybe Int]
 > accessibleData f p = take p $ map (f `fmodp` p) [0..]
 > 
 > accessibleData' :: [Ratio Int] -> Int -> [Maybe Int]
@@ -114,46 +115,104 @@ Degree, eager and lazy versions
 >   where
 >     xs' = take n xs
 >     n   = 2 + degreep p xs
-
+  
   *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
-  *FROverZp> let fs p = accessibleData f p
-  *FROverZp> firstDifsp 101 (fs 101)
+  *FROverZp> let fsp p = accessibleData f p
+  *FROverZp> let smallPrimes = [11,13,19,23,101,103,107]
+  *FROverZp> and $ map isPrime smallPrimes 
+  True
+  *FROverZp> firstDifsp 101 (fsp 101)
   [Just 34,Just 26,Just 71]
-  *FROverZp> firstDifsp 103 (fs 103)
-  [Just 69,Just 36,Just 9]
-  *FROverZp> firstDifsp 107 (fs 107)
-  [Just 36,Just 39,Just 34]
-
-  *FROverZp> map ourData [11,13,17,19,101,103,107]
+  *FROverZp> map (\p -> firstDifsp p (fs
+  fsp  fst
+  *FROverZp> map (\p -> firstDifsp p (fsp p)) smallPrimes 
   [[Just 4,Just 3,Just 7]
   ,[Just 9,Nothing]
-  ,[Just 6,Just 15,Just 5]
   ,[Just 13,Just 14,Just 4]
+  ,[Just 8,Just 16,Just 17]
   ,[Just 34,Just 26,Just 71]
   ,[Just 69,Just 36,Just 9]
   ,[Just 36,Just 39,Just 34]
   ]
-
-  *FROverZp> let ourData' = sequence . ourData
-  *FROverZp> map ourData' ourPrimes 
+  *FROverZp> map sequence it
   [Just [4,3,7]
   ,Nothing
-  ,Just [6,15,5]
   ,Just [13,14,4]
+  ,Just [8,16,17]
   ,Just [34,26,71]
   ,Just [69,36,9]
   ,Just [36,39,34]
   ]
-
-  *FROverZp> zip (map (sequence . ourData) smallPrimes) smallPrimes 
+  *FROverZp> zip it smallPrimes 
   [(Just [4,3,7],11)
   ,(Nothing,13)
-  ,(Just [6,15,5],17)
   ,(Just [13,14,4],19)
+  ,(Just [8,16,17],23)
   ,(Just [34,26,71],101)
   ,(Just [69,36,9],103)
   ,(Just [36,39,34],107)
   ]
+
+> makeAPair ps fs = zip ps . map (sequence . (\p -> firstDifsp p (fsp p))) $ ps 
+>   where
+>     fsp = accessibleData' fs
+
+  *FROverZp> take 5 $ makeAPair bigPrimes fs 
+  [(10007,Just [3336,463,6929])
+  ,(10009,Just [6673,1387,771])
+  ,(10037,Just [3346,6641,9266])
+  ,(10039,Just [6693,7569,3090])
+  ,(10061,Just [3354,9443,775])
+  ]
+  
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
+  *FROverZp> let fs = map f [0..]
+  *FROverZp> take 5 $ makeAPair bigPrimes fs 
+  [(10007,Just [3336,463,6929]),(10009,Just [6673,1387,771]),(10037,Just [3346,6641,9266]),(10039,Just [6693,7569,3090]),(10061,Just [3354,9443,775])]
+  
+  *FROverZp> take 5 $ makeAPair bigPrimes fs 
+  [(10007,Just [3336,463,6929])
+  ,(10009,Just [6673,1387,771])
+  ,(10037,Just [3346,6641,9266])
+  ,(10039,Just [6693,7569,3090])
+  ,(10061,Just [3354,9443,775])
+  ]
+  *FROverZp> map (\(p,m) -> if isJust m then Just (zip (fromJust m) (repeat p)) else Nothing) it
+  [Just [(3336,10007),(463,10007),(6929,10007)],Just [(6673,10009),(1387,10009),(771,10009)],Just [(3346,10037),(6641,10037),(9266,10037)],Just [(6693,10039),(7569,10039),(3090,10039)],Just [(3354,10061),(9443,10061),(775,10061)]]
+  *FROverZp> sequence it
+  Just [[(3336,10007),(463,10007),(6929,10007)]
+       ,[(6673,10009),(1387,10009),(771,10009)]
+       ,[(3346,10037),(6641,10037),(9266,10037)]
+       ,[(6693,10039),(7569,10039),(3090,10039)]
+       ,[(3354,10061),(9443,10061),(775,10061)]
+       ]
+
+> makePairs = sequence . map helper
+>   where
+>     helper (_, Nothing) = Nothing
+>     helper (p, Just a) = Just (zip a (repeat p))
+  
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
+  *FROverZp> let fs = map f [0..]
+  *FROverZp> makePairs $ take 5 $ makeAPair bigPrimes fs
+  Just [[(3336,10007),(463,10007),(6929,10007)],[(6673,10009),(1387,10009),(771,10009)],[(3346,10037),(6641,10037),(9266,10037)],[(6693,10039),(7569,10039),(3090,10039)],[(3354,10061),(9443,10061),(775,10061)]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
