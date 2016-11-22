@@ -1,9 +1,9 @@
 Multivariate.lhs
 
-> module Multivariate 
->   where
+> module Multivariate where
 
 > import Data.Ratio
+> import Data.List(transpose)
 > import Univariate 
 >   ( degree, list2pol
 >   , thiele2ratf, lists2ratf, thiele2coef, list2rat
@@ -25,7 +25,8 @@ Let us start 2-variate polynomials.
   ,[588,643,710,789,880,983,1098,1225,1364,1515]
   ]
 
-Assuming the list of lists is a matrix of 2-variate function's values, (f i j).
+Assuming the list of lists is a matrix of 2-variate function's values,
+  f i j
 
 > tablize :: (Enum t1, Num t1) => (t1 -> t1 -> t) -> Int -> [[t]]
 > tablize f n = [[f x y | y <- range] | x <- range]
@@ -46,10 +47,7 @@ Assuming the list of lists is a matrix of 2-variate function's values, (f i j).
   ,[588 % 1,49 % 1,6 % 1]
   ]
 
-> wellOrd :: [[a]] -> [[a]]
-> wellOrd xss 
->   | null (head xss) = [] 
->   | otherwise       = map head xss : wellOrd (map tail xss)
+Let us take the transpose of this "matrix" to see the behavior of coefficients.
 
   *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
   *Multivariate> let fTable = tablize f 10
@@ -65,7 +63,7 @@ Assuming the list of lists is a matrix of 2-variate function's values, (f i j).
   ,[467 % 1,44 % 1,6 % 1]
   ,[588 % 1,49 % 1,6 % 1]
   ]
-  *Multivariate> wellOrd it
+  *Multivariate> transpose it
   [[3 % 1,12 % 1,35 % 1,72 % 1,123 % 1,188 % 1,267 % 1,360 % 1,467 % 1,588 % 1]
   ,[4 % 1,9 % 1,14 % 1,19 % 1,24 % 1,29 % 1,34 % 1,39 % 1,44 % 1,49 % 1]
   ,[6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
@@ -76,7 +74,7 @@ Assuming the list of lists is a matrix of 2-variate function's values, (f i j).
   ,[6 % 1]]
 
 > table2pol :: [[Ratio Integer]] -> [[Ratio Integer]]
-> table2pol = map list2pol . wellOrd . map list2pol
+> table2pol = map list2pol . transpose . map list2pol
 
   *Multivariate> let g x y = 1+7*x + 8*y + 10*x^2 + x*y+9*y^2
   *Multivariate> table2pol $ tablize g 5
@@ -119,7 +117,7 @@ Using the homogenious property, we just take x=1:
   ,[3 % 1,18 % 1,123 % 1]
   ,[3 % 1,22 % 1,182 % 1]
   ]
-  *Multivariate> wellOrd it
+  *Multivariate> transpose it
   [[3 % 1,3 % 1,3 % 1,3 % 1,3 % 1,3 % 1]
   ,[2 % 1,6 % 1,10 % 1,14 % 1,18 % 1,22 % 1]
   ,[7 % 1,18 % 1,41 % 1,76 % 1,123 % 1,182 % 1]
@@ -129,17 +127,41 @@ Using the homogenious property, we just take x=1:
 
 So, the numerator is given by
 
-  *Multivariate> map list2pol . wellOrd . map (fst . list2rat) $ auxhs
+  *Multivariate> map list2pol . transpose . map (fst . list2rat) $ auxhs
   [[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]]
   
 and the denominator is
 
-  *Multivariate> map list2pol . wellOrd . map (snd . list2rat) $ auxhs
+  *Multivariate> map list2pol . transpose . map (snd . list2rat) $ auxhs
   [[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]]
 
 > table2ratf table = (t2r fst table, t2r snd table)
 >   where
->     t2r third = map list2pol . wellOrd . map (third . list2rat)
+>     t2r third = map list2pol . transpose . map (third . list2rat)
   
   *Multivariate> table2ratf auxhs
   ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]])
+
+It is interesting but this Thiele reconstruction does work even if the target is a polynomial:
+
+  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
+  *Multivariate> let auxf x y t = f (t*x) (t*y)
+  *Multivariate> let auxfs = [map (auxf 1 y) [0..5] | y <- [0..5]]
+  *Multivariate> table2ratf auxfs
+  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[0 % 1]])
+
+> tablizer' :: (Num a, Enum a) => (a -> a -> b) -> a -> [[b]]
+> tablizer' f n = [map (f_t 1 y) [0..(n-1)] | y <- [1..(n-1)]]
+>   where
+>     f_t x y t = f (t*x) (t*y)
+  
+  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
+  *Multivariate> table2ratf $ tablizer' f 10
+  ([[3 % 1],[6 % 1,4 % 1],[18 % 1,17 % 1,6 % 1]]
+  ,[[1 % 1],[0 % 1]]
+  )
+  *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
+  *Multivariate> table2ratf $ tablizer' h 10
+  ([[3 % 1],[6 % 1,4 % 1],[18 % 1,17 % 1,6 % 1]]
+  ,[[1 % 1],[15 % 1,8 % 1],[20 % 1,19 % 1,9 % 1]]
+  )
