@@ -10,7 +10,7 @@ Functional Reconstruction over finite field Z_p
 > import Data.List (null)
 > import Control.Monad (sequence)
 >
-> import Ffield (modp)
+> import Ffield (modp, bigPrimes, reconstruct)
 > -- , inversep, bigPrimes, recCRT, recCRT')
 > -- import Univariate (npol2pol, newtonC)
 
@@ -124,6 +124,29 @@ Degree, eager and lazy versions
   *FROverZp> firstDifsp 107 (fs 107)
   [Just 36,Just 39,Just 34]
 
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
+  *FROverZp> let fsp p = accessibleData f p
+  *FROverZp> let smallerPrimes = filter isPrime [11, 13, 19, 23, 101, 103, 107]
+  *FROverZp> filter (isJust . snd) $ zip smallerPrimes $ map (sequence . (\p -> firstDifsp p $ fsp p)) smallerPrimes 
+  [(11,Just [4,3,7])
+  ,(19,Just [13,14,4])
+  ,(23,Just [8,16,17])
+  ,(101,Just [34,26,71])
+  ,(103,Just [69,36,9])
+  ,(107,Just [36,39,34])
+  ]
+
+> makePair :: [Maybe Int] -> [(Int, Maybe [Int])]
+> makePair ds = filter (isJust . snd) $ zip bigPrimes $ map (sequence . (\p -> firstDifsp p ds)) bigPrimes
+
+
+
+
+
+
+
+
+
   *FROverZp> map ourData [11,13,17,19,101,103,107]
   [[Just 4,Just 3,Just 7]
   ,[Just 9,Nothing]
@@ -160,7 +183,8 @@ Degree, eager and lazy versions
 
 
 
-  Our target is this diff-list, since once we reconstruct the diflists from several prime fields to rational field, we can fully convert it to canonical form in Q, by applying Univariate.npol2pol.
+
+Our target is this diff-list, since once we reconstruct the diflists from several prime fields to rational field, we can fully convert it to canonical form in Q, by applying Univariate.npol2pol.
 
 > wellOrd :: [[a]] -> [[a]]
 > wellOrd xss 

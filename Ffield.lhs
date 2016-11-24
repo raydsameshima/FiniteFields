@@ -111,6 +111,7 @@ See the algorithm, examples, and pseudo code at:
   ,Just ((-71) % 18,10039) ..
 
 --
+
 Chinese Remainder Theorem, and its usage
  
 > imagesAndPrimes :: Ratio Int -> [(Maybe Int, Int)]
