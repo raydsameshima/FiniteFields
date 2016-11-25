@@ -1,13 +1,10 @@
 Multivariate.lhs
 
-> module Multivariate 
->   where
+> module Multivariate where
 
 > import Data.Ratio
-> import Univariate 
->   ( degree, list2pol
->   , thiele2ratf, lists2ratf, thiele2coef, list2rat
->   )
+> import Data.List (transpose)
+> import Univariate (list2pol, list2rat)
 
 Let us start 2-variate polynomials.
 
@@ -25,7 +22,8 @@ Let us start 2-variate polynomials.
   ,[588,643,710,789,880,983,1098,1225,1364,1515]
   ]
 
-Assuming the list of lists is a matrix of 2-variate function's values, (f i j).
+Assuming the list of lists is a matrix of 2-variate function's values,
+  f i j
 
 > tablize :: (Enum t1, Num t1) => (t1 -> t1 -> t) -> Int -> [[t]]
 > tablize f n = [[f x y | y <- range] | x <- range]
@@ -46,10 +44,7 @@ Assuming the list of lists is a matrix of 2-variate function's values, (f i j).
   ,[588 % 1,49 % 1,6 % 1]
   ]
 
-> wellOrd :: [[a]] -> [[a]]
-> wellOrd xss 
->   | null (head xss) = [] 
->   | otherwise       = map head xss : wellOrd (map tail xss)
+Let us take the transpose of this "matrix" to see the behavior of coefficients.
 
   *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
   *Multivariate> let fTable = tablize f 10
@@ -65,7 +60,7 @@ Assuming the list of lists is a matrix of 2-variate function's values, (f i j).
   ,[467 % 1,44 % 1,6 % 1]
   ,[588 % 1,49 % 1,6 % 1]
   ]
-  *Multivariate> wellOrd it
+  *Multivariate> transpose it
   [[3 % 1,12 % 1,35 % 1,72 % 1,123 % 1,188 % 1,267 % 1,360 % 1,467 % 1,588 % 1]
   ,[4 % 1,9 % 1,14 % 1,19 % 1,24 % 1,29 % 1,34 % 1,39 % 1,44 % 1,49 % 1]
   ,[6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
@@ -76,7 +71,7 @@ Assuming the list of lists is a matrix of 2-variate function's values, (f i j).
   ,[6 % 1]]
 
 > table2pol :: [[Ratio Integer]] -> [[Ratio Integer]]
-> table2pol = map list2pol . wellOrd . map list2pol
+> table2pol = map list2pol . transpose . map list2pol
 
   *Multivariate> let g x y = 1+7*x + 8*y + 10*x^2 + x*y+9*y^2
   *Multivariate> table2pol $ tablize g 5
@@ -119,7 +114,7 @@ Using the homogenious property, we just take x=1:
   ,[3 % 1,18 % 1,123 % 1]
   ,[3 % 1,22 % 1,182 % 1]
   ]
-  *Multivariate> wellOrd it
+  *Multivariate> transpose it
   [[3 % 1,3 % 1,3 % 1,3 % 1,3 % 1,3 % 1]
   ,[2 % 1,6 % 1,10 % 1,14 % 1,18 % 1,22 % 1]
   ,[7 % 1,18 % 1,41 % 1,76 % 1,123 % 1,182 % 1]
@@ -129,17 +124,56 @@ Using the homogenious property, we just take x=1:
 
 So, the numerator is given by
 
-  *Multivariate> map list2pol . wellOrd . map (fst . list2rat) $ auxhs
+  *Multivariate> map list2pol . transpose . map (fst . list2rat) $ auxhs
   [[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]]
   
 and the denominator is
 
-  *Multivariate> map list2pol . wellOrd . map (snd . list2rat) $ auxhs
+  *Multivariate> map list2pol . transpose . map (snd . list2rat) $ auxhs
   [[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]]
 
+> table2ratf :: Integral a => [[Ratio a]] -> ([[Ratio a]], [[Ratio a]])
 > table2ratf table = (t2r fst table, t2r snd table)
 >   where
->     t2r third = map list2pol . wellOrd . map (third . list2rat)
+>     t2r third = map list2pol . transpose . map (third . list2rat)
   
   *Multivariate> table2ratf auxhs
   ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]])
+
+It is interesting but this Thiele reconstruction does work even if the target is a polynomial:
+
+  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
+  *Multivariate> let auxf x y t = f (t*x) (t*y)
+  *Multivariate> let auxfs = [map (auxf 1 y) [0..5] | y <- [0..5]]
+  *Multivariate> table2ratf auxfs
+  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[0 % 1]])
+
+> tablizer :: (Num a, Enum a) => (a -> a -> b) -> a -> [[b]]
+> tablizer f n = [map (f_t 1 y) [0..(n-1)] | y <- [1..(n-1)]]
+>   where
+>     f_t x y t = f (t*x) (t*y)
+  
+  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
+  *Multivariate> table2ratf $ tablizer f 10
+  ([[3 % 1],[6 % 1,4 % 1],[18 % 1,17 % 1,6 % 1]]
+  ,[[1 % 1],[0 % 1]]
+  )
+  *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
+  *Multivariate> table2ratf $ tablizer h 10
+  ([[3 % 1],[6 % 1,4 % 1],[18 % 1,17 % 1,6 % 1]]
+  ,[[1 % 1],[15 % 1,8 % 1],[20 % 1,19 % 1,9 % 1]]
+  )
+
+Note that, the sampling points for n=10 case are
+  
+  *Multivariate> tablizer (\x y -> (x,y)) 10
+  [[(0,0),(1,1),(2,2),(3,3),(4,4),(5,5),(6,6),(7,7),(8,8),(9,9)]
+  ,[(0,0),(1,2),(2,4),(3,6),(4,8),(5,10),(6,12),(7,14),(8,16),(9,18)]
+  ,[(0,0),(1,3),(2,6),(3,9),(4,12),(5,15),(6,18),(7,21),(8,24),(9,27)]
+  ,[(0,0),(1,4),(2,8),(3,12),(4,16),(5,20),(6,24),(7,28),(8,32),(9,36)]
+  ,[(0,0),(1,5),(2,10),(3,15),(4,20),(5,25),(6,30),(7,35),(8,40),(9,45)]
+  ,[(0,0),(1,6),(2,12),(3,18),(4,24),(5,30),(6,36),(7,42),(8,48),(9,54)]
+  ,[(0,0),(1,7),(2,14),(3,21),(4,28),(5,35),(6,42),(7,49),(8,56),(9,63)]
+  ,[(0,0),(1,8),(2,16),(3,24),(4,32),(5,40),(6,48),(7,56),(8,64),(9,72)]
+  ,[(0,0),(1,9),(2,18),(3,27),(4,36),(5,45),(6,54),(7,63),(8,72),(9,81)]
+  ]
