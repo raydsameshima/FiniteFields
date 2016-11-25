@@ -29,6 +29,11 @@ Our target is a univariate polynomial
   *FROverZp> take 10 $ map (f `fmodp` 19)  [0..]
   [Just 13,Just 8,Just 7,Just 10,Just 17,Just 9,Just 5,Just 5,Just 9,Just 17]
 
+Since we have chosen 
+  *Ffield> last bigPrimes 
+  10939
+we can put a finite number of outputs as our accessible "row" data.
+
 Difference analysis over Z_p
 Every arithmetic should be on Z_p, i.e., (`mod` p).
 
@@ -82,7 +87,7 @@ Every arithmetic should be on Z_p, i.e., (`mod` p).
 Degree, eager and lazy versions
 
 > degreep' :: (Applicative f, Eq (f Int)) => Int -> [f Int] -> Int
-> degreep' p xs = length (difListsp p [xs]) -1
+> degreep' p xs = length (difListsp p [xs]) - 1
 >
 > degreepLazy :: (Applicative f, Num t, Eq (f Int)) => Int -> [f Int] -> t
 > degreepLazy p xs = helper xs 0
@@ -109,7 +114,6 @@ Degree, eager and lazy versions
   *FROverZp> degreep 17 $ accessibleData f 17
   2
 
-> -- firstDifsp :: Integral a => a -> [a] -> [a]
 > firstDifsp :: (Applicative f, Eq (f Int)) => Int -> [f Int] -> [f Int]
 > firstDifsp p xs = reverse $ map head $ difListsp p [xs']
 >   where
@@ -123,7 +127,6 @@ Degree, eager and lazy versions
   True
   *FROverZp> firstDifsp 101 (fsp 101)
   [Just 34,Just 26,Just 71]
-<<<<<<< HEAD
   *FROverZp> firstDifsp 103 (fs 103)
   [Just 69,Just 36,Just 9]
   *FROverZp> firstDifsp 107 (fs 107)

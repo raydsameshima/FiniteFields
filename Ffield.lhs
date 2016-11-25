@@ -90,10 +90,10 @@ See the algorithm, examples, and pseudo code at:
 >         | otherwise = select rs ss p
 >
 > -- Hard code of big primes
+> -- We have chosen a finite number version.
 > bigPrimes :: [Int]
-> bigPrimes = dropWhile (<10^4) primes
-> -- bigPrimes = take 10 $ dropWhile (<10^4) primes
-> -- 10 is just for "practical" reason.
+> bigPrimes = take 100 $ dropWhile (<10^4) primes
+> -- bigPrimes = dropWhile (<10^4) primes
 
   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
   *Ffield> let ds = knownData (12%13)
