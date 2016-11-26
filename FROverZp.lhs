@@ -12,7 +12,7 @@ Functional Reconstruction over finite field Z_p
 >
 > import Ffield (modp, bigPrimes, reconstruct)
 > -- , inversep, bigPrimes, recCRT, recCRT')
-> -- import Univariate (npol2pol, newtonC)
+> import Univariate (list2npol)
 
 Univariate Polynomial case
 Our target is a univariate polynomial
@@ -119,24 +119,18 @@ Degree, eager and lazy versions
 >   where
 >     xs' = take n xs
 >     n   = 2 + degreep p xs
-  
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
-  *FROverZp> let fsp p = accessibleData f p
-  *FROverZp> let smallPrimes = [11,13,19,23,101,103,107]
-  *FROverZp> and $ map isPrime smallPrimes 
-  True
-  *FROverZp> firstDifsp 101 (fsp 101)
-  [Just 34,Just 26,Just 71]
-  *FROverZp> firstDifsp 103 (fs 103)
-  [Just 69,Just 36,Just 9]
-  *FROverZp> firstDifsp 107 (fs 107)
-  [Just 36,Just 39,Just 34]
+>
+> makeAPair :: [Int] -> [Ratio Int] -> [(Int, Maybe [Int])]
+> makeAPair ps fs = zip ps . map (sequence . (\p -> firstDifsp p (fsp p))) $ ps 
+>   where
+>     fsp = accessibleData' fs
 
   *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
-  *FROverZp> let fsp p = accessibleData f p
+  *FROverZp> let fs = map f [0..]
   *FROverZp> let smallerPrimes = filter isPrime [11, 13, 19, 23, 101, 103, 107]
-  *FROverZp> filter (isJust . snd) $ zip smallerPrimes $ map (sequence . (\p -> firstDifsp p $ fsp p)) smallerPrimes 
+  *FROverZp> makeAPair smallerPrimes  fs
   [(11,Just [4,3,7])
+  ,(13,Nothing)
   ,(19,Just [13,14,4])
   ,(23,Just [8,16,17])
   ,(101,Just [34,26,71])
@@ -144,49 +138,78 @@ Degree, eager and lazy versions
   ,(107,Just [36,39,34])
   ]
 
-> makePair :: [Maybe Int] -> [(Int, Maybe [Int])]
-> makePair ds = filter (isJust . snd) $ zip bigPrimes $ map (sequence . (\p -> firstDifsp p ds)) bigPrimes
-
-
-
-
-
-
-
-
-
-  *FROverZp> map ourData [11,13,17,19,101,103,107]
-  *FROverZp> map (\p -> firstDifsp p (fsp p)) smallPrimes 
-  [[Just 4,Just 3,Just 7]
-  ,[Just 9,Nothing]
-  ,[Just 13,Just 14,Just 4]
-  ,[Just 8,Just 16,Just 17]
-  ,[Just 34,Just 26,Just 71]
-  ,[Just 69,Just 36,Just 9]
-  ,[Just 36,Just 39,Just 34]
+  *FROverZp>  makeAPair smallerPrimes  fs
+  [(11,Just [4,3,7])
+  ,(13,Nothing)
+  ,(19,Just [13,14,4])
+  ,(23,Just [8,16,17])
+  ,(101,Just [34,26,71])
+  ,(103,Just [69,36,9])
+  ,(107,Just [36,39,34])
   ]
-  *FROverZp> map sequence it
-  [Just [4,3,7]
-  ,Nothing
-  ,Just [13,14,4]
-  ,Just [8,16,17]
-  ,Just [34,26,71]
-  ,Just [69,36,9]
-  ,Just [36,39,34]
+  *FROverZp> filter (isJust . snd) it
+  [(11,Just [4,3,7])
+  ,(19,Just [13,14,4])
+  ,(23,Just [8,16,17])
+  ,(101,Just [34,26,71])
+  ,(103,Just [69,36,9])
+  ,(107,Just [36,39,34])
   ]
-  *FROverZp> zip it smallPrimes 
-  [(Just [4,3,7],11)
-  ,(Nothing,13)
-  ,(Just [13,14,4],19)
-  ,(Just [8,16,17],23)
-  ,(Just [34,26,71],101)
-  ,(Just [69,36,9],103)
-  ,(Just [36,39,34],107)
+  *FROverZp> map (\(p, xs) -> (zip (sequence xs) (repeat p))) it
+  [[(Just 4,11),(Just 3,11),(Just 7,11)]
+  ,[(Just 13,19),(Just 14,19),(Just 4,19)]
+  ,[(Just 8,23),(Just 16,23),(Just 17,23)]
+  ,[(Just 34,101),(Just 26,101),(Just 71,101)]
+  ,[(Just 69,103),(Just 36,103),(Just 9,103)]
+  ,[(Just 36,107),(Just 39,107),(Just 34,107)]
   ]
+  *FROverZp> transpose it
+  [[(Just 4,11),(Just 13,19),(Just 8,23),(Just 34,101),(Just 69,103),(Just 36,107)]
+  ,[(Just 3,11),(Just 14,19),(Just 16,23),(Just 26,101),(Just 36,103),(Just 39,107)]
+  ,[(Just 7,11),(Just 4,19),(Just 17,23),(Just 71,101),(Just 9,103),(Just 34,107)]
+  ]
+  *FROverZp> :t it
+  it :: [[(Maybe Int, Int)]]
+  *FROverZp> :t reconstruct 
+  reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer, Integer)
+  *FROverZp> map reconstruct it
+  [Just (1 % 3,209),Just (74 % 65,485507),Just (14 % 13,209)]
 
-> makeAPair ps fs = zip ps . map (sequence . (\p -> firstDifsp p (fsp p))) $ ps 
->   where
->     fsp = accessibleData' fs
+  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
+  *FROverZp> let fs = map f [0..]
+  *FROverZp> list2npol fs
+  [1 % 3,74 % 65,7 % 13]
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   *FROverZp> take 5 $ makeAPair bigPrimes fs 
   [(10007,Just [3336,463,6929])
