@@ -180,6 +180,10 @@ Degree, eager and lazy versions
   *FROverZp> list2npol fs
   [1 % 3,74 % 65,7 % 13]
 
+> list2npolp :: [Ratio Int] -> [Maybe (Ratio Integer, Integer)]
+> list2npolp = map reconstruct . transpose . map (\(p,xs) -> (zip (sequence xs) (repeat p))) . 
+>              filter (isJust .snd) . makeAPair bigPrimes 
+
 
   
 
