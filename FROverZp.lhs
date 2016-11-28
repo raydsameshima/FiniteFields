@@ -12,7 +12,7 @@ Functional Reconstruction over finite field Z_p
 >
 > import Ffield (modp, bigPrimes, reconstruct)
 > -- , inversep, bigPrimes, recCRT, recCRT')
-> import Univariate (list2npol)
+> import Univariate (newtonC, firstDifs, list2npol)
 
 Univariate Polynomial case
 Our target is a univariate polynomial
@@ -180,233 +180,20 @@ Degree, eager and lazy versions
   *FROverZp> list2npol fs
   [1 % 3,74 % 65,7 % 13]
 
-> list2npolp :: [Ratio Int] -> [Maybe (Ratio Integer, Integer)]
-> list2npolp = map reconstruct . transpose . map (\(p,xs) -> (zip (sequence xs) (repeat p))) . 
+> firstDifs' :: [Ratio Int] -> [Maybe (Ratio Integer, Integer)]
+> firstDifs' = map reconstruct . transpose . map (\(p,xs) -> (zip (sequence xs) (repeat p))) . 
 >              filter (isJust .snd) . makeAPair bigPrimes 
 
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  *FROverZp> take 5 $ makeAPair bigPrimes fs 
-  [(10007,Just [3336,463,6929])
-  ,(10009,Just [6673,1387,771])
-  ,(10037,Just [3346,6641,9266])
-  ,(10039,Just [6693,7569,3090])
-  ,(10061,Just [3354,9443,775])
-  ]
-  
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
-  *FROverZp> let fs = map f [0..]
-  *FROverZp> take 5 $ makeAPair bigPrimes fs 
-  [(10007,Just [3336,463,6929]),(10009,Just [6673,1387,771]),(10037,Just [3346,6641,9266]),(10039,Just [6693,7569,3090]),(10061,Just [3354,9443,775])]
-  
-  *FROverZp> take 5 $ makeAPair bigPrimes fs 
-  [(10007,Just [3336,463,6929])
-  ,(10009,Just [6673,1387,771])
-  ,(10037,Just [3346,6641,9266])
-  ,(10039,Just [6693,7569,3090])
-  ,(10061,Just [3354,9443,775])
-  ]
-  *FROverZp> map (\(p,m) -> if isJust m then Just (zip (fromJust m) (repeat p)) else Nothing) it
-  [Just [(3336,10007),(463,10007),(6929,10007)],Just [(6673,10009),(1387,10009),(771,10009)],Just [(3346,10037),(6641,10037),(9266,10037)],Just [(6693,10039),(7569,10039),(3090,10039)],Just [(3354,10061),(9443,10061),(775,10061)]]
-  *FROverZp> sequence it
-  Just [[(3336,10007),(463,10007),(6929,10007)]
-       ,[(6673,10009),(1387,10009),(771,10009)]
-       ,[(3346,10037),(6641,10037),(9266,10037)]
-       ,[(6693,10039),(7569,10039),(3090,10039)]
-       ,[(3354,10061),(9443,10061),(775,10061)]
-       ]
-
-> makePairs = sequence . map helper
->   where
->     helper (_, Nothing) = Nothing
->     helper (p, Just a) = Just (zip a (repeat p))
-  
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%13)*x^2
-  *FROverZp> let fs = map f [0..]
-  *FROverZp> makePairs $ take 5 $ makeAPair bigPrimes fs
-  Just [[(3336,10007),(463,10007),(6929,10007)],[(6673,10009),(1387,10009),(771,10009)],[(3346,10037),(6641,10037),(9266,10037)],[(6693,10039),(7569,10039),(3090,10039)],[(3354,10061),(9443,10061),(775,10061)]]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Our target is this diff-list, since once we reconstruct the diflists from several prime fields to rational field, we can fully convert it to canonical form in Q, by applying Univariate.npol2pol.
-
-> wellOrd :: [[a]] -> [[a]]
-> wellOrd xss 
->   | null (head xss) = [] 
->   | otherwise       = map head xss : wellOrd (map tail xss)
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> let fps p = accessibleData f p
-  *FROverZp> let ourData p = firstDifsp p (fps p)
-  *FROverZp> let fivePrimes = take 5 bigPrimes 
-  *FROverZp> map (\p -> zip (ourData p) (repeat p)) fivePrimes 
-  [[(299158,897473),(867559,897473),(299160,897473)]
-  ,[(299166,897497),(329084,897497),(299168,897497)]
-  ,[(598333,897499),(388918,897499),(598335,897499)]
-  ,[(598345,897517),(29919,897517),(598347,897517)]
-  ,[(299176,897527),(329095,897527),(299178,897527)]
-  ]
-  *FROverZp> wellOrd it
-  [[(299158,897473),(299166,897497),(598333,897499)
-   ,(598345,897517),(299176,897527)]
-  ,[(867559,897473),(329084,897497),(388918,897499)
-   ,(29919,897517),(329095,897527)]
-  ,[(299160,897473),(299168,897497),(598335,897499)
-   ,(598347,897517),(299178,897527)]
-  ]
-  *FROverZp> :t it
-  it :: [[(Int, Int)]]
-
-We need to transform
-  Int -> Integer
-to use recCRT :: Integral a => [(a, a)] -> Ratio a
-
-  *FROverZp> let impCasted = 
-  [[(299158,897473),(299166,897497),(598333,897499)
-   ,(598345,897517),(299176,897527)]
-  ,[(867559,897473),(329084,897497),(388918,897499)
-   ,(29919,897517),(329095,897527)]
-  ,[(299160,897473),(299168,897497),(598335,897499)
-   ,(598347,897517),(299178,897527)]
-  ]
-  *FROverZp> :t impCasted 
-  impCasted :: (Num t1, Num t) => [[(t, t1)]]
-  *FROverZp> map recCRT impCasted 
-  [1 % 3,53 % 30,7 % 3]
-  *FROverZp> map recCRT' impCastet 
-  [(1 % 3,897473),(53 % 30,897473),(7 % 3,897473)]
-
-This result is consistent:
-  *Univariate> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *Univariate> firstDifs (map f [0..10])
-  [1 % 3,53 % 30,7 % 3] 
-
-Let us define above casting function
-
-> toInteger2 :: (Integral a1, Integral a) => (a, a1) -> (Integer, Integer)
-> toInteger2 (a,b) = (toInteger a, toInteger b)
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> let fps p = accessibleData f p
-  *FROverZp> let ourData p = firstDifsp p (fps p)
-  *FROverZp> let longList' = map (\p -> zip (ourData p) (repeat p)) bigPrimes 
-  *FROverZp> let longList = wellOrd longList' 
-  *FROverZp> :t longList
-  longList :: [[(Int, Int)]]
-  *FROverZp> let longList'' = map (map toInteger2) longList
-  *FROverZp> :t longList''
-  longList'' :: [[(Integer, Integer)]]
-  *FROverZp> map recCRT longList''
-  [1 % 3,53 % 30,7 % 3]
-  *FROverZp> map recCRT' longList''
-  [(1 % 3,897473),(53 % 30,897473),(7 % 3,897473)]
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> let fps p = accessibleData f p
-  *FROverZp> let ourData p = firstDifsp p (fps p)
-  *FROverZp> let longList' = map (\p -> zip (ourData p) (repeat p)) bigPrimes 
-  *FROverZp> let longList = wellOrd longList' 
-  *FROverZp> :t longList
-  longList :: [[(Int, Int)]]
-  *FROverZp> let longList'' = map (map toInteger2) longList
-  *FROverZp> :t longList''
-  longList'' :: [[(Integer, Integer)]]
-  *FROverZp> map recCRT longList''
-  [1 % 3,53 % 30,7 % 3]
-  *FROverZp> map recCRT' longList''
-  [(1 % 3,897473),(53 % 30,897473),(7 % 3,897473)]
-
-Let us try another example:
-
-  *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
-  *FROverZp> let fps p = accessibleData f p
-  *FROverZp> let longList = map (map toInteger2) $ wellOrd $ map (\p -> zip (firstDifsp p (fps p)) (repeat p)) bigPrimes 
-  *FROverZp> map recCRT' longList 
-  [(895 % 922,805479325081)
-  ,(17448553 % 8649888,722916888780872419)
-  ,(2323 % 624,805479325081)
-  ]
-
-This result is consistent to that of on Q:
-
-  *FROverZp> :l Univariate
-  [1 of 2] Compiling Polynomials      ( Polynomials.hs, interpreted )
-  [2 of 2] Compiling Univariate       ( Univariate.lhs, interpreted )
-  Ok, modules loaded: Univariate, Polynomials.
-  *Univariate> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
-  *Univariate> firstDifs (map f [0..20])
-  [895 % 922,17448553 % 8649888,2323 % 624]
-
-> {-
-> list2firstDifZp' fs = map (recCRT' . map toInteger2) $ wellOrd $ map helper bigPrimes
->   where 
->     helper p = zip (firstDifsp p (accessibleData' fs p)) (repeat p)
-
-  *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
-  *FROverZp> let fs = map f [0..]
-  *FROverZp> list2firstDifZp' fs
-  [(895 % 922,805479325081)
-  ,(17448553 % 8649888,722916888780872419)
-  ,(2323 % 624,805479325081)
-  ]
-  *FROverZp> map fst it
-  [895 % 922,17448553 % 8649888,2323 % 624]
-  *FROverZp> newtonC it
-  [895 % 922,17448553 % 8649888,2323 % 1248]
-  *FROverZp> npol2pol it
-  [895 % 922,1080 % 6931,2323 % 1248]
-
-> list2polZp :: [Ratio Int] -> [Ratio Integer]
-> list2polZp = npol2pol . newtonC . (map fst) . list2firstDifZp'
+  *FROverZp> let g x = 1%153 + x*(133%122) + (x^2)*(1%199) + (x^3)*(922%855)
+  *FROverZp> let gs = map g [0..]
+  *FROverZp> fmap (newtonC . map fst) . sequence . firstDifs' $ take 100 gs
+  Just [1 % 153,45117911 % 20757690,183763 % 56715,922 % 855]
+  *FROverZp> list2npol gs
+  [1 % 153,45117911 % 20757690,183763 % 56715,922 % 855]
+
+> -- Eager-version, i.e., input should be finite.
+> list2npolp :: [Ratio Int] -> Maybe [Ratio Integer]
+> list2npolp = fmap (newtonC . map fst) . sequence . firstDifs' 
 
 --
 Univariate Rational function case
@@ -415,6 +202,7 @@ So, our target should be rho function (matrix?) calculation.
 
 Reciprocal difference
 
+> {-
 > rhoZp :: Integral a => [Ratio a] -> a -> Int -> a -> a
 > rhoZp fs 0 i p = (fs !! i) `modp` p
 > rhoZp fs n i p 
