@@ -195,6 +195,14 @@ Degree, eager and lazy versions
 > list2npolp :: [Ratio Int] -> Maybe [Ratio Integer]
 > list2npolp = fmap (newtonC . map fst) . sequence . firstDifs' 
 
+  *FROverZp> let g x = 1%153 + x*(133%122) + (x^2)*(1%199) + (x^3)*(922%855)
+  *FROverZp> let gs = map g [0..100]
+  *FROverZp> list2npol gs
+  [1 % 153,45117911 % 20757690,183763 % 56715,922 % 855]
+  *FROverZp> list2npolp gs
+  Just [1 % 153,45117911 % 20757690,183763 % 56715,922 % 855]
+ 
+
 --
 Univariate Rational function case
 Since thiele2coef uses only (*), (+) and (-) operations, we don't have to do these calculation over prime fields.
