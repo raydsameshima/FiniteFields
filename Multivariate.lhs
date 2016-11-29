@@ -80,10 +80,9 @@ Let us take the transpose of this "matrix" to see the behavior of coefficients.
 --
 
 Next, 2-variate rational functions.
+Note that, we assume the denominator function is greater in its rank than that of numerator, or equal.
   
   *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
-  *Multivariate> let auxh x y t = h (t*x) (t*y)
-  *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2)% (1+7*x+8*y+10*x^2+x*y+9*y^2)
   *Multivariate> let auxh x y t = h (t*x) (t*y)
 
 Using the homogenious property, we just take x=1:
@@ -149,25 +148,25 @@ It is interesting but this Thiele reconstruction does work even if the target is
   ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[0 % 1]])
 
 > tablizer :: (Num a, Enum a) => (a -> a -> b) -> a -> [[b]]
-> tablizer f n = [map (f_t 1 y) [0..(n-1)] | y <- [1..(n-1)]]
+> tablizer f n = [map (f_t 1 y) [0..(n-1)] | y <- [0..(n-1)]]
 >   where
 >     f_t x y t = f (t*x) (t*y)
-  
+
   *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
   *Multivariate> table2ratf $ tablizer f 10
-  ([[3 % 1],[6 % 1,4 % 1],[18 % 1,17 % 1,6 % 1]]
-  ,[[1 % 1],[0 % 1]]
-  )
+  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[0 % 1]])
+  *Multivariate> let g z1 z2 = 1%(3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2)
+  *Multivariate> table2ratf $ tablizer g 10
+  ([[1 % 3],[0 % 1],[0 % 1]],[[1 % 1],[2 % 3,4 % 3],[7 % 3,5 % 3,2 % 1]])
   *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
   *Multivariate> table2ratf $ tablizer h 10
-  ([[3 % 1],[6 % 1,4 % 1],[18 % 1,17 % 1,6 % 1]]
-  ,[[1 % 1],[15 % 1,8 % 1],[20 % 1,19 % 1,9 % 1]]
-  )
+  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]])
 
 Note that, the sampling points for n=10 case are
-  
+
   *Multivariate> tablizer (\x y -> (x,y)) 10
-  [[(0,0),(1,1),(2,2),(3,3),(4,4),(5,5),(6,6),(7,7),(8,8),(9,9)]
+  [[(0,0),(1,0),(2,0),(3,0),(4,0),(5,0),(6,0),(7,0),(8,0),(9,0)]
+  ,[(0,0),(1,1),(2,2),(3,3),(4,4),(5,5),(6,6),(7,7),(8,8),(9,9)]
   ,[(0,0),(1,2),(2,4),(3,6),(4,8),(5,10),(6,12),(7,14),(8,16),(9,18)]
   ,[(0,0),(1,3),(2,6),(3,9),(4,12),(5,15),(6,18),(7,21),(8,24),(9,27)]
   ,[(0,0),(1,4),(2,8),(3,12),(4,16),(5,20),(6,24),(7,28),(8,32),(9,36)]
@@ -177,3 +176,19 @@ Note that, the sampling points for n=10 case are
   ,[(0,0),(1,8),(2,16),(3,24),(4,32),(5,40),(6,48),(7,56),(8,64),(9,72)]
   ,[(0,0),(1,9),(2,18),(3,27),(4,36),(5,45),(6,54),(7,63),(8,72),(9,81)]
   ]
+  
+  *Multivariate> let h1 x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2+13*x^5)
+  *Multivariate> table2ratf $ tablizer h1 20
+  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1],[0 % 1],[0 % 1],[0 % 1]]
+  ,[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1],[0 % 1],[0 % 1],[13 % 1]]
+  )
+  *Multivariate> let h2 x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2+13*x^5+x*y^4)
+  *Multivariate> table2ratf $ tablizer h2 20
+  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1],[0 % 1],[0 % 1],[0 % 1]]
+  ,[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1],[0 % 1],[0 % 1],[13 % 1,0 % 1,0 % 1,0 % 1,1 % 1]]
+  )
+  *Multivariate> let h3 x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2+11*x^3) % (1+7*x+8*y+10*x^2+x*y+9*y^2+13*x^5+x*y^4)
+  *Multivariate> table2ratf $ tablizer h3 20
+  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1],[11 % 1],[0 % 1],[0 % 1]]
+  ,[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1],[0 % 1],[0 % 1],[13 % 1,0 % 1,0 % 1,0 % 1,1 % 1]]
+  )
