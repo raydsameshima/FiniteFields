@@ -29,6 +29,13 @@ Assuming the list of lists is a matrix of 2-variate function's values,
 > tablize f n = [[f x y | y <- range] | x <- range]
 >   where
 >     range = take n [0..]
+  
+  *Multivariate> tablize (\x y -> (x,y)) 4
+  [[(0,0),(0,1),(0,2),(0,3)]
+  ,[(1,0),(1,1),(1,2),(1,3)]
+  ,[(2,0),(2,1),(2,2),(2,3)]
+  ,[(3,0),(3,1),(3,2),(3,3)]
+  ]
 
   *Multivariate> let fTable = tablize f 10
   *Multivariate> map list2pol fTable 
@@ -76,6 +83,101 @@ Let us take the transpose of this "matrix" to see the behavior of coefficients.
   *Multivariate> let g x y = 1+7*x + 8*y + 10*x^2 + x*y+9*y^2
   *Multivariate> table2pol $ tablize g 5
   [[1 % 1,7 % 1,10 % 1],[8 % 1,1 % 1],[9 % 1]]
+
+There are some bad-behavior polynomials;
+  *Multivariate> table2pol $ tablize (\x y -> x*y) 20
+  [[0 % 1],[1 % 1,1 % 1]]
+  *Multivariate> tablize (\x y -> (x,y)) 5
+  [[(0,0),(0,1),(0,2),(0,3),(0,4)]
+  ,[(1,0),(1,1),(1,2),(1,3),(1,4)]
+  ,[(2,0),(2,1),(2,2),(2,3),(2,4)]
+  ,[(3,0),(3,1),(3,2),(3,3),(3,4)]
+  ,[(4,0),(4,1),(4,2),(4,3),(4,4)]
+  ]
+  *Multivariate> tablize (\x y -> (x*y)) 5
+  [[0,0,0,0,0]
+  ,[0,1,2,3,4]
+  ,[0,2,4,6,8]
+  ,[0,3,6,9,12]
+  ,[0,4,8,12,16]
+  ]
+
+Here we have assumed that the list of functions has the same length, but
+
+  *Multivariate> map list2pol $ tablize (\x y -> x*y) 5
+  [[0 % 1],[0 % 1,1 % 1],[0 % 1,2 % 1],[0 % 1,3 % 1],[0 % 1,4 % 1]]
+
+So, we should repeat 0's if we have zero-function.
+
+> xyDegree f = (dX, dY)
+>   where
+>     dX = length . list2pol $ map (\t -> f t 1) [0..] 
+>     dY = length . list2pol $ map (\t -> f 1 t) [0..]
+
+  *Multivariate> let test x y = x^2*(2*y + y^3)
+  *Multivariate> uncurry (*) . xyDegree $ test
+  6
+  *Multivariate> maximum . map (length . list2pol) . tablize test $ 6
+  4
+  *Multivariate> map (take 4 . (++ (repeat (0%1))) . list2pol) . tablize test $ 6
+  [[0 % 1,0 % 1,0 % 1,0 % 1]
+  ,[0 % 1,2 % 1,0 % 1,1 % 1]
+  ,[0 % 1,8 % 1,0 % 1,4 % 1]
+  ,[0 % 1,18 % 1,0 % 1,9 % 1]
+  ,[0 % 1,32 % 1,0 % 1,16 % 1]
+  ,[0 % 1,50 % 1,0 % 1,25 % 1]
+  ]
+  *Multivariate> map list2pol . transpose $ it
+  [[0 % 1],[0 % 1,0 % 1,2 % 1],[0 % 1],[0 % 1,0 % 1,1 % 1]]
+
+  *Multivariate> let test x y = (1%3)*x^2*((2%5)*y + ((3%4)*x*y^3)) 
+                           -- = (2%15)*x^2*y + (1%4)*x^3*y^3
+  *Multivariate> xyDegree  test
+  (3,3)
+  *Multivariate> map (take 4 . (++ (repeat (0%1))) . list2pol) . tablize test $ 9
+  [[0 % 1,0 % 1,0 % 1,0 % 1]
+  ,[0 % 1,2 % 15,0 % 1,1 % 4]
+  ,[0 % 1,8 % 15,0 % 1,2 % 1]
+  ,[0 % 1,6 % 5,0 % 1,27 % 4]
+  ,[0 % 1,32 % 15,0 % 1,16 % 1]
+  ,[0 % 1,10 % 3,0 % 1,125 % 4]
+  ,[0 % 1,24 % 5,0 % 1,54 % 1]
+  ,[0 % 1,98 % 15,0 % 1,343 % 4]
+  ,[0 % 1,128 % 15,0 % 1,128 % 1]
+  ]
+  *Multivariate> map list2pol . transpose $ it
+  [[0 % 1],[0 % 1,0 % 1,2 % 15],[0 % 1],[0 % 1,0 % 1,0 % 1,1 % 4]]
+
+> xyPol2Coef f = map list2pol . transpose . map (take num . (++ (repeat (0%1))) . list2pol) . tablize f $ rank
+>   where
+>     rank = uncurry (*) . xyDegree $ f
+>     num  = maximum . map (length . list2pol) . tablize f $ rank 
+
+  *Multivariate> let test x y = (1%3)*x^2*((2%5)*y + ((3%4)*x*y^3))
+  *Multivariate> xyPol2Coef test
+  [[0 % 1],[0 % 1,0 % 1,2 % 15],[0 % 1],[0 % 1,0 % 1,0 % 1,1 % 4]]
+  *Multivariate> let test2 x y = x*y
+  *Multivariate> xyPol2Coef test2
+  [[0 % 1],[0 % 1,1 % 1]]
+  *Multivariate> let test3 x y = x^3*y^4
+  *Multivariate> xyPol2Coef test3
+  [[0 % 1],[0 % 1],[0 % 1],[0 % 1],[0 % 1,0 % 1,0 % 1,1 % 1]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 --
 
