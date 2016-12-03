@@ -148,6 +148,8 @@ So, we should repeat 0's if we have zero-function.
   *Multivariate> map list2pol . transpose $ it
   [[0 % 1],[0 % 1,0 % 1,2 % 15],[0 % 1],[0 % 1,0 % 1,0 % 1,1 % 4]]
 
+> xyPol2Coef :: (Enum t, Integral a, Num t) =>
+>               (t -> t -> Ratio a) -> [[Ratio a]]
 > xyPol2Coef f = map list2pol . transpose . map (take num . (++ (repeat (0%1))) . list2pol) . tablize f $ rank
 >   where
 >     rank = uncurry (*) . xyDegree $ f
@@ -163,21 +165,10 @@ So, we should repeat 0's if we have zero-function.
   *Multivariate> xyPol2Coef test3
   [[0 % 1],[0 % 1],[0 % 1],[0 % 1],[0 % 1,0 % 1,0 % 1,1 % 1]]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+> table2pol' :: Integral a => [[Ratio a]] -> [[Ratio a]]
+> table2pol' tbl = map list2pol . transpose . map (take num . (++ (repeat (0%1))) . list2pol) $ tbl
+>   where
+>     num = maximum . map (length . list2pol) $ tbl
 
 --
 
@@ -313,3 +304,11 @@ Note that, the sampling points for n=10 case are
   ([[27 % 13],[9 % 4,63 % 32],[99 % 4,27 % 16,18 % 1]],[[1 % 1],[9 % 4,18 % 1],[9 % 44,9 % 5,33 % 16]])
 
 > wilFunc x y = (14*x^2*y^2) % ((1 + y)^3)
+
+> table2ratf' :: Integral a => [[Ratio a]] -> ([[Ratio a]], [[Ratio a]])
+> table2ratf' table = (t2r fst table, t2r snd table)
+>   where
+>     t2r third = map list2pol . transpose' . map (third . list2rat)
+>     transpose' = undefined
+ 
+> -- table2pol' tbl = map list2pol . transpose . map (take num . (++ (repeat (0%1))) . list2pol) $ tbl
