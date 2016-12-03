@@ -357,4 +357,14 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
   *Univariate> thiele2coef as
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
 
+It fails at the follwoing example:
 
+  *Univariate> list2rat $ map (\t -> t%(1+t^2)) [0..]
+  *** Exception: Ratio has zero denominator
+
+  *Univariate> list2rat $ map (\t -> t%(4+t^2)) [0..]
+  ([0 % 1,1 % 4,0 % 1],[1 % 1,0 % 1,1 % 4])
+  *Univariate> list2rat $ map (\t -> t%(1+t^3)) [0..]
+  ([0 % 1,1 % 1,0 % 1,0 % 1],[1 % 1,0 % 1,0 % 1,1 % 1])
+  *Univariate> list2rat $ map (\t -> t^2%(1+t^2)) [0..]
+  ([0 % 1,0 % 1,1 % 1],[1 % 1,0 % 1,1 % 1])
