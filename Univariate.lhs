@@ -2,6 +2,8 @@ Univariate.lhs
 
 > module Univariate where
 > import Data.Ratio
+> import Control.Applicative
+
 > import Polynomials 
 
 From the output list
@@ -17,10 +19,11 @@ we reconstrunct the canonical form of f.
 > difs (i:jj@(j:js)) = j-i : difs jj
 >
 > difLists :: (Eq a, Num a) => [[a]] -> [[a]]
-> difLists [] = []
+> difLists []          = []
 > difLists xx@(xs:xss) =
->   if isConst xs then xx
->                 else difLists $ difs xs : xx
+>   if isConst xs 
+>     then xx
+>     else difLists $ difs xs : xx
 >   where
 >     isConst (i:jj@(j:js)) = all (==i) jj
 >     isConst _ = error "difLists: lack of data, or not a polynomial"
@@ -368,3 +371,21 @@ It fails at the follwoing example:
   ([0 % 1,1 % 1,0 % 1,0 % 1],[1 % 1,0 % 1,0 % 1,1 % 1])
   *Univariate> list2rat $ map (\t -> t^2%(1+t^2)) [0..]
   ([0 % 1,0 % 1,1 % 1],[1 % 1,0 % 1,1 % 1])
+
+  *Univariate Control.Applicative> let ladder n = map (flip (/) . (n^)) [0..]
+  *Univariate Control.Applicative> list2rat $ map ((\t -> t%(1+t^2)) . (2*)) [0..]
+  ([0 % 1,2 % 1,0 % 1],[1 % 1,0 % 1,4 % 1])
+  *Univariate Control.Applicative> getZipList $ (ZipList $ ladder 2) <*> (ZipList $ fst it)
+  [0 % 1,1 % 1,0 % 1]
+
+> x2nx f n = f . (*n)
+>
+> factorOutBy n pair = (help $ fst pair, help $ snd pair)
+>   where
+>     help lst = getZipList $ ZipList ladder <*> ZipList lst
+>     ladder = map (flip (/) . (n^)) [0..]
+
+  *Univariate Control.Applicative> list2rat $ map ((\t -> t%(1+t^2)) . (2*)) [0..]
+  ([0 % 1,2 % 1,0 % 1],[1 % 1,0 % 1,4 % 1])
+  *Univariate Control.Applicative> factorOutBy 2 it
+  ([0 % 1,1 % 1,0 % 1],[1 % 1,0 % 1,1 % 1])
