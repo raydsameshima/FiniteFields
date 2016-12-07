@@ -1,5 +1,11 @@
 Univariate.lhs
 
+References
+J. Stoer, R. Bulirsch
+  Introduction to Numerical Analysis (2nd edition)
+L. M. Milne-Thomson
+  THE CALCULUS OF FINITE DIFFERENCES
+
 > module Univariate where
 > import Data.Ratio
 > import Control.Applicative
@@ -20,17 +26,17 @@ we reconstrunct the canonical form of f.
 >
 > difLists :: (Eq a, Num a) => [[a]] -> [[a]]
 > difLists []          = []
-> difLists xx@(xs:xss) =
+> difLists xx@(xs:_) =
 >   if isConst xs 
 >     then xx
 >     else difLists $ difs xs : xx
 >   where
->     isConst (i:jj@(j:js)) = all (==i) jj
+>     isConst (i:jj@(j:_)) = all (==i) jj
 >     isConst _ = error "difLists: lack of data, or not a polynomial"
 >
 > -- This degree function is "strict", so only take finite list.
 > degree' :: (Eq a, Num a) => [a] -> Int
-> degree' xs = length (difLists [xs]) -1
+> degree' xs = length (difLists [xs]) - 1
 >
 > -- This degree function can compute the degree of infinite list.
 > degreeLazy :: (Eq a, Num a) => [a] -> Int
@@ -212,53 +218,82 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 
 > rho :: (Integral a) => 
 >        [Ratio a] -- A list of output of f :: a -> Ratio a 
->     -> a -> Int -> Ratio a
-> rho fs 0 i = fs !! i
+>                  -> a -> Int -> Maybe (Ratio a)
+> rho fs 0 i = Just $ fs !! i
 > rho fs n i 
->   | n < 0     = 0
->   | otherwise = (n*den)%num + rho fs (n-2) (i+1)
+>   | n < 0          = Just 0
+>   | num == Just 0  = Nothing
+>   | otherwise      = (+) <$> recipro <*> rho fs (n-2) (i+1)
 >   where
->     num  = numerator next
->     den  = denominator next
->     next = rho fs (n-1) (i+1) - rho fs (n-1) i
+>     recipro = (%) <$> (*n) <$> den <*> num
+>     num  = numerator <$> next
+>     den  = denominator <$> next
+>     next = (-) <$> rho fs (n-1) (i+1) <*> rho fs (n-1) i
 
 Note that (%) has the following type,
   (%) :: Integral a => a -> a -> Ratio a
 
-> a :: (Integral a) => [Ratio a] -> a -> Ratio a
-> a fs 0 = head fs
-> a fs n = rho fs n 0 - rho fs (n-2) 0
+  *Univariate> (%) <$> (*2) <$> Just 5 <*> Just 3
+  Just (10 % 3)
 
-Consider the following continuous fraction form.
-  (%i25) f(x) := 1+(x/(2+(x-1)/(3+(x-2)/4)));
-  (%o25) f(x):=x/(2+(x-1)/(3+(x-2)/4))+1
-  (%i26) ratsimp(f(x));
-  (%o26) (x^2+16*x+16)/(16+6*x)
+This reciprocal difference rho matches the table of Milne-Thompson[1951] page 106:
 
-  *Univariate> map (a fs) [0..]
-  [1 % 1,2 % 1,3 % 1,4 % 1,*** Exception: Ratio has zero denominator
+  *Univariate> map (\p -> map (rho (map (\t -> 1%(1+t^2)) [0..]) p) [0..3]) [0..5]
+  [[Just (1 % 1),Just (1 % 2),Just (1 % 5),Just (1 % 10)]
+  ,[Just ((-2) % 1),Just ((-10) % 3),Just ((-10) % 1),Just ((-170) % 7)]
+  ,[Just ((-1) % 1),Just ((-1) % 10),Just ((-1) % 25),Just ((-1) % 46)]
+  ,[Just (0 % 1),Just (40 % 1),Just (140 % 1),Just (324 % 1)]
+  ,[Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)]
+  ,[Nothing,Nothing,Nothing,Nothing]
+  ]
 
-  *Univariate> let func x = (x^2 + 16*x + 16)%(6*x + 16)
-  *Univariate> let fs = map func [0..]
-  *Univariate> take 5 $ map (rho fs 0) [0..]
-  [1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]
-  *Univariate> take 5 $ map (rho fs 1) [0..]
-  [2 % 1,14 % 5,238 % 69,170 % 43,230 % 53]
-  *Univariate> take 5 $ map (rho fs 2) [0..]
-  [4 % 1,79 % 16,269 % 44,667 % 88,413 % 44]
-  *Univariate> take 5 $ map (rho fs 3) [0..]
-  [6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
+> a :: (Integral a) => [Ratio a] -> a -> Maybe (Ratio a)
+> a fs 0 = Just $ head fs
+> a fs n = (-) <$> rho fs n 0 <*> rho fs (n-2) 0
+
+> a' fs p 0 = Just $ fs !! p
+> a' fs p n = (-) <$> rho fs n p <*> rho fs (n-2) p
+
+
+  *Univariate> map (\p -> map (rho fs p) [0..5]) [0..4]
+  [[Just (0 % 1),Just (1 % 2),Just (2 % 5),Just (3 % 10),Just (4 % 17),Just (5 % 26)]
+  ,[Just (2 % 1),Just ((-10) % 1),Just ((-10) % 1),Just ((-170) % 11),Just ((-442) % 19),Just ((-962) % 29)]
+  ,[Just (1 % 3),Nothing,Just ((-1) % 15),Just ((-1) % 48),Just ((-1) % 105),Just ((-1) % 192)]
+  ,[Nothing,Nothing,Just (50 % 1),Just (242 % 1),Just (662 % 1),Just (1430 % 1)]
+  ,[Nothing,Nothing,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)]
+  ]
 
 > tDegree :: Integral a => [Ratio a] -> a
 > tDegree fs = helper fs 0
 >   where
 >     helper fs n
->       | isConstants fs' = n
+>       | areNothings fs' = n-1 -- We have taken one more, so need (-1)!
 >       | otherwise       = helper fs (n+1)
 >       where
 >         fs' = map (rho fs n) [0..]
->     isConstants (i:j:_) = i==j -- 2 times match
-> --  isConstants (i:j:k_) = i==j && j==k -- 3 times match
+>     areNothings js = all (== Nothing) $ take 10 js -- 10 for practical
+
+  *Univariate> map (\p -> map (rho (map (\t -> t%(1+t^2)) [0..]) p) [0..5]) [0..5]
+  [[Just (0 % 1),Just (1 % 2),Just (2 % 5),Just (3 % 10),Just (4 % 17),Just (5 % 26)]
+  ,[Just (2 % 1),Just ((-10) % 1),Just ((-10) % 1),Just ((-170) % 11),Just ((-442) % 19),Just ((-962) % 29)]
+  ,[Just (1 % 3),Nothing,Just ((-1) % 15),Just ((-1) % 48),Just ((-1) % 105),Just ((-1) % 192)]
+  ,[Nothing,Nothing,Just (50 % 1),Just (242 % 1),Just (662 % 1),Just (1430 % 1)]
+  ,[Nothing,Nothing,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)]
+  ,[Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
+  ]
+
+  *Univariate> map (\p -> map (rho (map (\t -> t^2%(1+t^2)) [0..]) p) [0..5]) [0..5]
+  [[Just (0 % 1),Just (1 % 2),Just (4 % 5),Just (9 % 10),Just (16 % 17),Just (25 % 26)]
+  ,[Just (2 % 1),Just (10 % 3),Just (10 % 1),Just (170 % 7),Just (442 % 9),Just (962 % 11)]
+  ,[Just (2 % 1),Just (11 % 10),Just (26 % 25),Just (47 % 46),Just (74 % 73),Just (107 % 106)]
+  ,[Just (0 % 1),Just ((-40) % 1),Just ((-140) % 1),Just ((-324) % 1),Just ((-616) % 1),Just ((-1040) % 1)]
+  ,[Just (1 % 1),Just (1 % 1),Just (1 % 1),Just (1 % 1),Just (1 % 1),Just (1 % 1)]
+  ,[Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
+  ]
+
+
+
+> {-
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
   *Univariate> let hs = map h [0..]
@@ -359,6 +394,8 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
   [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
   *Univariate> thiele2coef as
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
+
+> -}
 
 It fails at the follwoing example:
 
