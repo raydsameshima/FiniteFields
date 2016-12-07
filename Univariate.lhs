@@ -7,8 +7,11 @@ L. M. Milne-Thomson
   THE CALCULUS OF FINITE DIFFERENCES
 
 > module Univariate where
-> import Data.Ratio
 > import Control.Applicative
+>
+> import Data.Ratio
+> import Data.Maybe
+> import Data.List
 
 > import Polynomials 
 
@@ -254,13 +257,13 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
 > a' fs p 0 = Just $ fs !! p
 > a' fs p n = (-) <$> rho fs n p <*> rho fs (n-2) p
 
-
-  *Univariate> map (\p -> map (rho fs p) [0..5]) [0..4]
+  *Univariate> map (\p -> map (rho (map (\t -> t%(1+t^2)) [0..]) p) [0..5]) [0..5]
   [[Just (0 % 1),Just (1 % 2),Just (2 % 5),Just (3 % 10),Just (4 % 17),Just (5 % 26)]
   ,[Just (2 % 1),Just ((-10) % 1),Just ((-10) % 1),Just ((-170) % 11),Just ((-442) % 19),Just ((-962) % 29)]
   ,[Just (1 % 3),Nothing,Just ((-1) % 15),Just ((-1) % 48),Just ((-1) % 105),Just ((-1) % 192)]
   ,[Nothing,Nothing,Just (50 % 1),Just (242 % 1),Just (662 % 1),Just (1430 % 1)]
   ,[Nothing,Nothing,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)]
+  ,[Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
   ]
 
 > tDegree :: Integral a => [Ratio a] -> a
@@ -273,15 +276,6 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
 >         fs' = map (rho fs n) [0..]
 >     areNothings js = all (== Nothing) $ take 10 js -- 10 for practical
 
-  *Univariate> map (\p -> map (rho (map (\t -> t%(1+t^2)) [0..]) p) [0..5]) [0..5]
-  [[Just (0 % 1),Just (1 % 2),Just (2 % 5),Just (3 % 10),Just (4 % 17),Just (5 % 26)]
-  ,[Just (2 % 1),Just ((-10) % 1),Just ((-10) % 1),Just ((-170) % 11),Just ((-442) % 19),Just ((-962) % 29)]
-  ,[Just (1 % 3),Nothing,Just ((-1) % 15),Just ((-1) % 48),Just ((-1) % 105),Just ((-1) % 192)]
-  ,[Nothing,Nothing,Just (50 % 1),Just (242 % 1),Just (662 % 1),Just (1430 % 1)]
-  ,[Nothing,Nothing,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)]
-  ,[Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
-  ]
-
   *Univariate> map (\p -> map (rho (map (\t -> t^2%(1+t^2)) [0..]) p) [0..5]) [0..5]
   [[Just (0 % 1),Just (1 % 2),Just (4 % 5),Just (9 % 10),Just (16 % 17),Just (25 % 26)]
   ,[Just (2 % 1),Just (10 % 3),Just (10 % 1),Just (170 % 7),Just (442 % 9),Just (962 % 11)]
@@ -290,6 +284,61 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
   ,[Just (1 % 1),Just (1 % 1),Just (1 % 1),Just (1 % 1),Just (1 % 1),Just (1 % 1)]
   ,[Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
   ]
+
+Using primed-a (a'), we can simply shift and reconstruct functions,
+  
+  *Univariate> let f = \t -> t^2%(1+t^2)
+  *Univariate> let fs = map f [0..]
+  *Univariate> tDegree fs
+  4
+  *Univariate> map (a' fs 0) [0..4]
+  [Just (0 % 1),Just (2 % 1),Just (2 % 1),Just ((-2) % 1),Just ((-1) % 1)]
+  *Univariate> map (a' fs 1) [0..4]
+  [Just (1 % 2),Just (10 % 3),Just (3 % 5),Just ((-130) % 3),Just ((-1) % 10)]
+
+Using Maxima, we get same results
+
+  (%i17) f(t) := 0 + (x/(2 + (x-1)/(2 + (x-2)/(-2 + (x-3)/(-1))))), ratsimp;
+  (%o17) f(t):=x^2/(1+x^2)
+  (%i18) ff(t) := 1/2 + (x-1)/(10/3 + (x-2)/(3/5 + (x-3)/(-130/3 + (x-4)/(-1/10)))), ratsimp;
+  (%o18) ff(t):=x^2/(1+x^2)
+
+  *Univariate> let g t = t%(1+t^2)
+  *Univariate> let gs = map g [0..]
+  *Univariate> tDegree gs
+  4
+  *Univariate> map (a' gs 0) [0..4]
+  [Just (0 % 1),Just (2 % 1),Just (1 % 3),Nothing,Nothing]
+  *Univariate> map (a' gs 1) [0..4]
+  [Just (1 % 2),Just ((-10) % 1),Nothing,Nothing,Nothing]
+  *Univariate> map (a' gs 2) [0..4]
+  [Just (2 % 5),Just ((-10) % 1),Just ((-7) % 15),Just (60 % 1),Just (1 % 15)]
+
+  (%i19) g(x) := 2/5 + (x-2)/(-10 + (x-3)/(-7/15 + (x-4)/(60 + (x-5)/(1/15)))), ratsimp;
+  (%o19) g(x):=x/(1+x^2)
+
+  *Univariate> map (\q -> map (a' gs q) [0..4]) [0..5]
+  [[Just (0 % 1),Just (2 % 1),Just (1 % 3),Nothing,Nothing]
+  ,[Just (1 % 2),Just ((-10) % 1),Nothing,Nothing,Nothing]
+  ,[Just (2 % 5),Just ((-10) % 1),Just ((-7) % 15),Just (60 % 1),Just (1 % 15)]
+  ,[Just (3 % 10),Just ((-170) % 11),Just ((-77) % 240),Just (2832 % 11),Just (1 % 48)]
+  ,[Just (4 % 17),Just ((-442) % 19),Just ((-437) % 1785),Just (13020 % 19),Just (1 % 105)]
+  ,[Just (5 % 26),Just ((-962) % 29),Just ((-493) % 2496),Just (42432 % 29),Just (1 % 192)]
+  ]
+  *Univariate> map sequence it
+  [Nothing
+  ,Nothing
+  ,Just [2 % 5,(-10) % 1,(-7) % 15,60 % 1,1 % 15]
+  ,Just [3 % 10,(-170) % 11,(-77) % 240,2832 % 11,1 % 48]
+  ,Just [4 % 17,(-442) % 19,(-437) % 1785,13020 % 19,1 % 105]
+  ,Just [5 % 26,(-962) % 29,(-493) % 2496,42432 % 29,1 % 192]
+  ]
+
+We also need the shift, in this case, 2 to get full Thiele coefficients.
+
+  *Univariate> findIndex isJust it
+  Just 2
+
 
 
 
@@ -426,3 +475,4 @@ It fails at the follwoing example:
   ([0 % 1,2 % 1,0 % 1],[1 % 1,0 % 1,4 % 1])
   *Univariate Control.Applicative> factorOutBy 2 it
   ([0 % 1,1 % 1,0 % 1],[1 % 1,0 % 1,1 % 1])
+
