@@ -8,6 +8,7 @@ L. M. Milne-Thomson
 
 > module Univariate where
 > import Control.Applicative
+> import Control.Monad
 >
 > import Data.Ratio
 > import Data.Maybe
@@ -338,6 +339,31 @@ We also need the shift, in this case, 2 to get full Thiele coefficients.
 
   *Univariate> findIndex isJust it
   Just 2
+
+> rhoMatrix :: Integral a => [Ratio a] -> [Maybe [Ratio a]]
+> rhoMatrix gs = map (sequence . (\q -> map (a' gs q) [0..thieleD])) [0..]
+>   where
+>     thieleD = tDegree gs
+
+> shiftAndThieleC :: [Maybe a] -> (Maybe Int, Maybe a)
+> shiftAndThieleC gs = (findIndex isJust gs, join $ find isJust gs)
+
+  *Univariate Control.Monad> let g t = t%(1+t^2)
+  *Univariate Control.Monad> let gs = map g [0..]
+  *Univariate Control.Monad> shiftAndThieleC $ rhoMatrix gs
+  (Just 2,Just [2 % 5,(-10) % 1,(-7) % 15,60 % 1,1 % 15])
+  *Univariate Control.Monad> let f t = 1%(1+t^2)
+  *Univariate Control.Monad> let fs = map f [0..]
+  *Univariate Control.Monad> shiftAndThieleC $ rhoMatrix fs
+  (Just 0,Just [1 % 1,(-2) % 1,(-2) % 1,2 % 1,1 % 1])
+
+
+
+
+
+
+
+
 
 
 
