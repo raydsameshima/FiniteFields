@@ -4,7 +4,7 @@ Multivariate.lhs
 
 > import Data.Ratio
 > import Data.List (transpose)
-> import Univariate (list2pol) --, list2rat)
+> import Univariate (list2pol, list2rat')
 
 Let us start 2-variate polynomials.
 
@@ -172,7 +172,6 @@ So, we should repeat 0's if we have zero-function.
 
 --
 
-> {-
 
 Next, 2-variate rational functions.
   
@@ -225,11 +224,14 @@ and the denominator is
   *Multivariate> map list2pol . transpose . map (snd . list2rat) $ auxhs
   [[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]]
 
+> {-
+
 > table2ratf :: Integral a => [[Ratio a]] -> ([[Ratio a]], [[Ratio a]])
 > table2ratf table = (t2r fst table, t2r snd table)
 >   where
 >     t2r third = map list2pol . transpose . map (third . list2rat)
   
+
   *Multivariate> table2ratf auxhs
   ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]])
 
