@@ -4,7 +4,7 @@ Multivariate.lhs
 
 > import Data.Ratio
 > import Data.List (transpose)
-> import Univariate (list2pol, list2rat)
+> import Univariate (list2pol) --, list2rat)
 
 Let us start 2-variate polynomials.
 
@@ -172,6 +172,8 @@ So, we should repeat 0's if we have zero-function.
 
 --
 
+> {-
+
 Next, 2-variate rational functions.
   
   *Multivariate> let h x y = (+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
@@ -312,3 +314,5 @@ Note that, the sampling points for n=10 case are
 >     transpose' = undefined
  
 > -- table2pol' tbl = map list2pol . transpose . map (take num . (++ (repeat (0%1))) . list2pol) $ tbl
+
+> -}

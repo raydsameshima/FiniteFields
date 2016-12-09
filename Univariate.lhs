@@ -9,11 +9,10 @@ L. M. Milne-Thomson
 > module Univariate where
 > import Control.Applicative
 > import Control.Monad
->
 > import Data.Ratio
 > import Data.Maybe
 > import Data.List
-
+>
 > import Polynomials 
 
 From the output list
@@ -22,7 +21,6 @@ of a polynomial
   f :: Int -> Ratio Int
 we reconstrunct the canonical form of f.
 
-> -- difference analysis
 > difs :: (Num a) => [a] -> [a]
 > difs [] = []
 > difs [_] = []
@@ -222,7 +220,7 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 
 > rho :: (Integral a) => 
 >        [Ratio a] -- A list of output of f :: a -> Ratio a 
->                  -> a -> Int -> Maybe (Ratio a)
+>      -> a -> Int -> Maybe (Ratio a)
 > rho fs 0 i = Just $ fs !! i
 > rho fs n i 
 >   | n < 0          = Just 0
@@ -255,6 +253,7 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
 > a fs 0 = Just $ head fs
 > a fs n = (-) <$> rho fs n 0 <*> rho fs (n-2) 0
 
+> -- shifted Thiele coefficients
 > a' fs p 0 = Just $ fs !! p
 > a' fs p n = (-) <$> rho fs n p <*> rho fs (n-2) p
 
@@ -275,7 +274,7 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
 >       | otherwise       = helper fs (n+1)
 >       where
 >         fs' = map (rho fs n) [0..]
->     areNothings js = all (== Nothing) $ take 10 js -- 10 for practical
+>     areNothings js = all (== Nothing) $ take 10 js -- 10 for practical reason
 
   *Univariate> map (\p -> map (rho (map (\t -> t^2%(1+t^2)) [0..]) p) [0..5]) [0..5]
   [[Just (0 % 1),Just (1 % 2),Just (4 % 5),Just (9 % 10),Just (16 % 17),Just (25 % 26)]
@@ -344,9 +343,12 @@ We also need the shift, in this case, 2 to get full Thiele coefficients.
 > rhoMatrix gs = map (sequence . (\q -> map (a' gs q) [0..thieleD])) [0..]
 >   where
 >     thieleD = tDegree gs
-
-> shiftAndThieleC :: [Maybe a] -> (Maybe Int, Maybe a)
-> shiftAndThieleC gs = (findIndex isJust gs, join $ find isJust gs)
+>
+> shiftAndThieleC :: Integral a => 
+>                    [Ratio a] -> (Maybe Int, Maybe [Ratio a])
+> shiftAndThieleC fs = (findIndex isJust gs, join $ find isJust gs)
+>   where
+>     gs = rhoMatrix fs
 
   *Univariate Control.Monad> let g t = t%(1+t^2)
   *Univariate Control.Monad> let gs = map g [0..]
@@ -356,40 +358,6 @@ We also need the shift, in this case, 2 to get full Thiele coefficients.
   *Univariate Control.Monad> let fs = map f [0..]
   *Univariate Control.Monad> shiftAndThieleC $ rhoMatrix fs
   (Just 0,Just [1 % 1,(-2) % 1,(-2) % 1,2 % 1,1 % 1])
-
-
-
-
-
-
-
-
-
-
-
-
-> {-
-
-  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
-  *Univariate> let hs = map h [0..]
-  *Univariate> tDegree hs
-  4
-  *Univariate> map (a hs) [0..(tDegree hs)]
-  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
-
-With Maxima,
-  (%i35) h(t) := 3+t/((-23/42)+(t-1)/((-28/13)+(t-2)/((767/14)+(t-3)/(7/130))));
-
-  (%o35) h(t):=t/((-23)/42+(t-1)/((-28)/13+(t-2)/(767/14+(t-3)/(7/130))))+3
-  (%i36) ratsimp(h(t));
-
-  (%o36) (18*t^2+6*t+3)/(1+2*t+20*t^2)
-
-> thieleC :: (Integral a) => [Ratio a] -> [Ratio a]
-> thieleC lst = map (a lst) [0..(tDegree lst)]
-
-  *Univariate> thieleC hs
-  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
 
 We need a convertor from this thiele sequence to continuous form of rational function.
 
@@ -455,8 +423,6 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
 >       where
 >         (num, den) = t2r as (n+1)
 >
-> list2rat :: (Integral a) => [Ratio a] -> ([Ratio a], [Ratio a])
-> list2rat = thiele2coef . thieleC
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
   *Univariate> let hs = map h [0..]
@@ -470,35 +436,49 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
   *Univariate> thiele2coef as
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
 
-> -}
+> thiele2coef' :: Integral a => 
+>                 Ratio a -> [Ratio a] -> ([Ratio a], [Ratio a])
+> thiele2coef' sft as = canonicalize $ t2r as sft
+>   where
+>     t2r [an,an'] n = (([an*an'-n] + z),[an'])
+>     t2r (a:as)   n = ((a .* num) + ((z - [n]) * den), num)
+>       where
+>         (num, den) = t2r as (n+1)
 
-It fails at the follwoing example:
-
-  *Univariate> list2rat $ map (\t -> t%(1+t^2)) [0..]
-  *** Exception: Ratio has zero denominator
-
-  *Univariate> list2rat $ map (\t -> t%(4+t^2)) [0..]
-  ([0 % 1,1 % 4,0 % 1],[1 % 1,0 % 1,1 % 4])
-  *Univariate> list2rat $ map (\t -> t%(1+t^3)) [0..]
-  ([0 % 1,1 % 1,0 % 1,0 % 1],[1 % 1,0 % 1,0 % 1,1 % 1])
-  *Univariate> list2rat $ map (\t -> t^2%(1+t^2)) [0..]
+  *Univariate> let f x = x^2%(1+x^2)
+  *Univariate> shiftAndThieleC $ map f [0..]
+  (Just 0,Just [0 % 1,2 % 1,2 % 1,(-2) % 1,(-1) % 1])
+  *Univariate> take 3 $ rho
+  rho        rhoMatrix
+  *Univariate> take 3 $ rhoMatrix (map f [0..])
+  [Just [0 % 1,2 % 1,2 % 1,(-2) % 1,(-1) % 1]
+  ,Just [1 % 2,10 % 3,3 % 5,(-130) % 3,(-1) % 10]
+  ,Just [4 % 5,10 % 1,6 % 25,(-150) % 1,(-1) % 25]
+  ]
+  *Univariate> thiele2coef' 0 [0 % 1,2 % 1,2 % 1,(-2) % 1,(-1) % 1]
+  ([0 % 1,0 % 1,1 % 1],[1 % 1,0 % 1,1 % 1])
+  *Univariate> thiele2coef' 1 [1 % 2,10 % 3,3 % 5,(-130) % 3,(-1) % 10]
   ([0 % 1,0 % 1,1 % 1],[1 % 1,0 % 1,1 % 1])
 
-  *Univariate Control.Applicative> let ladder n = map (flip (/) . (n^)) [0..]
-  *Univariate Control.Applicative> list2rat $ map ((\t -> t%(1+t^2)) . (2*)) [0..]
-  ([0 % 1,2 % 1,0 % 1],[1 % 1,0 % 1,4 % 1])
-  *Univariate Control.Applicative> getZipList $ (ZipList $ ladder 2) <*> (ZipList $ fst it)
-  [0 % 1,1 % 1,0 % 1]
+> shiftAndThiele2coef (Just sft, Just ts) = Just $ thiele2coef' (fromIntegral sft) ts
+> shiftAndThiele2coef _                   = Nothing
 
-> x2nx f n = f . (*n)
->
-> factorOutBy n pair = (help $ fst pair, help $ snd pair)
->   where
->     help lst = getZipList $ ZipList ladder <*> ZipList lst
->     ladder = map (flip (/) . (n^)) [0..]
-
-  *Univariate Control.Applicative> list2rat $ map ((\t -> t%(1+t^2)) . (2*)) [0..]
-  ([0 % 1,2 % 1,0 % 1],[1 % 1,0 % 1,4 % 1])
-  *Univariate Control.Applicative> factorOutBy 2 it
-  ([0 % 1,1 % 1,0 % 1],[1 % 1,0 % 1,1 % 1])
-
+> list2rat' = shiftAndThiele2coef . shiftAndThieleC
+ 
+  *Univariate> let f t = t%(1+t^2)
+  *Univariate> let fs = map (\t -> 1%(1+t^2)) [0..]
+  *Univariate> list2rat' fs
+  Just ([1 % 1,0 % 1,0 % 1],[1 % 1,0 % 1,1 % 1])
+  *Univariate> shiftAndThieleC fs
+  (Just 0,Just [1 % 1,(-2) % 1,(-2) % 1,2 % 1,1 % 1])
+  *Univariate> let fs = map (\t -> t%(1+t^2)) [0..]
+  *Univariate> let gs = map (\t -> t%(1+t^2)) [0..]
+  *Univariate> shiftAndThieleC gs
+  (Just 2,Just [2 % 5,(-10) % 1,(-7) % 15,60 % 1,1 % 15])
+  *Univariate> list2rat' gs
+  Just ([0 % 1,1 % 1,0 % 1],[1 % 1,0 % 1,1 % 1])
+  *Univariate> let hs = map (\t -> t^2%(1+t^2)) [0..]
+  *Univariate> shiftAndThieleC hs
+  (Just 0,Just [0 % 1,2 % 1,2 % 1,(-2) % 1,(-1) % 1])
+  *Univariate> list2rat' hs
+  Just ([0 % 1,0 % 1,1 % 1],[1 % 1,0 % 1,1 % 1])
