@@ -52,6 +52,13 @@ we reconstrunct the canonical form of f.
 > degree :: (Num a, Eq a) => [a] -> Int
 > degree xs = let l = degreeLazy xs in
 >   degree' $ take (l+2) xs
+>
+> degreeTimes :: (Num a, Eq a) => Int -> [a] -> Int
+> degreeTimes m xs = helper xs 0
+>   where
+>     helper aa@(a:as) n
+>       | all (== a) (take m as) = n
+>       | otherwise              = helper (difs aa) (n+1)
 
 Newton interpolation formula
 First we introduce a new infix symbol for the operation of taking a falling power.
