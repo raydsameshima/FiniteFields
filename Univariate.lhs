@@ -154,14 +154,19 @@ Mapping a list of integers to a Newton representation:
 > list2npol :: (Integral a) => [Ratio a] -> [Ratio a]
 > list2npol xs = newtonC . firstDifs $ take n xs
 >   where n = (degree xs) + 2
+>
+> list2npolTimes :: (Integral a) => Int -> [Ratio a] -> [Ratio a]
+> list2npolTimes m xs = newtonC . firstDifs $ take n xs
+>   where n = (degreeTimes m xs) + 2
 
-  *Univariate> let f x = 2*x^3 + 3*x + 1%5
-  *Univariate> take 10 $ map f [0..]
-  [1 % 5,26 % 5,111 % 5,316 % 5,701 % 5,1326 % 5,2251 % 5,3536 % 5,5241 % 5,7426 % 5]
-  *Univariate> list2npol it
-  [1 % 5,5 % 1,6 % 1,2 % 1]
-  *Univariate> list2npol $ map f [0..]
-  [1 % 5,5 % 1,6 % 1,2 % 1]
+  *Univariate> let f x = x*(x-1)*(x-2)*(x-3)*(x-4)*(x-5)
+  *Univariate> let fs = map f [0..]
+  *Univariate> list2npolTimes 10 fs
+  [0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,1 % 1]
+  *Univariate> npol2pol it
+  [0 % 1,(-120) % 1,274 % 1,(-225) % 1,85 % 1,(-15) % 1,1 % 1]
+  *Univariate> list2npol fs
+  [0 % 1]
 
 We need to map Newton falling powers to standard powers.  
 This is a matter of applying combinatorics, by means of a convention formula that uses the so-called Stirling cyclic numbers (of the first kind.)
@@ -227,7 +232,7 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 
 > rho :: (Integral a) => 
 >        [Ratio a] -- A list of output of f :: a -> Ratio a 
->      -> a -> Int -> Maybe (Ratio a)
+>     -> a -> Int -> Maybe (Ratio a)
 > rho fs 0 i = Just $ fs !! i
 > rho fs n i 
 >   | n < 0          = Just 0
@@ -259,8 +264,9 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
 > a :: (Integral a) => [Ratio a] -> a -> Maybe (Ratio a)
 > a fs 0 = Just $ head fs
 > a fs n = (-) <$> rho fs n 0 <*> rho fs (n-2) 0
-
+>
 > -- shifted Thiele coefficients
+> a' :: Integral a => [Ratio a] -> Int -> a -> Maybe (Ratio a)
 > a' fs p 0 = Just $ fs !! p
 > a' fs p n = (-) <$> rho fs n p <*> rho fs (n-2) p
 
@@ -412,7 +418,7 @@ However, since our input starts from 0 and this means firstNonzero is the same a
 > canonicalize :: (Integral a) => ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
 > canonicalize rat@(ns,ds)
 >   | dMin == 1 = rat
->   | otherwise = (map (/dMin) ns, map (/dMin) ds)
+>   | otherwise = (map (/ dMin) ns, map (/ dMin) ds)
 >   where
 >     dMin = firstNonzero ds
 >     firstNonzero [a] = a -- head
@@ -470,6 +476,7 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
 > shiftAndThiele2coef (Just sft, Just ts) = Just $ thiele2coef' (fromIntegral sft) ts
 > shiftAndThiele2coef _                   = Nothing
 
+> list2rat' :: (Integral a) => [Ratio a] -> Maybe ([Ratio a], [Ratio a])
 > list2rat' = shiftAndThiele2coef . shiftAndThieleC
  
   *Univariate> let f t = t%(1+t^2)
