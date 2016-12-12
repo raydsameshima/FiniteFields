@@ -186,94 +186,33 @@ So, we should repeat 0's if we have zero-function.
   *Univariate> fmap (map list2pol) it
   Just [[1 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Next, 2-variate rational functions.
-  
-  *Multivariate> let h x y = (+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
+  *Multivariate> let h x y = (1+2*x+4*y+7*x^2+5*x*y+(6%13)*y^2) / (1+(7%3)*x+8*y+10*x^2+x*y+9*y^2)
   *Multivariate> let auxh x y t = h (t*x) (t*y)
+  *Multivariate> let auxhs = [map (auxh 1 y) [0..100] | y <- [0..100]]
+  *Multivariate> fmap (map list2pol . transpose . map fst) . sequence . map list2rat' $ auxhs
+  Just [[1 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 13]]
+  *Multivariate> fmap (map list2pol . transpose . map snd) . sequence . map list2rat' $ auxhs
+  Just [[1 % 1],[7 % 3,8 % 1],[10 % 1,1 % 1,9 % 1]]
 
-sing the homogenious property, we just take x=1:
-
-  *Multivariate> let auxhs = [map (auxh 1 y) [0..5] | y <- [0..5]]
-  *Multivariate> auxhs
-  [[3 % 1,2 % 3,7 % 11,9 % 14,41 % 63,94 % 143]
-  ,[3 % 1,3 % 4,29 % 37,183 % 226,105 % 127,161 % 192]
-  ,[3 % 1,3 % 4,187 % 239,201 % 251,233 % 287,77 % 94]
-  ,[3 % 1,31 % 42,335 % 439,729 % 940,425 % 543,1973 % 2506]
-  ,[3 % 1,8 % 11,59 % 79,291 % 385,681 % 895,528 % 691]
-  ,[3 % 1,23 % 32,155 % 211,1707 % 2302,1001 % 1343,4663 % 6236]
-  ]
-  
-  *Multivariate> map list2rat auxhs
-  [([3 % 1,2 % 1,7 % 1],[1 % 1,7 % 1,10 % 1])
-  ,([3 % 1,6 % 1,18 % 1],[1 % 1,15 % 1,20 % 1])
-  ,([3 % 1,10 % 1,41 % 1],[1 % 1,23 % 1,48 % 1])
-  ,([3 % 1,14 % 1,76 % 1],[1 % 1,31 % 1,94 % 1])
-  ,([3 % 1,18 % 1,123 % 1],[1 % 1,39 % 1,158 % 1])
-  ,([3 % 1,22 % 1,182 % 1],[1 % 1,47 % 1,240 % 1])
-  ]
-  *Multivariate> map fst it
-  [[3 % 1,2 % 1,7 % 1]
-  ,[3 % 1,6 % 1,18 % 1]
-  ,[3 % 1,10 % 1,41 % 1]
-  ,[3 % 1,14 % 1,76 % 1]
-  ,[3 % 1,18 % 1,123 % 1]
-  ,[3 % 1,22 % 1,182 % 1]
-  ]
-  *Multivariate> transpose it
-  [[3 % 1,3 % 1,3 % 1,3 % 1,3 % 1,3 % 1]
-  ,[2 % 1,6 % 1,10 % 1,14 % 1,18 % 1,22 % 1]
-  ,[7 % 1,18 % 1,41 % 1,76 % 1,123 % 1,182 % 1]
-  ]
-  *Multivariate> map list2pol it
-  [[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]]
-
-So, the numerator is given by
-
-  *Multivariate> map list2pol . transpose . map (fst . list2rat) $ auxhs
-  [[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]]
-  
-and the denominator is
-
-  *Multivariate> map list2pol . transpose . map (snd . list2rat) $ auxhs
-  [[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]]
-
-> {-
-
-> table2ratf :: Integral a => [[Ratio a]] -> ([[Ratio a]], [[Ratio a]])
+> -- table2ratf :: Integral a => [[Ratio a]] -> ([[Ratio a]], [[Ratio a]])
+> table2ratf :: Integral a =>
+>               [[Ratio a]] -> (Maybe [[Ratio a]], Maybe [[Ratio a]])
 > table2ratf table = (t2r fst table, t2r snd table)
 >   where
->     t2r third = map list2pol . transpose . map (third . list2rat)
-  
-
-  *Multivariate> table2ratf auxhs
-  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]])
-
-It is interesting but this Thiele reconstruction does work even if the target is a polynomial:
-
-  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
-  *Multivariate> let auxf x y t = f (t*x) (t*y)
-  *Multivariate> let auxfs = [map (auxf 1 y) [0..5] | y <- [0..5]]
-  *Multivariate> table2ratf auxfs
-  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[0 % 1]])
-
+>     t2r third = fmap (map list2pol . transpose . map third) . 
+>                 sequence . map list2rat'   
+>
 > tablizer :: (Num a, Enum a) => (a -> a -> b) -> a -> [[b]]
 > tablizer f n = [map (f_t 1 y) [0..(n-1)] | y <- [0..(n-1)]]
 >   where
 >     f_t x y t = f (t*x) (t*y)
+  
+  *Multivariate> let h x y = (1+2*x+4*y+7*x^2+5*x*y+(6%13)*y^2) / (1+(7%3)*x+8*y+10*x^2+x*y+9*y^2)
+  *Multivariate> let hTable = tablizer h 20
+  *Multivariate> table2ratf hTable 
+  (Just [[1 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 13]],Just [[1 % 1],[7 % 3,8 % 1],[10 % 1,1 % 1,9 % 1]])
+
+> {-
 
   *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
   *Multivariate> table2ratf $ tablizer f 10
