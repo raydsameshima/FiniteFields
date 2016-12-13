@@ -451,6 +451,7 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
 
 > thiele2coef' :: Integral a => 
 >                 Ratio a -> [Ratio a] -> ([Ratio a], [Ratio a])
+> thiele2coef' sft [a] = ([a],1)
 > thiele2coef' sft as = canonicalize $ t2r as sft
 >   where
 >     t2r [an,an'] n = (([an*an'-n] + z),[an'])

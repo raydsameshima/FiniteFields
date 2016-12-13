@@ -4,7 +4,8 @@ Multivariate.lhs
 
 > import Data.Ratio
 > import Data.List (transpose)
-> import Univariate (list2pol, list2rat')
+> import Univariate ( list2pol 
+>                   , tDegree, list2rat')
 
 Let us start 2-variate polynomials.
 
@@ -199,8 +200,18 @@ So, we should repeat 0's if we have zero-function.
 >               [[Ratio a]] -> (Maybe [[Ratio a]], Maybe [[Ratio a]])
 > table2ratf table = (t2r fst table, t2r snd table)
 >   where
->     t2r third = fmap (map list2pol . transpose . map third) . 
+>     t2r' third = fmap (map third) . sequence . map list2rat'
+>
+>     myMax Nothing   = 0
+>     myMax (Just ns) = ns
+>
+>     t2r third = fmap (map list2pol . transpose . map (take num . (++ (repeat (0%1))) . third)) . 
 >                 sequence . map list2rat'   
+>       where
+>         num = myMax . fmap (maximum . map (length . fst)) . sequence . map list2rat' $ table
+> 
+> -- fmap (maximum . map (length . fst)) . sequence . map list2rat'
+> -- map (take num . (++ (repeat (0%1))) . list2pol)
 >
 > tablizer :: (Num a, Enum a) => (a -> a -> b) -> a -> [[b]]
 > tablizer f n = [map (f_t 1 y) [0..(n-1)] | y <- [0..(n-1)]]
@@ -211,18 +222,6 @@ So, we should repeat 0's if we have zero-function.
   *Multivariate> let hTable = tablizer h 20
   *Multivariate> table2ratf hTable 
   (Just [[1 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 13]],Just [[1 % 1],[7 % 3,8 % 1],[10 % 1,1 % 1,9 % 1]])
-
-> {-
-
-  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
-  *Multivariate> table2ratf $ tablizer f 10
-  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[0 % 1]])
-  *Multivariate> let g z1 z2 = 1%(3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2)
-  *Multivariate> table2ratf $ tablizer g 10
-  ([[1 % ],[0 % 1],[0 % 1]],[[1 % 1],[2 % 3,4 % 3],[7 % 3,5 % 3,2 % 1]])
-  *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
-  *Multivariate> table2ratf $ tablizer h 10
-  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]])
 
 Note that, the sampling points for n=10 case are
   
@@ -239,48 +238,40 @@ Note that, the sampling points for n=10 case are
   ,[(0,0),(1,9),(2,18),(3,27),(4,36),(5,45),(6,54),(7,63),(8,72),(9,81)]
   ]
 
-  *Multivariate> let h1 x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2+13*x^5)
-  *Multivariate> table2ratf $ tablizer h1 20
-  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1],[0 % 1],[0 % 1],[0 % 1]]
-  ,[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1],[0 % 1],[0 % 1],[13 % 1]]
-  )
-  *Multivariate> let h2 x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2+13*x^5+x*y^4)
-  *Multivariate> table2ratf $ tablizer h2 20
-  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1],[0 % 1],[0 % 1],[0 % 1]]
-  ,[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1],[0 % 1],[0 % 1],[13 % 1,0 % 1,0 % 1,0 % 1,1 % 1]]
-  )
-  *Multivariate> let h3 x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2+11*x^3) % (1+7*x+8*y+10*x^2+x*y+9*y^2+13*x^5+x*y^4)
-  *Multivariate> table2ratf $ tablizer h3 20
-  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1],[11 % 1],[0 % 1],[0 % 1]]
-  ,[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1],[0 % 1],[0 % 1],[13 % 1,0 % 1,0 % 1,0 % 1,1 % 1]]
-  )
-  *Multivariate> let h4 x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2+11*x^3+x*y^2+2*y^3) % (1+7*x+8*y+10*x^2+x*y+9*y^2+13*x^5+x*y^4)
-  *Multivariate> table2ratf $ tablizer h4 20
-  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1],[11 % 1,0 % 1,1 % 1,2 % 1],[0 % 1],[0 % 1]]
-  ,[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1],[0 % 1],[0 % 1],[13 % 1,0 % 1,0 % 1,0 % 1,1 % 1]]
-  )
+  *Multivariate> let f x y = (1 + 2*x + 3*y + 4*x^2 + (1%5)*x*y + (1%6)*y^2) / (7 + 8*x + (1%9)*y + x^2 + x*y + 10*y^2)
+  *Multivariate> let g x y = (11 + 10*x + 9*y) / (8 + 7*x^2 + (1%6)*x*y + 5*y^2)
+  *Multivariate> table2ratf $ tablizer f 20
+  (Just [[1 % 7],[2 % 7,3 % 7],[4 % 7,1 % 35,1 % 42]],Just [[1 % 1],[8 % 7,1 % 63],[1 % 7,1 % 7,10 % 7]])
+  *Multivariate> table2ratf $ tablizer g 20
+  (Just [[11 % 8],[5 % 4,9 % 8],[0 % 1]],Just [[1 % 1],[0 % 1],[7 % 8,1 % 48,5 % 8]])
+  *Multivariate> let h x y = (f x y) / (g x y)
+  *Multivariate> table2ratf $ tablizer h 20
+  (Just [[8 % 77],[16 % 77,24 % 77],[39 % 77,53 % 2310,19 % 231],[2 % 11,64 % 231,3 % 22,15 % 77],[4 % 11,31 % 1155,106 % 385,37 % 2772,5 % 462]],Just [[1 % 1],[158 % 77,578 % 693],[13 % 11,757 % 693,111 % 77],[10 % 77,19 % 77,109 % 77,90 % 77]])
+  *Multivariate> table2ratf $ tablizer f 10
+  (*** Exception: Prelude.!!: index too large
+  *Multivariate> table2ratf $ tablizer f 13
+  (*** Exception: Prelude.!!: index too large
+  *Multivariate> table2ratf $ tablizer f 15
+  (Just [[1 % 7],[2 % 7,3 % 7],[4 % 7,1 % 35,1 % 42]],Just [[1 % 1],[8 % 7,1 % 63],[1 % 7,1 % 7,10 % 7]])
+  *Multivariate> table2ratf $ tablizer g 11
+  (*** Exception: Prelude.!!: index too large
+  *Multivariate> table2ratf $ tablizer g 13
+  (*** Exception: Prelude.!!: index too large
+  *Multivariate> table2ratf $ tablizer g 15
+  (Just [[11 % 8],[5 % 4,9 % 8],[0 % 1]],Just [[1 % 1],[0 % 1],[7 % 8,1 % 48,5 % 8]])
+  *Multivariate> table2ratf $ tablizer (\x y -> x/(1+x^2)) 10
+  (*** Exception: Prelude.!!: index too large
+  *Multivariate> table2ratf $ tablizer (\x y -> x/(1+x^2)) 13
+  (*** Exception: Prelude.!!: index too large
+  *Multivariate> table2ratf $ tablizer (\x y -> x/(1+x^2)) 20
+  (Just [[0 % 1],[1 % 1],[0 % 1]],Just [[1 % 1],[0 % 1],[1 % 1]])
+  *Multivariate> table2ratf $ tablizer (\x y -> x/(1+x^2)) 13
+  (*** Exception: Prelude.!!: index too large
+  *Multivariate> table2ratf $ tablizer (\x y -> x/(1+x^2)) 15
+  (Just [[0 % 1],[1 % 1],[0 % 1]],Just [[1 % 1],[0 % 1],[1 % 1]])
 
-  *Multivariate> let f x y = (12%13) + x + (7%8)*y + 11*x^2 + (3%4)*x*y + 8*y^2
-  *Multivariate> let g x y = (4%9) + x + 8*y + (1%11)*x^2 + (4%5)*x*y + (11%12)*y^2
-  *Multivariate> let h x y = (f x y)/(g x y)
-  *Multivariate> tablizer h 5
-  [[27 % 13,2079 % 247,30195 % 1807,66231 % 2743,29106 % 949]
-  ,[27 % 13,1160775 % 579254,2153745 % 660868,9487665 % 2250326,4175325 % 841256]
-  ,[27 % 13,1239975 % 586924,2373525 % 719108,10544985 % 2565316,4658445 % 992056]
-  ,[27 % 13,4622805 % 1862822,8987715 % 2404324,40105395 % 8860358,17753175 % 3504488]
-  ,[27 % 13,1897335 % 661544,3718935 % 889798,16633485 % 3359876,7371045 % 1350596]
-  ]
-  *Multivariate>  table2ratf $ tablizer h 20
-  ([[27 % 13],[9 % 4,63 % 32],[99 % 4,27 % 16,18 % 1]],[[1 % 1],[9 % 4,18 % 1],[9 % 44,9 % 5,33 % 16]])
+> wilFunc x y = (x^2*y^2) % ((1 + y)^3)
 
-> wilFunc x y = (14*x^2*y^2) % ((1 + y)^3)
-
-> table2ratf' :: Integral a => [[Ratio a]] -> ([[Ratio a]], [[Ratio a]])
-> table2ratf' table = (t2r fst table, t2r snd table)
->   where
->     t2r third = map list2pol . transpose' . map (third . list2rat)
->     transpose' = undefined
- 
-> -- table2pol' tbl = map list2pol . transpose . map (take num . (++ (repeat (0%1))) . list2pol) $ tbl
-
-> -}
+  *Multivariate> table2ratf $ tablizer wilFunc 20
+  (Just [[0 % 1],[0 % 1],[0 % 1],[0 % 1],[0 % 1,0 % 1,1 % 1]]
+  ,Just [[1 % 1],[0 % 1,3 % 1],[0 % 1,0 % 1,3 % 1],[0 % 1,0 % 1,0 % 1,1 % 1],[0 % 1]]) 
