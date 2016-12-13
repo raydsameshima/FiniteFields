@@ -1,0 +1,22 @@
+-- reconstruct.hs
+-- (x^2*y^2) % ((1 + y)^3)  
+
+import System.Environment (getArgs)
+import System.IO 
+import Data.Ratio
+
+import Multivariate (table2ratf)
+
+main = do
+  args <- getArgs
+  let fileName = head args
+
+  handle <- openFile fileName ReadMode
+  contents <- hGetContents handle
+--  putStrLn $ "The data from " ++ fileName ++ " is: "
+--  putStrLn contents
+  putStrLn "The coefficients: "
+  let d = read contents :: [[Ratio Integer]]
+  putStrLn . show $ table2ratf d
+  hClose handle
+
