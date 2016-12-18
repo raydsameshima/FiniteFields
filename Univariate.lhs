@@ -52,13 +52,14 @@ we reconstrunct the canonical form of f.
 > degree :: (Num a, Eq a) => [a] -> Int
 > degree xs = let l = degreeLazy xs in
 >   degree' $ take (l+2) xs
->
+
+> -- m-times match version
 > degreeTimes :: (Num a, Eq a) => Int -> [a] -> Int
 > degreeTimes m xs = helper xs 0
 >   where
 >     helper aa@(a:as) n
->       | all (== a) (take m as) = n
->       | otherwise              = helper (difs aa) (n+1)
+>       | all (== a) (take (m-1) as) = n
+>       | otherwise                  = helper (difs aa) (n+1)
 
 Newton interpolation formula
 First we introduce a new infix symbol for the operation of taking a falling power.
@@ -146,7 +147,7 @@ Then the implementation of the Newton interpolation formula is as follows:
 The list of first differences can be computed as follows:
 
 > firstDifs :: (Eq a, Num a) => [a] -> [a]
-> firstDifs xs = reverse $ map head $ difLists [xs]
+> firstDifs xs = reverse . map head . difLists $ [xs]
 
 Mapping a list of integers to a Newton representation:
 
@@ -220,6 +221,9 @@ Reconstruction as curve fitting
   *Univariate> map (p2fct $ list2pol [0,1,5,14,30,55]) [0..6]
   [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1,55 % 1,91 % 1]
 
+> list2polTimes :: Integral a => Int -> [Ratio a] -> [Ratio a]
+> list2polTimes n = npol2pol . list2npolTimes n
+
 --
 
 Thiele's interpolation formula
@@ -287,7 +291,8 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
 >       | otherwise       = helper fs (n+1)
 >       where
 >         fs' = map (rho fs n) [0..]
->     areNothings js = all (== Nothing) $ take 10 js -- 10 for practical reason
+> --  areNothings js = all (== Nothing) $ take 10 js -- 10 for practical reason
+>         areNothings js = all (== Nothing) $ take 10 $ drop (fromIntegral n) js 
 
   *Univariate> map (\p -> map (rho (map (\t -> t^2%(1+t^2)) [0..]) p) [0..5]) [0..5]
   [[Just (0 % 1),Just (1 % 2),Just (4 % 5),Just (9 % 10),Just (16 % 17),Just (25 % 26)]
