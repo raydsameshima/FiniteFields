@@ -4,9 +4,9 @@ Multivariate.lhs
 
 > import Data.Ratio
 > import Data.List (transpose)
-> import Univariate ( list2pol, list2npolTimes
->                   , tDegree, list2rat'
->                   )
+> import Univariate -- ( list2pol, list2npolTimes
+>                   -- , tDegree, list2rat'
+>                   -- )
 
 Let us start 2-variate polynomials.
 
@@ -308,3 +308,25 @@ Note that, the sampling points for n=10 case are
   *Multivariate> table2ratf $ tablizer wilFunc 20
   (Just [[0 % 1],[0 % 1],[0 % 1],[0 % 1],[0 % 1,0 % 1,1 % 1]]
   ,Just [[1 % 1],[0 % 1,3 % 1],[0 % 1,0 % 1,3 % 1],[0 % 1,0 % 1,0 % 1,1 % 1],[0 % 1]]) 
+
+> transposeWith :: a -> [[a]] -> [[a]]
+> transposeWith _ [] = []
+> transposeWith z ([] : xss)
+>   | all null xss = []
+>   | otherwise    = (z : [h | (h:_) <- xss]) 
+>                  : transposeWith z ([] : [t | (_:t) <- xss])
+> transposeWith z ((x:xs) : xss) = (x : [h | (h:_) <- xss])
+>                                : transposeWith z (xs : [t | (_:t) <- xss])
+
+  *Multivariate> let f x y = (x*y)%(1+y)^2
+  *Multivariate> let tbl = tablizer f 20
+  *Multivariate> fmap (map list2pol . (transposeWith (0%1)) . map fst) . sequence . map list2rat' $ tbl
+  Just [[0 % 1],[0 % 1],[0 % 1,1 % 1]]
+  *Multivariate> fmap (map list2pol . (transposeWith (0%1)) . map snd) . sequence . map list2rat' $ tbl
+  Just [[1 % 1],[0 % 1,2 % 1],[0 % 1,0 % 1,1 % 1]]
+
+> table2ratf' table = (t2r fst table, t2r snd table)
+>   where
+>     t2r third = fmap (map list2pol . transposeWith (0%1) . map third) . sequence . map list2rat'   
+>
+
