@@ -194,8 +194,6 @@ This definition can be used to convert from falling powers to standard powers.
 We use this to convert Newton representations to standard polynomials in coefficients list representation.
 Here we have uses sum to collect same order terms in list representation.
 
-> -- For later convenience, we relax the type annotation.
-> -- npol2pol :: (Integral a) => [Ratio a] -> [Ratio a]
 > npol2pol :: (Ord t, Num t) => [t] -> [t]
 > npol2pol xs = sum [ [x] * map fromInteger (fall2pol k)
 >                   | (x,k) <- zip xs [0..]
@@ -207,6 +205,7 @@ Finally, here is the function for computing a polynomial from an output sequence
 > list2pol = npol2pol . list2npol
 
 Reconstruction as curve fitting
+
   *Univariate> let f x = 2*x^3 + 3*x + 1%5
   *Univariate> take 10 $ map f [0..]
   [1 % 5,26 % 5,111 % 5,316 % 5,701 % 5,1326 % 5,2251 % 5,3536 % 5,5241 % 5,7426 % 5]
@@ -220,6 +219,8 @@ Reconstruction as curve fitting
   [0 % 1,1 % 6,1 % 2,1 % 3]
   *Univariate> map (p2fct $ list2pol [0,1,5,14,30,55]) [0..6]
   [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1,55 % 1,91 % 1]
+
+Here is n-times match version:
 
 > list2polTimes :: Integral a => Int -> [Ratio a] -> [Ratio a]
 > list2polTimes n = npol2pol . list2npolTimes n
@@ -239,11 +240,11 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 >     -> a -> Int -> Maybe (Ratio a)
 > rho fs 0 i = Just $ fs !! i
 > rho fs n i 
->   | n < 0          = Just 0
->   | num == Just 0  = Nothing
->   | otherwise      = (+) <$> recipro <*> rho fs (n-2) (i+1)
+>   | n < 0         = Just 0
+>   | num == Just 0 = Nothing -- "infinity"
+>   | otherwise     = (+) <$> recipro <*> rho fs (n-2) (i+1)
 >   where
->     recipro = (%) <$> (*n) <$> den <*> num
+>     recipro = (%) <$> (*n) <$> den <*> num -- (den*n)%num
 >     num  = numerator <$> next
 >     den  = denominator <$> next
 >     next = (-) <$> rho fs (n-1) (i+1) <*> rho fs (n-1) i
@@ -283,98 +284,60 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
   ,[Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
   ]
 
-> tDegree :: Integral a => [Ratio a] -> a
-> tDegree fs = helper fs 0
->   where
->     helper fs n
->       | areNothings fs' = n-1 -- We have taken one more, so need (-1)!
->       | otherwise       = helper fs (n+1)
->       where
->         fs' = map (rho fs n) [0..]
-> --  areNothings js = all (== Nothing) $ take 10 js -- 10 for practical reason
->         areNothings js = all (== Nothing) $ take 10 $ drop (fromIntegral n) js 
-
-  *Univariate> map (\p -> map (rho (map (\t -> t^2%(1+t^2)) [0..]) p) [0..5]) [0..5]
-  [[Just (0 % 1),Just (1 % 2),Just (4 % 5),Just (9 % 10),Just (16 % 17),Just (25 % 26)]
-  ,[Just (2 % 1),Just (10 % 3),Just (10 % 1),Just (170 % 7),Just (442 % 9),Just (962 % 11)]
-  ,[Just (2 % 1),Just (11 % 10),Just (26 % 25),Just (47 % 46),Just (74 % 73),Just (107 % 106)]
-  ,[Just (0 % 1),Just ((-40) % 1),Just ((-140) % 1),Just ((-324) % 1),Just ((-616) % 1),Just ((-1040) % 1)]
-  ,[Just (1 % 1),Just (1 % 1),Just (1 % 1),Just (1 % 1),Just (1 % 1),Just (1 % 1)]
-  ,[Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
-  ]
-
-Using primed-a (a'), we can simply shift and reconstruct functions,
-  
-  *Univariate> let f = \t -> t^2%(1+t^2)
+  *Univariate> let f t = t%(1+t^2)
   *Univariate> let fs = map f [0..]
-  *Univariate> tDegree fs
-  4
-  *Univariate> map (a' fs 0) [0..4]
-  [Just (0 % 1),Just (2 % 1),Just (2 % 1),Just ((-2) % 1),Just ((-1) % 1)]
-  *Univariate> map (a' fs 1) [0..4]
-  [Just (1 % 2),Just (10 % 3),Just (3 % 5),Just ((-130) % 3),Just ((-1) % 10)]
+  *Univariate> let aMat = [map (a' fs i) [0..] | i <- [0..]]
+  *Univariate> take 20 $ map (length . takeWhile isJust) $ aMat 
+  [3,2,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
 
-Using Maxima, we get same results
-
-  (%i17) f(t) := 0 + (x/(2 + (x-1)/(2 + (x-2)/(-2 + (x-3)/(-1))))), ratsimp;
-  (%o17) f(t):=x^2/(1+x^2)
-  (%i18) ff(t) := 1/2 + (x-1)/(10/3 + (x-2)/(3/5 + (x-3)/(-130/3 + (x-4)/(-1/10)))), ratsimp;
-  (%o18) ff(t):=x^2/(1+x^2)
-
-  *Univariate> let g t = t%(1+t^2)
-  *Univariate> let gs = map g [0..]
-  *Univariate> tDegree gs
-  4
-  *Univariate> map (a' gs 0) [0..4]
-  [Just (0 % 1),Just (2 % 1),Just (1 % 3),Nothing,Nothing]
-  *Univariate> map (a' gs 1) [0..4]
-  [Just (1 % 2),Just ((-10) % 1),Nothing,Nothing,Nothing]
-  *Univariate> map (a' gs 2) [0..4]
-  [Just (2 % 5),Just ((-10) % 1),Just ((-7) % 15),Just (60 % 1),Just (1 % 15)]
-
-  (%i19) g(x) := 2/5 + (x-2)/(-10 + (x-3)/(-7/15 + (x-4)/(60 + (x-5)/(1/15)))), ratsimp;
-  (%o19) g(x):=x/(1+x^2)
-
-  *Univariate> map (\q -> map (a' gs q) [0..4]) [0..5]
-  [[Just (0 % 1),Just (2 % 1),Just (1 % 3),Nothing,Nothing]
-  ,[Just (1 % 2),Just ((-10) % 1),Nothing,Nothing,Nothing]
-  ,[Just (2 % 5),Just ((-10) % 1),Just ((-7) % 15),Just (60 % 1),Just (1 % 15)]
-  ,[Just (3 % 10),Just ((-170) % 11),Just ((-77) % 240),Just (2832 % 11),Just (1 % 48)]
-  ,[Just (4 % 17),Just ((-442) % 19),Just ((-437) % 1785),Just (13020 % 19),Just (1 % 105)]
-  ,[Just (5 % 26),Just ((-962) % 29),Just ((-493) % 2496),Just (42432 % 29),Just (1 % 192)]
-  ]
-  *Univariate> map sequence it
-  [Nothing
-  ,Nothing
-  ,Just [2 % 5,(-10) % 1,(-7) % 15,60 % 1,1 % 15]
-  ,Just [3 % 10,(-170) % 11,(-77) % 240,2832 % 11,1 % 48]
-  ,Just [4 % 17,(-442) % 19,(-437) % 1785,13020 % 19,1 % 105]
-  ,Just [5 % 26,(-962) % 29,(-493) % 2496,42432 % 29,1 % 192]
-  ]
+> aMatrix :: Integral a => [Ratio a] -> [[Maybe (Ratio a)]]
+> aMatrix fs = [map (a' fs i) [0..] | i <- [0..]]
+> 
+> tDegree :: Integral a => [Ratio a] -> Int
+> tDegree = constantValues 10 . map (length . takeWhile isJust) . aMatrix
+>   where
+>     constantValues n (l:ls)  
+>       | all (==l) $ take (n-1) ls = l 
+>       | otherwise = constantValues n ls
 
 We also need the shift, in this case, 2 to get full Thiele coefficients.
 
-  *Univariate> findIndex isJust it
-  Just 2
-
-> rhoMatrix :: Integral a => [Ratio a] -> [Maybe [Ratio a]]
-> rhoMatrix gs = map (sequence . (\q -> map (a' gs q) [0..thieleD])) [0..]
+> shiftaMatrix :: Integral a => [Ratio a] -> [Maybe [Ratio a]]
+> shiftaMatrix gs = map (sequence . (\q -> map (a' gs q) [0..(thieleD-1)])) [0..]
 >   where
->     thieleD = tDegree gs
+>     thieleD = fromIntegral $ tDegree gs
 >
 > shiftAndThieleC :: Integral a => 
 >                    [Ratio a] -> (Maybe Int, Maybe [Ratio a])
 > shiftAndThieleC fs = (findIndex isJust gs, join $ find isJust gs)
 >   where
->     gs = rhoMatrix fs
+>     gs = shiftaMatrix fs
+
+  *Univariate> take 10 $ map sequence $ transpose $ take (tDegree fs) m
+  [Just [0 % 1,1 % 2,2 % 5,3 % 10,4 % 17]
+  ,Just [2 % 1,(-10) % 1,(-10) % 1,(-170) % 11,(-442) % 19]
+  ,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
+
+packed version
+
+> degSftTC fs = (d,s,ts)
+>   where
+>     m = [map (a' fs i) [0..] | i <- [0..]]
+>     d = consts 10 . map (length . takeWhile isJust) $ m
+>     m' = map (sequence . take d) $ m
+>     s = findIndex isJust $ m'
+>     ts = find isJust $ m'
+>     consts n (l:ls)
+>       | all (==l) $ take (n-1) ls = l
+>       | otherwise = consts n ls
 
   *Univariate Control.Monad> let g t = t%(1+t^2)
   *Univariate Control.Monad> let gs = map g [0..]
-  *Univariate Control.Monad> shiftAndThieleC $ rhoMatrix gs
+  *Univariate Control.Monad> shiftAndThieleC $ shiftaMatrix gs
   (Just 2,Just [2 % 5,(-10) % 1,(-7) % 15,60 % 1,1 % 15])
   *Univariate Control.Monad> let f t = 1%(1+t^2)
   *Univariate Control.Monad> let fs = map f [0..]
-  *Univariate Control.Monad> shiftAndThieleC $ rhoMatrix fs
+  *Univariate Control.Monad> shiftAndThieleC $ shiftaMatrix fs
   (Just 0,Just [1 % 1,(-2) % 1,(-2) % 1,2 % 1,1 % 1])
 
 We need a convertor from this thiele sequence to continuous form of rational function.
@@ -467,9 +430,7 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
   *Univariate> let f x = x^2%(1+x^2)
   *Univariate> shiftAndThieleC $ map f [0..]
   (Just 0,Just [0 % 1,2 % 1,2 % 1,(-2) % 1,(-1) % 1])
-  *Univariate> take 3 $ rho
-  rho        rhoMatrix
-  *Univariate> take 3 $ rhoMatrix (map f [0..])
+  *Univariate> take 3 $ shiftaMatrix (map f [0..])
   [Just [0 % 1,2 % 1,2 % 1,(-2) % 1,(-1) % 1]
   ,Just [1 % 2,10 % 3,3 % 5,(-130) % 3,(-1) % 10]
   ,Just [4 % 5,10 % 1,6 % 25,(-150) % 1,(-1) % 25]
@@ -502,3 +463,16 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
   (Just 0,Just [0 % 1,2 % 1,2 % 1,(-2) % 1,(-1) % 1])
   *Univariate> list2rat' hs
   Just ([0 % 1,0 % 1,1 % 1],[1 % 1,0 % 1,1 % 1])
+
+  *Univariate> let f t = t%(1+t^2)
+  *Univariate> let fs = map f [0..]
+  *Univariate> let aMat = [map (\j -> a' fs j i) [0..] | i <- [0..]]
+  *Univariate> take 6 $ map (take 5) aMat
+  [[Just (0 % 1),Just (1 % 2),Just (2 % 5),Just (3 % 10),Just (4 % 17)]
+  ,[Just (2 % 1),Just ((-10) % 1),Just ((-10) % 1),Just ((-170) % 11),Just ((-442) % 19)]
+  ,[Just (1 % 3),Nothing,Just ((-7) % 15),Just ((-77) % 240),Just ((-437) % 1785)]
+  ,[Nothing,Nothing,Just (60 % 1),Just (2832 % 11),Just (13020 % 19)]
+  ,[Nothing,Nothing,Just (1 % 15),Just (1 % 48),Just (1 % 105)]
+  ,[Nothing,Nothing,Nothing,Nothing,Nothing]
+  ] 
+
