@@ -237,9 +237,9 @@ So, we should repeat 0's if we have zero-function.
 >     myMax (Just ns) = ns
 >
 >     t2r third = fmap (map list2pol . transpose . map (take num . (++ (repeat (0%1))) . third)) . 
->                 sequence . map list2rat'   
+>                 mapM list2rat'
 >       where
->         num = myMax . fmap (maximum . map (length . fst)) . sequence . map list2rat' $ table
+>         num = myMax . fmap (maximum . map (length . fst)) . mapM list2rat' $ table
 > 
 > -- fmap (maximum . map (length . fst)) . sequence . map list2rat'
 > -- map (take num . (++ (repeat (0%1))) . list2pol)
@@ -327,6 +327,5 @@ Note that, the sampling points for n=10 case are
 
 > table2ratf' table = (t2r fst table, t2r snd table)
 >   where
->     t2r third = fmap (map list2pol . transposeWith (0%1) . map third) . sequence . map list2rat'   
->
+>     t2r third = fmap (map list2pol . transposeWith (0%1) . map third) . mapM list2rat'
 
