@@ -173,6 +173,7 @@ So, we should repeat 0's if we have zero-function.
 >     num = maximum . map (length . list2pol) $ tbl
 
 --
+
 2-variable rational functions
 
   *Univariate> let h x y = (1+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)

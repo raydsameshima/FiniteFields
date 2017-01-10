@@ -1,12 +1,13 @@
 Univariate.lhs
 
+> module Univariate where
+
 References
 J. Stoer, R. Bulirsch
   Introduction to Numerical Analysis (2nd edition)
 L. M. Milne-Thomson
   THE CALCULUS OF FINITE DIFFERENCES
 
-> module Univariate where
 > import Control.Applicative
 > import Control.Monad
 > import Data.Ratio
@@ -125,7 +126,9 @@ Assume the differences are given in a list
 where x_i = diff^k(f)(0).
 Then the implementation of the Newton interpolation formula is as follows:
 
-> newtonC :: (Fractional t, Enum t) => [t] -> [t]
+> newtonC :: (Fractional t, Enum t) => 
+>            [t] -- first differences
+>         -> [t] -- Newton coefficients
 > newtonC xs = [x / factorial k | (x,k) <- zip xs [0..]]
 >   where
 >     factorial k = product [1..fromInteger k]
@@ -146,7 +149,9 @@ Then the implementation of the Newton interpolation formula is as follows:
 
 The list of first differences can be computed as follows:
 
-> firstDifs :: (Eq a, Num a) => [a] -> [a]
+> firstDifs :: (Eq a, Num a) => 
+>              [a] -- map f [0..]
+>           -> [a]
 > firstDifs xs = reverse . map head . difLists $ [xs]
 
 Mapping a list of integers to a Newton representation:
@@ -156,6 +161,7 @@ Mapping a list of integers to a Newton representation:
 > list2npol xs = newtonC . firstDifs $ take n xs
 >   where n = (degree xs) + 2
 >
+> -- m-times matches version
 > list2npolTimes :: (Integral a) => Int -> [Ratio a] -> [Ratio a]
 > list2npolTimes m xs = newtonC . firstDifs $ take n xs
 >   where n = (degreeTimes m xs) + 2
@@ -182,7 +188,7 @@ Therefore, an implementation is as follows:
 > stirlingC :: (Integral a) => a -> a -> a
 > stirlingC 0 0 = 1
 > stirlingC 0 _ = 0
-> stirlingC n k = stirlingC (n-1) (k-1) + (n-1)*stirlingC (n-1) k  
+> stirlingC n k = stirlingC (n-1) (k-1) + (n-1) * stirlingC (n-1) k  
 
 This definition can be used to convert from falling powers to standard powers.
 
@@ -237,14 +243,16 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 
 > rho :: (Integral a) => 
 >        [Ratio a] -- A list of output of f :: a -> Ratio a 
->     -> a -> Int -> Maybe (Ratio a)
+>     -> a -> Int  -- "matrix"
+>     -> Maybe (Ratio a) -- Nothing means 1/0 type infinity 
 > rho fs 0 i = Just $ fs !! i
 > rho fs n i 
 >   | n < 0         = Just 0
 >   | num == Just 0 = Nothing -- "infinity"
 >   | otherwise     = (+) <$> recipro <*> rho fs (n-2) (i+1)
 >   where
->     recipro = (%) <$> (*n) <$> den <*> num -- (den*n)%num
+>     recipro = ((%) . (* n) <$> den) <*> num -- (den*n)%num
+> --            (%) <$> (*n) <$> den <*> num -- (den*n)%num
 >     num  = numerator <$> next
 >     den  = denominator <$> next
 >     next = (-) <$> rho fs (n-1) (i+1) <*> rho fs (n-1) i
@@ -266,6 +274,7 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
   ,[Nothing,Nothing,Nothing,Nothing]
   ]
 
+> -- Thiele coefficients (continuous fraction)
 > a :: (Integral a) => [Ratio a] -> a -> Maybe (Ratio a)
 > a fs 0 = Just $ head fs
 > a fs n = (-) <$> rho fs n 0 <*> rho fs (n-2) 0
@@ -284,12 +293,15 @@ This reciprocal difference rho matches the table of Milne-Thompson[1951] page 10
   ,[Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
   ]
 
+Here, the consecutive Just ((-10) % 1) in second list make "fake" infinity (Nothing).
+
   *Univariate> let f t = t%(1+t^2)
   *Univariate> let fs = map f [0..]
   *Univariate> let aMat = [map (a' fs i) [0..] | i <- [0..]]
   *Univariate> take 20 $ map (length . takeWhile isJust) $ aMat 
   [3,2,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
 
+> -- Thiele coefficients with shifts.
 > aMatrix :: Integral a => [Ratio a] -> [[Maybe (Ratio a)]]
 > aMatrix fs = [map (a' fs i) [0..] | i <- [0..]]
 > 
@@ -318,8 +330,14 @@ We also need the shift, in this case, 2 to get full Thiele coefficients.
   ,Just [2 % 1,(-10) % 1,(-10) % 1,(-170) % 11,(-442) % 19]
   ,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
 
-packed version
+Packed version
 
+> degSftTC
+>   :: Integral a =>
+>      [Ratio a] -> (Int, Maybe Int, Maybe (Maybe [Ratio a]))
+> --                 |    |          + Thiele coefficients
+> --                 |    + shift
+> --                 + degree
 > degSftTC fs = (d,s,ts)
 >   where
 >     m = [map (a' fs i) [0..] | i <- [0..]]
@@ -340,7 +358,7 @@ packed version
   *Univariate Control.Monad> shiftAndThieleC $ shiftaMatrix fs
   (Just 0,Just [1 % 1,(-2) % 1,(-2) % 1,2 % 1,1 % 1])
 
-We need a convertor from this thiele sequence to continuous form of rational function.
+We need a convertor from this thiele sequence to continuous fractional form of rational function.
 
 > nextStep [a0,a1] (v:_)  = a0 + v/a1
 > nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
@@ -348,7 +366,7 @@ We need a convertor from this thiele sequence to continuous form of rational fun
 > -- From thiele sequence to (rational) function.
 > thiele2ratf :: Integral a => [Ratio a] -> (Ratio a -> Ratio a)
 > thiele2ratf as x
->   | x == 0    = head as
+>   | x == 0    = head as -- only constant term
 >   | otherwise = nextStep as [x,x-1 ..]
 
   *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
