@@ -9,6 +9,7 @@ Multivariate.lhs
 >                   -- )
 
 Let us start 2-variate polynomials.
+First, make a naive grid.
 
   *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
   *Multivariate> [[f x y | y <- [0..9]] | x <- [0..9]]
@@ -27,7 +28,9 @@ Let us start 2-variate polynomials.
 Assuming the list of lists is a matrix of 2-variate function's values,
   f i j
 
-> tablize :: (Enum t1, Num t1) => (t1 -> t1 -> t) -> Int -> [[t]]
+> tablize 
+>  :: (Enum t1, Num t1) => 
+>     (t1 -> t1 -> t) -> Int -> [[t]]
 > tablize f n = [[f x y | y <- range] | x <- range]
 >   where
 >     range = take n [0..]
@@ -133,8 +136,8 @@ So, we should repeat 0's if we have zero-function.
   [[0 % 1],[0 % 1,0 % 1,2 % 1],[0 % 1],[0 % 1,0 % 1,1 % 1]]
 
   *Multivariate> let test x y = (1%3)*x^2*((2%5)*y + ((3%4)*x*y^3)) 
-                           -- = (2%15)*x^2*y + (1%4)*x^3*y^3
-  *Multivariate> xyDegree  test
+                                -- = (2%15)*x^2*y + (1%4)*x^3*y^3
+  *Multivariate> xyDegree test
   (3,3)
   *Multivariate> map (take 4 . (++ (repeat (0%1))) . list2pol) . tablize test $ 9
   [[0 % 1,0 % 1,0 % 1,0 % 1]
@@ -227,9 +230,10 @@ So, we should repeat 0's if we have zero-function.
   *Multivariate> fmap (map list2pol . transpose . map snd) . sequence . map list2rat' $ auxhs
   Just [[1 % 1],[7 % 3,8 % 1],[10 % 1,1 % 1,9 % 1]]
 
-> -- table2ratf :: Integral a => [[Ratio a]] -> ([[Ratio a]], [[Ratio a]])
-> table2ratf :: Integral a =>
->               [[Ratio a]] -> (Maybe [[Ratio a]], Maybe [[Ratio a]])
+> -- SUPER SLOW IMPLEMENTATION, DO NOT USE THIS!
+> table2ratf 
+>   :: Integral a =>
+>      [[Ratio a]] -> (Maybe [[Ratio a]], Maybe [[Ratio a]])
 > table2ratf table = (t2r fst table, t2r snd table)
 >   where
 > --    t2r' third = fmap (map third) . sequence . map list2rat'
@@ -304,12 +308,8 @@ Note that, the sampling points for n=10 case are
   *Multivariate> table2ratf $ tablizer (\x y -> x/(1+x^2)) 15
   (Just [[0 % 1],[1 % 1],[0 % 1]],Just [[1 % 1],[0 % 1],[1 % 1]])
 
-> wilFunc x y = (x^2*y^2) % ((1 + y)^3)
-
-  *Multivariate> table2ratf $ tablizer wilFunc 20
-  (Just [[0 % 1],[0 % 1],[0 % 1],[0 % 1],[0 % 1,0 % 1,1 % 1]]
-  ,Just [[1 % 1],[0 % 1,3 % 1],[0 % 1,0 % 1,3 % 1],[0 % 1,0 % 1,0 % 1,1 % 1],[0 % 1]]) 
-
+> -- Alternative transpose, filling with the default value.
+> -- I followed the implementation of standard Prelude.
 > transposeWith :: a -> [[a]] -> [[a]]
 > transposeWith _ [] = []
 > transposeWith z ([] : xss)
@@ -329,4 +329,23 @@ Note that, the sampling points for n=10 case are
 > table2ratf' table = (t2r fst table, t2r snd table)
 >   where
 >     t2r third = fmap (map list2pol . transposeWith (0%1) . map third) . mapM list2rat'
+>
+> table2ratf'' table = (t2r fst table, t2r snd table)
+>   where
+>     t2r third = fmap (map list2pol . transposeWith (0%1) . map third) . mapM list2rat''
+
+> wilFunc x y = (x^2*y^2) % ((1 + y)^3)
+
+  *Multivariate> table2ratf $ tablizer wilFunc 20
+  (Just [[0 % 1],[0 % 1],[0 % 1],[0 % 1],[0 % 1,0 % 1,1 % 1]]
+  ,Just [[1 % 1],[0 % 1,3 % 1],[0 % 1,0 % 1,3 % 1],[0 % 1,0 % 1,0 % 1,1 % 1],[0 % 1]])
+  (3.91 secs, 2,850,226,792 bytes)
+  *Multivariate> table2ratf' $ tablizer wilFunc 20
+  (Just [[0 % 1],[0 % 1],[0 % 1],[0 % 1],[0 % 1,0 % 1,1 % 1]]
+  ,Just [[1 % 1],[0 % 1,3 % 1],[0 % 1,0 % 1,3 % 1],[0 % 1,0 % 1,0 % 1,1 % 1]])
+  (2.00 secs, 1,425,753,744 bytes)
+  *Multivariate> table2ratf'' $ tablizer wilFunc 20
+  (Just [[0 % 1],[0 % 1],[0 % 1],[0 % 1],[0 % 1,0 % 1,1 % 1]]
+  ,Just [[1 % 1],[0 % 1,3 % 1],[0 % 1,0 % 1,3 % 1],[0 % 1,0 % 1,0 % 1,1 % 1]])
+  (1.73 secs, 1,234,282,424 bytes)
 

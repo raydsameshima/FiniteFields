@@ -63,22 +63,24 @@ we reconstrunct the canonical form of f.
 >       | otherwise                  = helper (difs aa) (n+1)
 
 Newton interpolation formula
-First we introduce a new infix symbol for the operation of taking a falling power.
+First we introduce a new infix symbol for the operation 
+of taking a falling power.
 
 > infixr 8 ^- -- falling power
 > (^-) :: (Eq a, Num a) => a -> a -> a
 > x ^- 0 = 1
 > x ^- n = (x ^- (n-1)) * (x - n + 1)
 
-Claim (Newton interpolation formula)
-A polynomial f of degree n is expressed as
-  f(z) = \sum_{k=0}^n  (diff^n(f)(0)/k!) * (x ^- n)
-where diff^n(f) is the n-th difference of f.
+Claim (Newton interpolation formula):
+  A polynomial f of degree n is expressed as
+    f(z) = \sum_{k=0}^n  (diff^n(f)(0)/k!) * (x ^- n)
+  where diff^n(f) is the n-th difference of f.
 
 Example
 Consider a polynomial f = 2*x^3+3*x.
 
-In general, we have no prior knowledge of this form, but we know the sequences as a list of outputs:
+In general, we have no prior knowledge of this form, 
+but we know the sequences as a list of outputs (map f [0..]):
 
   Univariate> let f x = 2*x^3+3*x
   Univariate> take 10 $ map f [0..]
@@ -110,7 +112,8 @@ What we need is the heads of above lists.
   [12,12,5,0]
   
 Newton interpolation formula gives
-  f' x = 0*(x ^- 0) `div` (0!) + 5*(x ^- 1) `div` (1!) + 12*(x ^- 2) `div` (2!) + 12*(x ^- 3) `div` (3!)
+  f' x = 0*(x ^- 0) `div` (0!) + 5*(x ^- 1) `div` (1!) 
+         + 12*(x ^- 2) `div` (2!) + 12*(x ^- 3) `div` (3!)
        = 5*(x ^- 1) + 6*(x ^- 2) + 2*(x ^- 3)
 So
 
@@ -123,12 +126,13 @@ So
 
 Assume the differences are given in a list
   [x_0, x_1 ..]
-where x_i = diff^k(f)(0).
+where x_k = diff^k(f)(0).
 Then the implementation of the Newton interpolation formula is as follows:
 
-> newtonC :: (Fractional t, Enum t) => 
->            [t] -- first differences
->         -> [t] -- Newton coefficients
+> newtonC 
+>   :: (Fractional t, Enum t) => 
+>      [t] -- first differences
+>   -> [t] -- Newton coefficients
 > newtonC xs = [x / factorial k | (x,k) <- zip xs [0..]]
 >   where
 >     factorial k = product [1..fromInteger k]
@@ -149,9 +153,10 @@ Then the implementation of the Newton interpolation formula is as follows:
 
 The list of first differences can be computed as follows:
 
-> firstDifs :: (Eq a, Num a) => 
->              [a] -- map f [0..]
->           -> [a]
+> firstDifs 
+>   :: (Eq a, Num a) => 
+>      [a] -- map f [0..]
+>   -> [a]
 > firstDifs xs = reverse . map head . difLists $ [xs]
 
 Mapping a list of integers to a Newton representation:
@@ -176,7 +181,8 @@ Mapping a list of integers to a Newton representation:
   [0 % 1]
 
 We need to map Newton falling powers to standard powers.  
-This is a matter of applying combinatorics, by means of a convention formula that uses the so-called Stirling cyclic numbers (of the first kind.)
+This is a matter of applying combinatorics, by means of a convention formula 
+that uses the so-called Stirling cyclic numbers (of the first kind.)
 Its defining relation is
   (x ^- n) = \sum_{k=1}^n (stirlingC n k) * (-1)^(n-k) * x^k.
 The key equation is
@@ -197,8 +203,11 @@ This definition can be used to convert from falling powers to standard powers.
 > fall2pol n = 0   -- No constant term. 
 >            : [(-1)^(n-k) * stirlingC n k| k<-[1..n]]
 
-We use this to convert Newton representations to standard polynomials in coefficients list representation.
-Here we have uses sum to collect same order terms in list representation.
+We use this to convert Newton representations to standard polynomials 
+in coefficients list representation.
+Here we have uses 
+  sum 
+to collect same order terms in list representation.
 
 > npol2pol :: (Ord t, Num t) => [t] -> [t]
 > npol2pol xs = sum [ [x] * map fromInteger (fall2pol k)
@@ -252,7 +261,7 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 >   | otherwise     = (+) <$> recipro <*> rho fs (n-2) (i+1)
 >   where
 >     recipro = ((%) . (* n) <$> den) <*> num -- (den*n)%num
-> --            (%) <$> (*n) <$> den <*> num -- (den*n)%num
+> --            (%) <$> (*n) <$> den <*> num -- functor law
 >     num  = numerator <$> next
 >     den  = denominator <$> next
 >     next = (-) <$> rho fs (n-1) (i+1) <*> rho fs (n-1) i
@@ -263,7 +272,7 @@ Note that (%) has the following type,
   *Univariate> (%) <$> (*2) <$> Just 5 <*> Just 3
   Just (10 % 3)
 
-This reciprocal difference rho matches the table of Milne-Thompson[1951] page 106:
+The follwoing reciprocal differences match the table of Milne-Thompson[1951] page 106:
 
   *Univariate> map (\p -> map (rho (map (\t -> 1%(1+t^2)) [0..]) p) [0..3]) [0..5]
   [[Just (1 % 1),Just (1 % 2),Just (1 % 5),Just (1 % 10)]
@@ -306,21 +315,25 @@ Here, the consecutive Just ((-10) % 1) in second list make "fake" infinity (Noth
 > aMatrix fs = [map (a' fs i) [0..] | i <- [0..]]
 > 
 > tDegree :: Integral a => [Ratio a] -> Int
-> tDegree = constantValues 10 . map (length . takeWhile isJust) . aMatrix
->   where
->     constantValues n (l:ls)  
->       | all (==l) $ take (n-1) ls = l 
->       | otherwise = constantValues n ls
+> tDegree = isConsts 3 . map (length . takeWhile isJust) . aMatrix
+> 
+> isConsts :: Eq t => Int -> [t] -> t
+> isConsts n (l:ls)  
+>   | all (==l) $ take (n-1) ls = l 
+>   | otherwise = isConsts n ls
 
 We also need the shift, in this case, 2 to get full Thiele coefficients.
 
-> shiftaMatrix :: Integral a => [Ratio a] -> [Maybe [Ratio a]]
+> shiftaMatrix 
+>   :: Integral a => 
+>      [Ratio a] -> [Maybe [Ratio a]]
 > shiftaMatrix gs = map (sequence . (\q -> map (a' gs q) [0..(thieleD-1)])) [0..]
 >   where
 >     thieleD = fromIntegral $ tDegree gs
 >
-> shiftAndThieleC :: Integral a => 
->                    [Ratio a] -> (Maybe Int, Maybe [Ratio a])
+> shiftAndThieleC 
+>   :: Integral a => 
+>      [Ratio a] -> (Maybe Int, Maybe [Ratio a])
 > shiftAndThieleC fs = (findIndex isJust gs, join $ find isJust gs)
 >   where
 >     gs = shiftaMatrix fs
@@ -330,7 +343,7 @@ We also need the shift, in this case, 2 to get full Thiele coefficients.
   ,Just [2 % 1,(-10) % 1,(-10) % 1,(-170) % 11,(-442) % 19]
   ,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
 
-Packed version
+Packed version, this scans the given data only once.
 
 > degSftTC
 >   :: Integral a =>
@@ -341,13 +354,13 @@ Packed version
 > degSftTC fs = (d,s,ts)
 >   where
 >     m = [map (a' fs i) [0..] | i <- [0..]]
->     d = consts 10 . map (length . takeWhile isJust) $ m
->     m' = map (sequence . take d) $ m
->     s = findIndex isJust $ m'
->     ts = find isJust $ m'
->     consts n (l:ls)
->       | all (==l) $ take (n-1) ls = l
->       | otherwise = consts n ls
+>     d = isConsts 3 . map (length . takeWhile isJust) $ m -- 3 times match
+>     m' = map (sequence . take d) m
+>     s = findIndex isJust m'
+>     ts = find isJust m'
+> --    consts n (l:ls)
+> --      | all (==l) $ take (n-1) ls = l
+> --      | otherwise = consts n ls
 
   *Univariate Control.Monad> let g t = t%(1+t^2)
   *Univariate Control.Monad> let gs = map g [0..]
@@ -435,8 +448,9 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
   *Univariate> thiele2coef as
   ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
 
-> thiele2coef' :: Integral a => 
->                 Ratio a -> [Ratio a] -> ([Ratio a], [Ratio a])
+> thiele2coef' -- shifted version (0 -> sft)
+>   :: Integral a => 
+>      Ratio a -> [Ratio a] -> ([Ratio a], [Ratio a])
 > thiele2coef' sft [a] = ([a],1)
 > thiele2coef' sft as = canonicalize $ t2r as sft
 >   where
@@ -463,6 +477,9 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
 
 > list2rat' :: (Integral a) => [Ratio a] -> Maybe ([Ratio a], [Ratio a])
 > list2rat' = shiftAndThiele2coef . shiftAndThieleC
+
+> list2rat'' lst = let (_,s,ts) = degSftTC lst in
+>   shiftAndThiele2coef (s, join ts)  
  
   *Univariate> let f t = t%(1+t^2)
   *Univariate> let fs = map (\t -> 1%(1+t^2)) [0..]
