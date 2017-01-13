@@ -214,7 +214,8 @@ to collect same order terms in list representation.
 >                   | (x,k) <- zip xs [0..]
 >                   ]
 
-Finally, here is the function for computing a polynomial from an output sequence:
+Finally, here is the function for reconstruction the polynomial
+from an output sequence:
 
 > list2pol :: (Integral a) => [Ratio a] -> [Ratio a]
 > list2pol = npol2pol . list2npol
@@ -223,7 +224,7 @@ Reconstruction as curve fitting
 
   *Univariate> let f x = 2*x^3 + 3*x + 1%5
   *Univariate> take 10 $ map f [0..]
-  [1 % 5,26 % 5,111 % 5,316 % 5,701 % 5,1326 % 5,2251 % 5,3536 % 5,5241 % 5,7426 % 5]
+  [1%5, 26%5, 111%5, 316%5, 701%5, 1326%5, 2251%5, 3536%5, 5241%5, 7426%5]
   *Univariate> list2npol it
   [1 % 5,5 % 1,6 % 1,2 % 1]
   *Univariate> list2npol $ map f [0..]
@@ -272,14 +273,15 @@ Note that (%) has the following type,
   *Univariate> (%) <$> (*2) <$> Just 5 <*> Just 3
   Just (10 % 3)
 
-The follwoing reciprocal differences match the table of Milne-Thompson[1951] page 106:
+The follwoing reciprocal differences match the table of 
+Milne-Thompson[1951] page 106:
 
   *Univariate> map (\p -> map (rho (map (\t -> 1%(1+t^2)) [0..]) p) [0..3]) [0..5]
-  [[Just (1 % 1),Just (1 % 2),Just (1 % 5),Just (1 % 10)]
+  [[Just (1 % 1)   ,Just (1 % 2)    ,Just (1 % 5)    ,Just (1 % 10)]
   ,[Just ((-2) % 1),Just ((-10) % 3),Just ((-10) % 1),Just ((-170) % 7)]
   ,[Just ((-1) % 1),Just ((-1) % 10),Just ((-1) % 25),Just ((-1) % 46)]
-  ,[Just (0 % 1),Just (40 % 1),Just (140 % 1),Just (324 % 1)]
-  ,[Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)]
+  ,[Just (0 % 1)   ,Just (40 % 1)   ,Just (140 % 1)  ,Just (324 % 1)]
+  ,[Just (0 % 1)   ,Just (0 % 1)    ,Just (0 % 1)    ,Just (0 % 1)]
   ,[Nothing,Nothing,Nothing,Nothing]
   ]
 
@@ -294,12 +296,12 @@ The follwoing reciprocal differences match the table of Milne-Thompson[1951] pag
 > a' fs p n = (-) <$> rho fs n p <*> rho fs (n-2) p
 
   *Univariate> map (\p -> map (rho (map (\t -> t%(1+t^2)) [0..]) p) [0..5]) [0..5]
-  [[Just (0 % 1),Just (1 % 2),Just (2 % 5),Just (3 % 10),Just (4 % 17),Just (5 % 26)]
-  ,[Just (2 % 1),Just ((-10) % 1),Just ((-10) % 1),Just ((-170) % 11),Just ((-442) % 19),Just ((-962) % 29)]
-  ,[Just (1 % 3),Nothing,Just ((-1) % 15),Just ((-1) % 48),Just ((-1) % 105),Just ((-1) % 192)]
-  ,[Nothing,Nothing,Just (50 % 1),Just (242 % 1),Just (662 % 1),Just (1430 % 1)]
-  ,[Nothing,Nothing,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)]
-  ,[Nothing,Nothing,Nothing,Nothing,Nothing,Nothing]
+  [[Just (0%1),Just (1%2)    ,Just (2%5)    ,Just (3%10)     ,Just (4%17)     ,Just (5%26)]
+  ,[Just (2%1),Just ((-10)%1),Just ((-10)%1),Just ((-170)%11),Just ((-442)%19),Just ((-962)%29)]
+  ,[Just (1%3),Nothing       ,Just ((-1)%15),Just ((-1)%48)  ,Just ((-1)%105) ,Just ((-1)%192)]
+  ,[Nothing   ,Nothing       ,Just (50%1)   ,Just (242%1)    ,Just (662%1)    ,Just (1430%1)]
+  ,[Nothing   ,Nothing       ,Just (0%1)    ,Just (0%1)      ,Just (0%1)      ,Just (0%1)]
+  ,[Nothing   ,Nothing       ,Nothing       ,Nothing         ,Nothing         ,Nothing]
   ]
 
 Here, the consecutive Just ((-10) % 1) in second list make "fake" infinity (Nothing).
@@ -315,14 +317,15 @@ Here, the consecutive Just ((-10) % 1) in second list make "fake" infinity (Noth
 > aMatrix fs = [map (a' fs i) [0..] | i <- [0..]]
 > 
 > tDegree :: Integral a => [Ratio a] -> Int
-> tDegree = isConsts 3 . map (length . takeWhile isJust) . aMatrix
+> tDegree = isConsts' 3 . map (length . takeWhile isJust) . aMatrix
 > 
-> isConsts :: Eq t => Int -> [t] -> t
-> isConsts n (l:ls)  
+> -- To find constant sub sequence.
+> isConsts' :: Eq t => Int -> [t] -> t
+> isConsts' n (l:ls)  
 >   | all (==l) $ take (n-1) ls = l 
->   | otherwise = isConsts n ls
+>   | otherwise                 = isConsts' n ls
 
-We also need the shift, in this case, 2 to get full Thiele coefficients.
+we also need the shift, in this case, p=2 to get full Thiele coefficients.
 
 > shiftaMatrix 
 >   :: Integral a => 
@@ -354,13 +357,10 @@ Packed version, this scans the given data only once.
 > degSftTC fs = (d,s,ts)
 >   where
 >     m = [map (a' fs i) [0..] | i <- [0..]]
->     d = isConsts 3 . map (length . takeWhile isJust) $ m -- 3 times match
+>     d = isConsts' 3 . map (length . takeWhile isJust) $ m -- 3 times match
 >     m' = map (sequence . take d) m
 >     s = findIndex isJust m'
 >     ts = find isJust m'
-> --    consts n (l:ls)
-> --      | all (==l) $ take (n-1) ls = l
-> --      | otherwise = consts n ls
 
   *Univariate Control.Monad> let g t = t%(1+t^2)
   *Univariate Control.Monad> let gs = map g [0..]
@@ -474,10 +474,10 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
 
 > shiftAndThiele2coef (Just sft, Just ts) = Just $ thiele2coef' (fromIntegral sft) ts
 > shiftAndThiele2coef _                   = Nothing
-
+>
 > list2rat' :: (Integral a) => [Ratio a] -> Maybe ([Ratio a], [Ratio a])
 > list2rat' = shiftAndThiele2coef . shiftAndThieleC
-
+>
 > list2rat'' lst = let (_,s,ts) = degSftTC lst in
 >   shiftAndThiele2coef (s, join ts)  
  
