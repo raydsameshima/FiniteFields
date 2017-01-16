@@ -73,7 +73,7 @@ of taking a falling power.
 
 Claim (Newton interpolation formula):
   A polynomial f of degree n is expressed as
-    f(z) = \sum_{k=0}^n  (diff^n(f)(0)/k!) * (x ^- n)
+    f(z) = \sum_{k=0}^n  (diff^n(f)(0)/k!) * (x ^- k)
   where diff^n(f) is the n-th difference of f.
 
 Example
