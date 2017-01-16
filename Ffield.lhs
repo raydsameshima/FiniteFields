@@ -137,7 +137,7 @@ In order to use CRT, we should cast its type.
 >     p = p1*p2
 >
 > matches3 :: Eq a => [Maybe (a,b)] -> Maybe (a,b)
-> matches3  (b1@(Just (q1,p1)):bb@((Just (q2,_)):(Just (q3,_)):_))
+> matches3 (b1@(Just (q1,p1)):bb@((Just (q2,_)):(Just (q3,_)):_))
 >   | q1==q2 && q2==q3 = b1
 >   | otherwise        = matches3 bb
 > matches3 _ = Nothing

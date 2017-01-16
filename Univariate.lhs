@@ -77,7 +77,7 @@ Claim (Newton interpolation formula):
   where diff^n(f) is the n-th difference of f.
 
 Example
-Consider a polynomial f = 2*x^3+3*x.
+Consider a polynomial f(x) = 2*x^3+3*x.
 
 In general, we have no prior knowledge of this form, 
 but we know the sequences as a list of outputs (map f [0..]):

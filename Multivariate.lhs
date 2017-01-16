@@ -315,7 +315,7 @@ Note that, the sampling points for n=10 case are
   (Just [[0 % 1],[1 % 1],[0 % 1]],Just [[1 % 1],[0 % 1],[1 % 1]])
 
 > -- Alternative transpose, filling with the default value.
-> -- I followed the implementation of standard Prelude.
+> -- I basically followed the implementation of standard Prelude.
 > transposeWith :: a -> [[a]] -> [[a]]
 > transposeWith _ [] = []
 > transposeWith z ([] : xss)
