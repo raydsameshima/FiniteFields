@@ -180,9 +180,9 @@ Degree, eager and lazy versions
   *FROverZp> list2npol fs
   [1 % 3,74 % 65,7 % 13]
 
-> firstDifs' :: [Ratio Int] -> [Maybe (Ratio Integer, Integer)]
-> firstDifs' = map reconstruct . transpose . map (\(p,xs) -> (zip (sequence xs) (repeat p))) . 
->              filter (isJust .snd) . makeAPair bigPrimes 
+> -- firstDifs' :: [Ratio Int] -> [Maybe (Ratio Integer, Integer)]
+> -- firstDifs' = map reconstruct . transpose . map (\(p,xs) -> (zip (sequence xs) (repeat p))) . 
+> --              filter (isJust .snd) . makeAPair bigPrimes 
 
   *FROverZp> let g x = 1%153 + x*(133%122) + (x^2)*(1%199) + (x^3)*(922%855)
   *FROverZp> let gs = map g [0..]
@@ -192,8 +192,8 @@ Degree, eager and lazy versions
   [1 % 153,45117911 % 20757690,183763 % 56715,922 % 855]
 
 > -- Eager-version, i.e., input should be finite.
-> list2npolp :: [Ratio Int] -> Maybe [Ratio Integer]
-> list2npolp = fmap (newtonC . map fst) . sequence . firstDifs' 
+> -- list2npolp :: [Ratio Int] -> Maybe [Ratio Integer]
+> -- list2npolp = fmap (newtonC . map fst) . sequence . firstDifs' 
 
   *FROverZp> let g x = 1%153 + x*(133%122) + (x^2)*(1%199) + (x^3)*(922%855)
   *FROverZp> let gs = map g [0..100]
