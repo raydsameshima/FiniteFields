@@ -13,6 +13,7 @@ L. M. Milne-Thomson
 > import Data.Ratio
 > import Data.Maybe
 > import Data.List
+> -- import Control.Monad.Catch
 >
 > import Polynomials 
 
@@ -265,7 +266,10 @@ https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
 > --            (%) <$> (*n) <$> den <*> num -- functor law
 >     num  = numerator <$> next
 >     den  = denominator <$> next
->     next = (-) <$> rho fs (n-1) (i+1) <*> rho fs (n-1) i
+> --    next = (-) <$> rho fs (n-1) (i+1) <*> rho fs (n-1) i
+>     next = x `seq` y `seq` (-) <$> x <*> y
+>       where x = rho fs (n-1) (i+1) 
+>             y = rho fs (n-1) i
 
 Note that (%) has the following type,
   (%) :: Integral a => a -> a -> Ratio a
@@ -510,4 +514,17 @@ What we need is a translator from Thiele coefficients to this tuple-rep.
   ,[Nothing,Nothing,Just (1 % 15),Just (1 % 48),Just (1 % 105)]
   ,[Nothing,Nothing,Nothing,Nothing,Nothing]
   ] 
+
+--
+
+For general, non-sequential input.
+
+to do:
+Need try-catch-throw type exception-handling. 
+Control.Monad.Catch
+
+> graph :: (a -> b) -> [a] -> [(a,b)] 
+> graph _ []     = []
+> graph f (a:as) = (a, f a): graph f as
+
 
