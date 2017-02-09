@@ -186,7 +186,7 @@ The final reconstruction function takes a list of Z_p values and returns the thr
   ]
 
 > reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer)
-> reconstruct = matches 10 . makeList
+> reconstruct = matches 10 . makeList -- 10 times match
 >   where
 >     matches n (a:as)
 >       | all (a==) $ take (n-1) as = a
