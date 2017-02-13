@@ -9,7 +9,7 @@ catchEither.lhs
 >          )
 > import Data.Ratio
 
-> func x = 1%x
+> func x = (1%1)/x
 >
 > saferEvalIO :: Show a => (t -> a) -> t -> IO ()
 > saferEvalIO f x = do
