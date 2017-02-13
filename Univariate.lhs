@@ -527,4 +527,59 @@ Control.Monad.Catch
 > graph _ []     = []
 > graph f (a:as) = (a, f a): graph f as
 
+--
+
+For non-sequential input-output.
+Assume
+  [(x, f x) | x<-domain]
+as the given data.
+
+> type Q = Ratio Int
+>
+> divDif :: ([Q], Q) -> ([Q], Q) -> ([Q], Q)
+> divDif ([x0], f0) ([x1], f1) = ([x0,x1], (f1 - f0) / (x1 - x0))
+> divDif (xs  , f0) (xs' , f1) = ((z:xs'), (f1-f0) / range)
+>   where
+>     a = last xs'
+>     z = head xs
+>     range = a - z
+>
+> map' :: (a -> a -> a) -> [a] -> [a]
+> map' _ []            = []
+> map' _ [a]           = []
+> map' f (a:bb@(b:bs)) = (f a b) : map' f bb
+> 
+> aStepOfDivDif :: [([Q], Q)] -> [([Q], Q)]
+> aStepOfDivDif = map' divDif
+>
+> aStepOfDivDif' []            = []
+> aStepOfDivDif' [a,b]         = [divDif a b]
+> aStepOfDivDif' (a:bb@(b:bs)) = (divDif a b) : aStepOfDivDif' bb
+
+The example from 1st ref. in page 46:
+  *Univariate> let ds = [([0%1],1%1), ([1%1],3%1), ([3%1],2%1)] :: [([Q],Q)]
+  *Univariate> aStepOfDivDif ds
+  [([0 % 1,1 % 1],2 % 1),([1 % 1,3 % 1],(-1) % 2)]
+  *Univariate> aStepOfDivDif it
+  [([0 % 1,1 % 1,3 % 1],(-5) % 6)]
+
+> isZeros :: Int -> [([Q], Q)] -> Bool
+> isZeros n ds = let ds' = map snd ds in
+>   all (==0%1) $ take n ds'
+>
+> finiteDifferences :: [([Q],Q)] -> [[([Q],Q)]]
+> finiteDifferences graph 
+>   = if isZeros 3 graph 
+>       then [graph]
+>       else graph : finiteDifferences g'
+>         where
+>           g' = aStepOfDivDif graph
+
+An Example; x^2 see page 48.
+  *Univariate> let ds = [([0%1],0%1), ([1%1],1%1), ([2%1],4%1), ([3%1],9%1), ([4%1], 16%1), ([5%1], 25%1)] :: [([Q],Q)]
+  *Univariate> finiteDifferences ds
+  [[([0 % 1],0 % 1),([1 % 1],1 % 1),([2 % 1],4 % 1),([3 % 1],9 % 1),([4 % 1],16 % 1),([5 % 1],25 % 1)]
+  ,[([0 % 1,1 % 1],1 % 1),([1 % 1,2 % 1],3 % 1),([2 % 1,3 % 1],5 % 1),([3 % 1,4 % 1],7 % 1),([4 % 1,5 % 1],9 % 1)]
+  ,[([0 % 1,1 % 1,2 % 1],1 % 1),([1 % 1,2 % 1,3 % 1],1 % 1),([2 % 1,3 % 1,4 % 1],1 % 1),([3 % 1,4 % 1,5 % 1],1 % 1)]
+  ,[([0 % 1,1 % 1,2 % 1,3 % 1],0 % 1),([1 % 1,2 % 1,3 % 1,4 % 1],0 % 1),([2 % 1,3 % 1,4 % 1,5 % 1],0 % 1)]]
 
