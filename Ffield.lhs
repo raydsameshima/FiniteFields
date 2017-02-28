@@ -47,7 +47,9 @@ See the algorithm, examples, and pseudo code at:
 >       | otherwise = x : xs
 >
 > -- a*x + b*y = gcd a b
-> exGCD :: Integral t => t -> t -> (t, t, t)
+> exGCD 
+>   :: Integral t => 
+>      t -> t -> (t, t, t)
 > exGCD a b = (g, x, y)
 >   where
 >     (_,r,s,t) = exGCD' a b
@@ -56,11 +58,18 @@ See the algorithm, examples, and pseudo code at:
 >     y = last . init $ t
 >
 > -- a^{-1} (in Z_p) == a `inversep` p
-> inversep :: Integral a => a -> a -> Maybe a -- We also use in CRT.
+> inversep 
+>   :: Integral a => 
+>      a -> a -> Maybe a -- We also use in CRT.
 > a `inversep` p = let (g,x,_) = exGCD a p in
 >   if (g == 1) 
 >     then Just (x `mod` p) -- g==1 <=> coprime a p
 >     else Nothing
+>
+> -- If a is "safe" value, 
+> inversep' :: Int -> Int -> Int
+> a `inversep'` p = (x `mod` p)
+>   where (_,x,_) = exGCD a p
 >
 > inversesp :: Int -> [Maybe Int]
 > inversesp p = map (`inversep` p) [1..(p-1)]

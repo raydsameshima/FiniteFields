@@ -9,6 +9,7 @@ GUnivariate.lhs
 > import Control.Monad
 
 > import Polynomials
+> import Ffield
 
 > type Q = Ratio Int
 > type Graph = [(Q,Q)]
@@ -44,10 +45,10 @@ as the given data.
 >     z = head xs
 >     range = a - z
 >
+> -- f [a,b,c ..] -> [(f a b), (f b c) ..]
 > map' :: (a -> a -> b) -> [a] -> [b]
-> map' _ []            = []
-> map' _ [a]           = []
-> -- map' f (a:bb@(b:bs)) = (f a b) : map' f bb
+> -- map' _ []            = []
+> -- map' _ [a]           = []
 > map' f as = zipWith f as (tail as)
 > 
 > aStepOfDivDif :: [([Q], Q)] -> [([Q], Q)]
@@ -290,16 +291,13 @@ Newton Backward interpolation
 >   | otherwise = helper [sf3] (drop 3 fs)
 >   where
 >     sf3 = reverse . take 3 $ fs -- [[f2,f1,f0]]
->     helper fss [] = error "newtonBT: need more evaluation" -- fss
+>     helper fss [] = error "newtonBT: need more evaluation" 
 >     helper fss (f:fs)
 >       | isConstsDiffs' 3 . last $ fss = fss
 >       | otherwise                     = helper (add1 f fss) fs
 >
 > bNewtonCoeff :: Graph -> [Diff]
 > bNewtonCoeff = map head . newtonTriangle . map toDiff
-> -- for double check
-> fNewtonCoeff :: Graph -> [Diff]
-> fNewtonCoeff = map last . newtonTriangle . map toDiff
 >
 > bnewton2canonical :: [Diff] -> [Q] -- using Polynomial.hs
 > bnewton2canonical [d]    = [value d]
@@ -309,6 +307,9 @@ Newton Backward interpolation
 >     next = bnewton2canonical ds
 >
 > -- for double check
+> fNewtonCoeff :: Graph -> [Diff]
+> fNewtonCoeff = map last . newtonTriangle . map toDiff
+
 > fnewton2canonical :: [Diff] -> [Q] -- using Polynomial.hs
 > fnewton2canonical [d]    = [value d]
 > fnewton2canonical (d:ds) = (z * next) - (zd .* next) + [value d]
@@ -320,4 +321,29 @@ Newton Backward interpolation
   *GUnivariate> bnewton2canonical . bNewtonCoeff $ gs
   [2 % 3,4 % 11,0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,13 % 2]
 
+--
+From now on, we combine finite fields technique to control overflow.
+
+> -- 
+> sample :: Int   -- prime
+>        -> Graph -- increasing
+>        -> Graph 
+> sample p = filter ((< (fromIntegral p)) . fst)
+>
+> -- eliminate (1%p) type "fake" infinity
+> check :: Int 
+>       -> Graph 
+>       -> Graph -- safe data sets
+> check p gs = filter (not . isDanger p) gs
+>
+> isDanger :: Int -- prime 
+>        -> (Q,Q) -> Bool
+> isDanger p (_, fx) = (d `rem` p) == 0
+>    where d = denominator fx
+> 
+> project :: Int -> (Q,Q) -> (Int, Maybe Int)
+> project p (x, fx)
+>   | denominator x == 1 = (numerator x, fx `modp` p)
+>   | otherwise          = error "project: integer input?"
+>
 
