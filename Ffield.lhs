@@ -66,7 +66,7 @@ See the algorithm, examples, and pseudo code at:
 >     then Just (x `mod` p) -- g==1 <=> coprime a p
 >     else Nothing
 >
-> -- If a is "safe" value, 
+> -- If a is "safe" value, we can use this.
 > inversep' :: Int -> Int -> Int
 > a `inversep'` p = (x `mod` p)
 >   where (_,x,_) = exGCD a p
@@ -83,6 +83,14 @@ See the algorithm, examples, and pseudo code at:
 >   where
 >     (a,b)   = (numerator q, denominator q)
 >     Just bi = b `inversep` p
+>
+> -- When the denominator of q does not factor p, use this.
+> modp' :: Ratio Int -> Int -> Int
+> q `modp'` p = (a * (bi `mod` p)) `mod` p
+>   where
+>     (a,b)   = (numerator q, denominator q)
+>     bi = b `inversep'` p
+
 >
 > -- This is guess function without Chinese Reminder Theorem.
 > guess :: Integral t => 

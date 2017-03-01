@@ -42,9 +42,9 @@ which is equivalent to determine (canonical) coefficients.
 > isDanger p (_, fx) = (d `rem` p) == 0
 >    where d = denominator fx
 > 
-> project :: Int -> (Q,Q) -> (Int, Maybe Int)
+> project :: Int -> (Q,Q) -> (Int, Int)
 > project p (x, fx)
->   | denominator x == 1 = (numerator x, fx `modp` p)
+>   | denominator x == 1 = (numerator x, fx `modp'` p)
 >   | otherwise          = error "project: integer input?"
  
   *> let gs = map (\x -> (x,(2%3) + (4%11)*x + (13%2)*x^8)) 
@@ -66,7 +66,8 @@ which is equivalent to determine (canonical) coefficients.
   [(1,Just 3),(3,Just 8),(4,Just 8),(7,Just 15),(8,Just 1),(11,Just 3)
   ,(13,Just 17),(17,Just 20),(19,Just 3),(20,Just 10),(21,Just 17)
   ]
- 
+
+>{- 
 > -- From Graph to Zp values.
 > onZp 
 >   :: Int                -- base prime
@@ -165,6 +166,19 @@ which is equivalent to determine (canonical) coefficients.
 > newtonCoeffZp :: Int -> Graph -> [PDiff]
 > newtonCoeffZp p = map head . newtonTriangleZp . graph2PDiff p
 >
+> -}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 > {-
