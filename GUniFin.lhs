@@ -62,7 +62,6 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 >           , value     :: Int -- Zp value
 >           , basePrime :: Int
 >           }
->   | PReci -- for reciprocal differences
 >   deriving (Show, Read)
 >
 > toPDiff 
@@ -106,7 +105,6 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 >   | p == q    = PDiff (x,y') finiteDiff p
 >   | otherwise = error "bdiffStep: different primes?"
 >   where
-> --     finiteDiff = (%) <$> fg <*> xy' >>= (`modp` p)
 >     finiteDiff = ((fg % xy') `modp'` p)
 >     xy' = (x - y' `mod` p)
 >     fg = ((f-g) `mod` p) 
@@ -173,3 +171,4 @@ Here is "a" final version, the univariate polynomial reconstruction with finite 
 --
 
 Non sequential inputs Thiele-interpolation with finite fields.
+
