@@ -165,64 +165,11 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
   *GUniFin> map reconstruct . transpose . map (preTrial gs) $ bigPrimes 
   [Just (1 % 3),Just (1 % 2),Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
 
+Here is "a" final version, the univariate polynomial reconstruction with finite fields.
+
+> uniPolCoeff :: Graph -> [Maybe (Ratio Integer)]
 > uniPolCoeff gs = map reconstruct . transpose . map (preTrial gs) $ bigPrimes
->
-> {-
-> trial :: Graph -> Int -> [Maybe (Ratio Int, Int)]
-> trial = map guess . preTrial 
-> -}
-
-> 
-
-> {-
-
-Instead of treating Either monad, let me make a working small codes.
-
-> diffStep' :: Diff -> Diff -> Diff
-> diffStep' (Diff n (x,x') f) (Diff m (y,y') g) 
->   | n == m = Diff (n+1) (x,y') ((f-g)/(x-y'))
->
-
-> -- trial :: Graph -> [[Diff]]
-> trial gs = let sg3 = reverse . take 3 $ gs in
->   if isConstsDiffs' 3 sg3 
->     then [sg3]
->     else sg3 : (trial $ map' diffStep' $ gs)
-
-> plant :: Diff -> [Diff] -> [[Diff]]
-> plant d ds
->   | isConstsDiffs' 3 ds = [ds]
->   | otherwise           = dd : [map' diffStep' dd]
->   where dd = (d:ds)
-
---
-Newton Backward interpolation
-
-> -- backward
-> bdiffStep :: Diff -> Diff -> Diff
-> bdiffStep (Diff m (y,y') g) (Diff n (x,x') f)
->   | n == m = Diff (n+1) (x,y') ((f-g)/(x-y'))
->
-> -- backward
-> add1 :: Diff -> [[Diff]] -> [[Diff]]
-> add1 f [gs] = fgs : [zipWith bdiffStep fgs gs] -- singleton
->   where 
->     fgs = f:gs
-> add1 f (gg@(g:gs) : hhs) -- gg is reversed order
->             = (f:gg) : add1 fg hhs
->   where
->     fg = bdiffStep f g
-
-> bNewtonCoeff :: Graph -> [Diff]
-> bNewtonCoeff = map head . newtonTriangle . map toDiff
->
-> bnewton2canonical :: [Diff] -> [Q] -- using Polynomial.hs
-> bnewton2canonical [d]    = [value d]
-> bnewton2canonical (d:ds) = (z * next) - (zd .* next) + [value d]
->   where 
->     zd = fst . points $ d
->     next = bnewton2canonical ds
 
 --
 
-> -}
+Non sequential inputs Thiele-interpolation with finite fields.

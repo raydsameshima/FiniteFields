@@ -74,8 +74,7 @@ See the algorithm, examples, and pseudo code at:
 > inversesp :: Int -> [Maybe Int]
 > inversesp p = map (`inversep` p) [1..(p-1)]
 >
-> -- A map from Q to Z_p.
-> -- p should be prime.
+> -- A map from Q to Z_p, where p is a prime.
 > modp :: Ratio Int -> Int -> Maybe Int
 > q `modp` p 
 >   | coprime b p = Just $ (a * (bi `mod` p)) `mod` p
@@ -84,13 +83,12 @@ See the algorithm, examples, and pseudo code at:
 >     (a,b)   = (numerator q, denominator q)
 >     Just bi = b `inversep` p
 >
-> -- When the denominator of q does not factor p, use this.
+> -- When the denominator of q is not proprtional to p, use this.
 > modp' :: Ratio Int -> Int -> Int
 > q `modp'` p = (a * (bi `mod` p)) `mod` p
 >   where
 >     (a,b)   = (numerator q, denominator q)
 >     bi = b `inversep'` p
-
 >
 > -- This is guess function without Chinese Reminder Theorem.
 > guess :: Integral t => 
@@ -107,10 +105,9 @@ See the algorithm, examples, and pseudo code at:
 >         | otherwise = select rs ss p
 >
 > -- Hard code of big primes
-> -- We have chosen a finite number version.
+> -- We have chosen a finite number (100) version.
 > bigPrimes :: [Int]
 > bigPrimes = take 100 $ dropWhile (<10^4) primes
-> -- bigPrimes = dropWhile (<10^4) primes
 
   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
   *Ffield> let ds = knownData (12%13)
@@ -184,24 +181,6 @@ In order to use CRT, we should cast its type.
   *Ffield> matches3 it
   Just (1123 % 1135,100160063)
 
-The final reconstruction function takes a list of Z_p values and returns the three times matched guess.
-
-> -- reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer, Integer)
-> -- reconstruct = matches3 . map guess . scanl1 crtRec' . toInteger2 
-> -- reconstruct = matches3 . map guess . scanl1 crtRec' . filter (isJust . fst) . toInteger2 
-
-  *Ffield> let q = 10937 % 10939
-  *Ffield> let ds = imagesAndPrimes q
-  *Ffield> map (fmap fst . guess) . scanl1 crtRec' . toInteger2 . filter (isJust . fst) $ ds
-  [Just ((-19) % 24)
-  ,Just ((-4977) % 4180)
-  ,Just (10937 % 10939)
-  ,Just (10937 % 10939)
-  ,Just (10937 % 10939)
-  ,Just (10937 % 10939)
-  ..
-  ]
-
 > reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer)
 > reconstruct = matches 10 . makeList -- 10 times match
 >   where
@@ -210,7 +189,7 @@ The final reconstruction function takes a list of Z_p values and returns the thr
 >       | otherwise                     = matches n as
 >     makeList = map (fmap fst . guess) . scanl1 crtRec' . toInteger2 . filter (isJust . fst)
 
---
+-- QuickCheck
 
   *Ffield> let q = 513197683989569 % 1047805145658 :: Ratio Int
   *Ffield> let ds = imagesAndPrimes q
@@ -227,5 +206,3 @@ The final reconstruction function takes a list of Z_p values and returns the thr
 
   *Ffield> quickCheckWith stdArgs { maxSuccess = 100000 } prop_rec 
   +++ OK, passed 100000 tests.
-
-
