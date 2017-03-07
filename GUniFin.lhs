@@ -165,10 +165,75 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 
 Here is "a" final version, the univariate polynomial reconstruction with finite fields.
 
-> uniPolCoeff :: Graph -> [Maybe (Ratio Integer)]
-> uniPolCoeff gs = map reconstruct . transpose . map (preTrial gs) $ bigPrimes
+> uniPolCoeff :: Graph -> Maybe [(Ratio Integer)]
+> uniPolCoeff gs = sequence . map reconstruct . transpose . map (preTrial gs) $ bigPrimes
+
+  *GUniFin> let gs = map (\x -> (x,x^5 + x^2 + (1%2)*x + 1%3)) [0,2,3,5,7,8,11,13,17,18,19,21,24,28,31,33,34] :: Graph
+  *GUniFin> gs
+  [(0 % 1,1 % 3),(2 % 1,112 % 3),(3 % 1,1523 % 6),(5 % 1,18917 % 6),(7 % 1,101159 % 6),(8 % 1,98509 % 3),(11 % 1,967067 % 6),(13 % 1,2228813 % 6),(17 % 1,8520929 % 6),(18 % 1,5669704 % 3),(19 % 1,14858819 % 6),(21 % 1,24507317 % 6),(24 % 1,23889637 % 3),(28 % 1,51633499 % 3),(31 % 1,171780767 % 6),(33 % 1,234818993 % 6),(34 % 1,136309792 % 3)]
+  *GUniFin> uniPolCoeff gs
+  Just [1 % 3,1 % 2,1 % 1,0 % 1,0 % 1,1 % 1]
 
 --
 
 Non sequential inputs Thiele-interpolation with finite fields.
 
+to do list
+Zipper
+
+> type ListZipper a = ([a], [a])
+> goForward, goBack :: ListZipper a -> ListZipper a
+> goForward (x:xs, ys) = (xs, x:ys)
+> goBack (xs, y:ys) = (y:xs, ys)
+>
+> list2zipper :: [a] -> ListZipper a 
+> list2zipper xs = (xs, [])
+> zipper2list :: ListZipper a -> [a]
+> zipper2list (xs, [])   = xs
+> zipper2list (xs, y:ys) = zipper2list (y:xs, ys)
+
+> removeHeads :: ListZipper [a] -> ListZipper [a]
+> removeHeads (xs, ys) = (xs, map tail ys)
+
+> add1'
+>   :: (Eq a) =>
+>      (a -> a -> a) -> a -> ListZipper [a] -> ListZipper [a]
+> add1' bo f zs@(((g:gs):ggs), bs)
+>   | f /= g = add1' bo fg (ggs, (f:g:gs):bs) 
+>   | f == g = removeHeads zs
+>   | otherwise = error "???"
+>   where fg = f `bo` g
+
+--
+Let me start naive rho:
+
+> rho :: Graph -> Int -> [Q]
+> rho gs 0 = map snd gs
+> rho gs 1 = zipWith (/) xs' fs'
+>   where
+>     xs' = zipWith (-) xs (tail xs)
+>     xs = map fst gs
+>     fs' = zipWith (-) fs (tail fs)
+>     fs = map snd gs
+> rho gs n = zipWith (+) twoAbove oneAbove
+>   where
+>     twoAbove = zipWith (/) xs' rs'
+>     xs' = zipWith (-) xs (drop n xs)
+>     xs = map fst gs
+>     rs' = zipWith (-) rs (tail rs)
+>     rs = rho gs (n-1)
+>     oneAbove = tail $ rho gs (n-2)
+
+  *GUniFin> let func x = (1+x+2*x^2)/(3+2*x +(1%4)*x^2)
+  *GUniFin> let fs = map (\x -> (x, func x)) [0,1,3,4,6,7,9,10,11,13,14,15,17,19,20] :: Graph 
+  *GUniFin> let r = rho fs
+  *GUniFin> r 0
+  [1 % 3,16 % 21,88 % 45,37 % 15,79 % 24,424 % 117,688 % 165,211 % 48,1016 % 221,1408 % 285,407 % 80,1864 % 357,2384 % 437,424 % 75,821 % 143]
+  *GUniFin> r 1
+  [7 % 3,315 % 188,45 % 23,80 % 33,936 % 311,6435 % 1756,880 % 199,10608 % 2137,62985 % 10804,4560 % 671,28560 % 3821,156009 % 18260,32775 % 3244,10725 % 943]
+  *GUniFin> r 2
+  [(-604) % 159,5116 % 405,9458 % 1065,18962 % 2253,75244 % 9171,117388 % 14439,174700 % 21603,243084 % 30151,329516 % 40955,436876 % 54375,559148 % 69659,26491 % 3303,138404 % 17267]
+  *GUniFin> r 3
+  [900 % 469,585 % 938,(-5805) % 938,(-19323) % 938,(-23418) % 469,(-165867) % 1876,(-295485) % 1876,(-111560) % 469,(-651015) % 1876,(-977265) % 1876,(-199317) % 268,(-278589) % 268]
+  *GUniFin> r 4
+  [8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1]
