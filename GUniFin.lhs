@@ -178,34 +178,8 @@ Here is "a" final version, the univariate polynomial reconstruction with finite 
 
 Non sequential inputs Thiele-interpolation with finite fields.
 
-to do list
-Zipper
-
-> type ListZipper a = ([a], [a])
-> goForward, goBack :: ListZipper a -> ListZipper a
-> goForward (x:xs, ys) = (xs, x:ys)
-> goBack (xs, y:ys) = (y:xs, ys)
->
-> list2zipper :: [a] -> ListZipper a 
-> list2zipper xs = (xs, [])
-> zipper2list :: ListZipper a -> [a]
-> zipper2list (xs, [])   = xs
-> zipper2list (xs, y:ys) = zipper2list (y:xs, ys)
-
-> removeHeads :: ListZipper [a] -> ListZipper [a]
-> removeHeads (xs, ys) = (xs, map tail ys)
-
-> add1'
->   :: (Eq a) =>
->      (a -> a -> a) -> a -> ListZipper [a] -> ListZipper [a]
-> add1' bo f zs@(((g:gs):ggs), bs)
->   | f /= g = add1' bo fg (ggs, (f:g:gs):bs) 
->   | f == g = removeHeads zs
->   | otherwise = error "???"
->   where fg = f `bo` g
-
 --
-Let me start naive rho:
+Let me start naive rho with non-sequential inputs:
 
 > rho :: Graph -> Int -> [Q]
 > rho gs 0 = map snd gs
@@ -224,6 +198,8 @@ Let me start naive rho:
 >     rs = rho gs (n-1)
 >     oneAbove = tail $ rho gs (n-2)
 
+This works 
+
   *GUniFin> let func x = (1+x+2*x^2)/(3+2*x +(1%4)*x^2)
   *GUniFin> let fs = map (\x -> (x, func x)) [0,1,3,4,6,7,9,10,11,13,14,15,17,19,20] :: Graph 
   *GUniFin> let r = rho fs
@@ -237,3 +213,112 @@ Let me start naive rho:
   [900 % 469,585 % 938,(-5805) % 938,(-19323) % 938,(-23418) % 469,(-165867) % 1876,(-295485) % 1876,(-111560) % 469,(-651015) % 1876,(-977265) % 1876,(-199317) % 268,(-278589) % 268]
   *GUniFin> r 4
   [8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1,8 % 1]
+
+But here is a corner case, an accidental match.
+We should detect them and handle them safely.
+
+  *GUniFin> let func x = (x%(1+x^2))
+  *GUniFin> let fs = map (\x -> (x%1,func x)) [0..10]
+  *GUniFin> let r = rho fs
+  *GUniFin> r 0
+  [0 % 1,1 % 2,2 % 5,3 % 10,4 % 17,5 % 26,6 % 37,7 % 50,8 % 65,9 % 82,10 % 101]
+  *GUniFin> r 1
+  [2 % 1,(-10) % 1,(-10) % 1,(-170) % 11,(-442) % 19,(-962) % 29,(-1850) % 41,(-650) % 11,(-5330) % 71,(-8282) % 89]
+  *GUniFin> r 2
+  [1 % 3,*** Exception: Ratio has zero denominator
+
+--
+Zipper
+
+> type ListZipper a = ([a], [a])
+>
+> goForward :: ListZipper a -> ListZipper a
+> goForward (x:xs, ys) = (xs, x:ys)
+> goBack :: ListZipper a -> ListZipper a
+> goBack (xs, y:ys) = (y:xs, ys)
+>
+> list2zipper :: [a] -> ListZipper a 
+> list2zipper xs = (xs, [])
+> zipper2list :: ListZipper a -> [a]
+> zipper2list (xs, [])   = xs
+> zipper2list (xs, y:ys) = zipper2list (y:xs, ys)
+
+> removeHeads :: ListZipper [a] -> ListZipper [a]
+> removeHeads (xs, ys) = (xs, map tail ys)
+
+> {-
+> add1'
+>   :: (Eq a) =>
+>      (a -> a -> a) -> a -> ListZipper [a] -> ListZipper [a]
+> add1' bo f zs@(((g:gs):ggs), bs)
+>   | f /= g = add1' bo fg (ggs, (f:g:gs):bs) 
+>   | f == g = removeHeads zs
+>   | otherwise = error "???"
+>   where fg = f `bo` g
+> -}
+
+--
+
+> -- graph2PDiff p = map (toPDiff p) . graph2Zp p
+> -- We have assumed our out-puts are safe, i.e. no fake infinity.
+> initialThieleZp :: [PDiff] -> [[PDiff]]
+> initialThieleZp fs = [first, second]
+>   where
+>     first = reverse . take 4 $ fs
+>     second = map' reciproDiff first
+>
+> reciproDiff :: PDiff -> PDiff -> PDiff
+> reciproDiff (PDiff (y,z) u p) (PDiff (w,x) v q)
+>   | p /= q = error "reciproDiff: wrong base prime"
+>   | otherwise = PDiff (w,z) r p
+>   where
+>     r = ((zw) * (uv `inversep'` p)) `mod` p
+>     zw = (z - w) `mod` p
+>     uv = (u - v) `mod` p
+
+  *GUniFin> let func x = (x%(1+x^2))
+  *GUniFin> let fs = map (\x -> (x%1,func x)) [0,1,3,5,6,8,9] :: Graph 
+  *GUniFin> initialThieleZp . graph2PDiff 101 $ fs
+  [[PDiff {points = (5,5), value = 74, basePrime = 101}
+   ,PDiff {points = (3,3), value = 71, basePrime = 101}
+   ,PDiff {points = (1,1), value = 51, basePrime = 101}
+   ,PDiff {points = (0,0), value = 0, basePrime = 101}
+   ]
+  ,[PDiff {points = (3,5), value = 68, basePrime = 101}
+   ,PDiff {points = (1,3), value = 192, basePrime = 101}
+   ,PDiff {points = (0,1), value = 2, basePrime = 101}
+   ]
+  ]
+
+> thieleTriangleZp fs
+>   | length fs < 3 = []
+>   | otherwise = helper [sf3] (drop 3 fs)
+>   where
+>     sf3 = reverse . take 3 $ fs -- [[f2,f1,f0]]
+>     helper fss [] = error "thiele: need more evaluation" 
+>     helper fss (f:fs)
+>       | isConsts 3 . last $ fss = fss
+>       | otherwise               = helper (reciproAdd1' f fss) fs
+>
+> reciproAdd1' f = undefined
+>
+> -- add1' :: PDiff -> [[PDiff]] -> [[PDiff]]
+> reciproAdd1 :: PDiff -> ListZipper [PDiff] -> ListZipper [PDiff]
+> reciproAdd1 _ ([], sb) = ([], sb) -- reversed order
+> reciproAdd1 f ((gs@(g:_) : hs : iss), []) = reciproAdd1 k (iss, [(j:hs), (f:gs)])
+>   where
+>     j = reciproDiff f g
+>     k = addZp' j g
+>
+> addZp' :: PDiff -> PDiff -> PDiff
+> addZp' (PDiff (x,y) v p) (PDiff (_,_) w q)
+>   | p /= q = error "reciproAdd1: wrong primes"
+>   | otherwise = PDiff (x,y) (v+w `mod` p) p   
+
+> thieleHeads _ []        = []
+> thieleHeads f gg@(g:gs) = f : fg : (zipWith addZp' (thieleHeads fg gs) gg)
+>   where
+>     fg  = reciproDiff f g
+>
+> -- ?
+> fiveFour2three [ff@(_:fs), gg] = zipWith addZp' (map' reciproDiff gg) fs
