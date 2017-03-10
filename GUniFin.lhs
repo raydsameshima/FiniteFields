@@ -226,8 +226,7 @@ We should detect them and handle them safely.
   *GUniFin> r 2
   [1 % 3,*** Exception: Ratio has zero denominator
 
---
-Zipper
+-- Zipper
 
 > type ListZipper a = ([a], [a])
 >
@@ -258,8 +257,6 @@ Zipper
 
 --
 
-> -- graph2PDiff p = map (toPDiff p) . graph2Zp p
->
 > -- We have assumed our out-puts are safe, i.e. no fake infinity.
 > initialThieleZp :: [PDiff] -> [[PDiff]]
 > initialThieleZp fs = [first, second]
@@ -301,7 +298,8 @@ Zipper
 > addZp' (PDiff (x,y) v p) (PDiff (_,_) w q)
 >   | p /= q = error "reciproAdd1: wrong primes"
 >   | otherwise = PDiff (x,y) vw p   
->   where vw = (v + w) `mod` p
+>   where 
+>     vw = (v + w) `mod` p
 >
 > -- This takes new point and the heads, and returns the new heads.
 > thieleHeads :: PDiff -> [PDiff] -> [PDiff]
@@ -313,22 +311,24 @@ Zipper
 > -- Finally from two stairs (5 and 4 elements),
 > -- we create the bottom 3 elements.
 > fiveFour2three 
->   :: [[PDiff]] -- 5 and 4
+>   :: [[PDiff]] -- 5 and 4, under last2
 >   -> [PDiff]   -- 3
 > fiveFour2three [ff@(_:fs), gg] = zipWith addZp' (map' reciproDiff gg) fs
 >
 > thieleTriangle' :: [PDiff] -> [[PDiff]]
 > thieleTriangle' fs 
->   | length fs < 3 = []
+>   | length fs < 4 = []
 >   | otherwise     = helper fourThree (drop 4 fs)
 >   where
 >     fourThree = initialThieleZp fs
+>     helper fss [] 
+>       | isConsts 3 . last $ fss = fss
+>       | otherwise               = error "thieleTriangle: need more inputs"
 >     helper fss (g:gs) 
 >       | isConsts 3 . last $ fss = fss
 >       | otherwise               = helper gfss gs
 >       where
 >         gfss = thieleComp g fss
->     helper fss [] = error "thieleTriangle: need more inputs"
 >
 > thieleComp :: PDiff -> [[PDiff]] -> [[PDiff]]
 > thieleComp g fss = wholeButLast ++ [three]
@@ -337,9 +337,9 @@ Zipper
 >     hs = thieleHeads g (map head fss)
 >     three = fiveFour2three $ last2 wholeButLast
 >
->     last2 :: [a] -> [a]
->     last2 [a,b] = [a,b]
->     last2 (_:ffs@(_:_)) = last2 ffs
+> last2 :: [a] -> [a]
+> last2 [a,b] = [a,b]
+> last2 (_:bb@(_:_)) = last2 bb
 >
 > thieleTriangle :: Graph -> Int -> [[PDiff]]
 > thieleTriangle fs p = thieleTriangle' $ graph2PDiff p fs
