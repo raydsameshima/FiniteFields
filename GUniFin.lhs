@@ -70,7 +70,6 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 >   -> PDiff
 > toPDiff p (x,fx) = PDiff (x,x) fx p
 >
-> -- newtonTriangleZp :: Int -> [Diff] -> [[Diff]]
 > newtonTriangleZp :: [PDiff] -> [[PDiff]]
 > newtonTriangleZp fs
 >   | length fs < 3 = []
@@ -260,6 +259,7 @@ Zipper
 --
 
 > -- graph2PDiff p = map (toPDiff p) . graph2Zp p
+>
 > -- We have assumed our out-puts are safe, i.e. no fake infinity.
 > initialThieleZp :: [PDiff] -> [[PDiff]]
 > initialThieleZp fs = [first, second]
@@ -268,12 +268,12 @@ Zipper
 >     second = map' reciproDiff first
 >
 > reciproDiff :: PDiff -> PDiff -> PDiff
-> reciproDiff (PDiff (y,z) u p) (PDiff (w,x) v q)
+> reciproDiff (PDiff (y,z') u p) (PDiff (w,x) v q)
 >   | p /= q = error "reciproDiff: wrong base prime"
->   | otherwise = PDiff (w,z) r p
+>   | otherwise = PDiff (w,z') r p
 >   where
 >     r = ((zw) * (uv `inversep'` p)) `mod` p
->     zw = (z - w) `mod` p
+>     zw = (z' - w) `mod` p
 >     uv = (u - v) `mod` p
 
   *GUniFin> let func x = (x%(1+x^2))
@@ -290,19 +290,6 @@ Zipper
    ]
   ]
 
-> thieleTriangleZp fs
->   | length fs < 3 = []
->   | otherwise = helper [sf3] (drop 3 fs)
->   where
->     sf3 = reverse . take 3 $ fs -- [[f2,f1,f0]]
->     helper fss [] = error "thiele: need more evaluation" 
->     helper fss (f:fs)
->       | isConsts 3 . last $ fss = fss
->       | otherwise               = helper (reciproAdd1' f fss) fs
->
-> reciproAdd1' f = undefined
->
-> -- add1' :: PDiff -> [[PDiff]] -> [[PDiff]]
 > reciproAdd1 :: PDiff -> ListZipper [PDiff] -> ListZipper [PDiff]
 > reciproAdd1 _ ([], sb) = ([], sb) -- reversed order
 > reciproAdd1 f ((gs@(g:_) : hs : iss), []) = reciproAdd1 k (iss, [(j:hs), (f:gs)])
@@ -313,12 +300,153 @@ Zipper
 > addZp' :: PDiff -> PDiff -> PDiff
 > addZp' (PDiff (x,y) v p) (PDiff (_,_) w q)
 >   | p /= q = error "reciproAdd1: wrong primes"
->   | otherwise = PDiff (x,y) (v+w `mod` p) p   
-
+>   | otherwise = PDiff (x,y) vw p   
+>   where vw = (v + w) `mod` p
+>
+> -- This takes new point and the heads, and returns the new heads.
+> thieleHeads :: PDiff -> [PDiff] -> [PDiff]
 > thieleHeads _ []        = []
 > thieleHeads f gg@(g:gs) = f : fg : (zipWith addZp' (thieleHeads fg gs) gg)
 >   where
 >     fg  = reciproDiff f g
 >
-> -- ?
+> -- Finally from two stairs (5 and 4 elements),
+> -- we create the bottom 3 elements.
+> fiveFour2three 
+>   :: [[PDiff]] -- 5 and 4
+>   -> [PDiff]   -- 3
 > fiveFour2three [ff@(_:fs), gg] = zipWith addZp' (map' reciproDiff gg) fs
+>
+> thieleTriangle' :: [PDiff] -> [[PDiff]]
+> thieleTriangle' fs 
+>   | length fs < 3 = []
+>   | otherwise     = helper fourThree (drop 4 fs)
+>   where
+>     fourThree = initialThieleZp fs
+>     helper fss (g:gs) 
+>       | isConsts 3 . last $ fss = fss
+>       | otherwise               = helper gfss gs
+>       where
+>         gfss = thieleComp g fss
+>     helper fss [] = error "thieleTriangle: need more inputs"
+>
+> thieleComp :: PDiff -> [[PDiff]] -> [[PDiff]]
+> thieleComp g fss = wholeButLast ++ [three]
+>   where
+>     wholeButLast = (zipWith (:) hs fss)
+>     hs = thieleHeads g (map head fss)
+>     three = fiveFour2three $ last2 wholeButLast
+>
+>     last2 :: [a] -> [a]
+>     last2 [a,b] = [a,b]
+>     last2 (_:ffs@(_:_)) = last2 ffs
+>
+> thieleTriangle :: Graph -> Int -> [[PDiff]]
+> thieleTriangle fs p = thieleTriangle' $ graph2PDiff p fs
+>
+> thieleCoeff' :: Graph -> Int -> [PDiff]
+> thieleCoeff' fs = map last . thieleTriangle fs 
+>
+> thieleCoeff'' fs p = a:b:(zipWith subZp bs as)
+>     where
+>       as@(a:b:bs) = thieleCoeff' fs p
+>       subZp :: PDiff -> PDiff -> PDiff
+>       subZp (PDiff (x,y) v p) (PDiff (_,_) w q)
+>         | p /= q = error "thileCoeff: different primes"
+>         | otherwise = PDiff (x,y) ((v-w) `mod` p) p
+>
+  
+  *GUniFin> let fs = map (\x -> (x,(1+x)/(2+x))) [0,2,3,4,6,8,9] :: Graph 
+  *GUniFin> thieleCoeff'' fs 101
+  [PDiff {points = (0,0), value = 51, basePrime = 101}
+  ,PDiff {points = (0,2), value = 8, basePrime = 101}
+  ,PDiff {points = (0,3), value = 51, basePrime = 101}
+  ]
+  *GUniFin> thieleCoeff'' fs 103
+  [PDiff {points = (0,0), value = 52, basePrime = 103}
+  ,PDiff {points = (0,2), value = 8, basePrime = 103}
+  ,PDiff {points = (0,3), value = 52, basePrime = 103}
+  ]
+  *GUniFin> thieleCoeff'' fs 107
+  [PDiff {points = (0,0), value = 54, basePrime = 107}
+  ,PDiff {points = (0,2), value = 8, basePrime = 107}
+  ,PDiff {points = (0,3), value = 54, basePrime = 107}
+  ]  
+
+> t2cZp 
+>   :: [PDiff]              -- thieleCoeff'' fs p
+>   -> (([Int],[Int]), Int) -- (rat-func, basePrime)
+> t2cZp gs = (helper gs, p)
+>   where
+>     p = basePrime . head $ gs
+>     helper [d,e] = ([de',1],[e']) -- base case
+>       where 
+>         de' = ((d'*e' `mod` p) - xd) `mod` p
+>         d'  = value d
+>         e'  = value e
+>         xd  = snd . points $ d
+>     helper (d:ds) = (den', num)
+>       where
+>         (num, den) = helper ds
+>         den'  = map (`mod` p) $  (z * den) + (map (`mod` p) $ num'' - den'')
+>         num'' = map (`mod` p) ((value d) .* num)
+>         den'' = map (`mod` p) ((snd . points $ d) .* den)
+>
+> -- pre "canonicalizer"
+> beforeFormat' :: (([Int], [Int]), Int) -> (([Int], [Int]), Int)
+> beforeFormat' ((num,(d:ds)), p) = ((num',den'), p)
+>   where
+>     num' = map (`mod` p) $ di .* num
+>     den' = 1: (map (`mod` p) $ di .* ds)
+>     di = d `inversep'` p
+>
+> format'
+>   :: (([Int], [Int]), Int)
+>   -> ([(Maybe Int, Int)], [(Maybe Int, Int)])
+> format' ((num,den), p) = (format (num, p), format (den, p))
+  
+  *GUniFin> let fs = map (\x -> (x,(1+x)/(2+x))) [0,2,3,4,6,8,9] :: Graph 
+  *GUniFin> thieleCoeff'' fs 101
+  [PDiff {points = (0,0), value = 51, basePrime = 101},PDiff {points = (0,2), value = 8, basePrime = 101},PDiff {points = (0,3), value = 51, basePrime = 101}]
+  *GUniFin> t2cZp it
+  (([1,1],[2,1]),101)
+  *GUniFin> format' it
+  ([(Just 1,101),(Just 1,101)],[(Just 2,101),(Just 1,101)])
+  *GUniFin> format' . t2cZp . thieleCoeff'' fs $ 101
+  ([(Just 1,101),(Just 1,101)],[(Just 2,101),(Just 1,101)])
+  *GUniFin> format' . t2cZp . thieleCoeff'' fs $ 103
+  ([(Just 1,103),(Just 1,103)],[(Just 2,103),(Just 1,103)])
+  *GUniFin> format' . t2cZp . thieleCoeff'' fs $ 107
+  ([(Just 1,107),(Just 1,107)],[(Just 2,107),(Just 1,107)])
+
+> ratCanZp
+>   :: Graph -> Int -> ([(Maybe Int, Int)], [(Maybe Int, Int)])
+> ratCanZp fs = format' . beforeFormat' . t2cZp . thieleCoeff'' fs 
+
+  *GUniFin> let fivePrimes = take 5 bigPrimes 
+  *GUniFin> let fs = map (\x -> (x,(1+x)/(2+x))) [0,2,3,4,6,8,9] :: Graph 
+  *GUniFin> map (ratCanZp fs) fivePrimes 
+  [([(Just 5004,10007),(Just 5004,10007)],[(Just 1,10007),(Just 5004,10007)]),([(Just 5005,10009),(Just 5005,10009)],[(Just 1,10009),(Just 5005,10009)]),([(Just 5019,10037),(Just 5019,10037)],[(Just 1,10037),(Just 5019,10037)]),([(Just 5020,10039),(Just 5020,10039)],[(Just 1,10039),(Just 5020,10039)]),([(Just 5031,10061),(Just 5031,10061)],[(Just 1,10061),(Just 5031,10061)])]
+  *GUniFin> map fst it
+  [[(Just 5004,10007),(Just 5004,10007)],[(Just 5005,10009),(Just 5005,10009)],[(Just 5019,10037),(Just 5019,10037)],[(Just 5020,10039),(Just 5020,10039)],[(Just 5031,10061),(Just 5031,10061)]]
+  *GUniFin> transpose it
+  [[(Just 5004,10007),(Just 5005,10009),(Just 5019,10037),(Just 5020,10039),(Just 5031,10061)],[(Just 5004,10007),(Just 5005,10009),(Just 5019,10037),(Just 5020,10039),(Just 5031,10061)]]
+  *GUniFin> map reconstruct it
+  [Just (1 % 2),Just (1 % 2)]
+  *GUniFin> map (ratCanZp fs) fivePrimes 
+  [([(Just 5004,10007),(Just 5004,10007)],[(Just 1,10007),(Just 5004,10007)]),([(Just 5005,10009),(Just 5005,10009)],[(Just 1,10009),(Just 5005,10009)]),([(Just 5019,10037),(Just 5019,10037)],[(Just 1,10037),(Just 5019,10037)]),([(Just 5020,10039),(Just 5020,10039)],[(Just 1,10039),(Just 5020,10039)]),([(Just 5031,10061),(Just 5031,10061)],[(Just 1,10061),(Just 5031,10061)])]
+  *GUniFin> map snd it
+  [[(Just 1,10007),(Just 5004,10007)],[(Just 1,10009),(Just 5005,10009)],[(Just 1,10037),(Just 5019,10037)],[(Just 1,10039),(Just 5020,10039)],[(Just 1,10061),(Just 5031,10061)]]
+  *GUniFin> transpose it
+  [[(Just 1,10007),(Just 1,10009),(Just 1,10037),(Just 1,10039),(Just 1,10061)],[(Just 5004,10007),(Just 5005,10009),(Just 5019,10037),(Just 5020,10039),(Just 5031,10061)]]
+  *GUniFin> map reconstruct it
+  [Just (1 % 1),Just (1 % 2)]
+  
+> -- uniPolCoeff :: Graph -> Maybe [(Ratio Integer)]
+> -- uniPolCoeff gs = sequence . map reconstruct . transpose . map (preTrial gs) $ bigPrimes
+  
+> uniRatCoeff gs = (num, den)
+>   where
+>     num = map reconstruct . transpose . map fst $ lst
+>     den = map reconstruct . transpose . map snd $ lst
+>     lst = map (ratCanZp gs) bigPrimes
