@@ -177,7 +177,6 @@ Here is "a" final version, the univariate polynomial reconstruction with finite 
 
 Non sequential inputs Thiele-interpolation with finite fields.
 
---
 Let me start naive rho with non-sequential inputs:
 
 > rho :: Graph -> Int -> [Q]
@@ -271,22 +270,8 @@ We should detect them and handle them safely.
 >   where
 >     r = ((zw) * (uv `inversep'` p)) `mod` p
 >     zw = (z' - w) `mod` p
->     uv = (u - v) `mod` p
-
-  *GUniFin> let func x = (x%(1+x^2))
-  *GUniFin> let fs = map (\x -> (x%1,func x)) [0,1,3,5,6,8,9] :: Graph 
-  *GUniFin> initialThieleZp . graph2PDiff 101 $ fs
-  [[PDiff {points = (5,5), value = 74, basePrime = 101}
-   ,PDiff {points = (3,3), value = 71, basePrime = 101}
-   ,PDiff {points = (1,1), value = 51, basePrime = 101}
-   ,PDiff {points = (0,0), value = 0, basePrime = 101}
-   ]
-  ,[PDiff {points = (3,5), value = 68, basePrime = 101}
-   ,PDiff {points = (1,3), value = 192, basePrime = 101}
-   ,PDiff {points = (0,1), value = 2, basePrime = 101}
-   ]
-  ]
-
+>     uv = (u  - v) `mod` p -- assuming (u-v) is not "zero"
+>
 > reciproAdd1 :: PDiff -> ListZipper [PDiff] -> ListZipper [PDiff]
 > reciproAdd1 _ ([], sb) = ([], sb) -- reversed order
 > reciproAdd1 f ((gs@(g:_) : hs : iss), []) = reciproAdd1 k (iss, [(j:hs), (f:gs)])
@@ -303,10 +288,16 @@ We should detect them and handle them safely.
 >
 > -- This takes new point and the heads, and returns the new heads.
 > thieleHeads :: PDiff -> [PDiff] -> [PDiff]
-> thieleHeads _ []        = []
-> thieleHeads f gg@(g:gs) = f : fg : (zipWith addZp' (thieleHeads fg gs) gg)
+> -- thieleHeads _ []        = []
+> thieleHeads f gg@(g:gs) = f : fg : (zipWith addZp' (tHs fg gs) gg)
 >   where
 >     fg  = reciproDiff f g
+>
+> tHs :: PDiff -> [PDiff] -> [PDiff]
+> tHs _ [] = []
+> tHs f gg@(g:gs) = fg : tHs fg gs
+>   where fg = reciproDiff f g
+>
 >
 > -- Finally from two stairs (5 and 4 elements),
 > -- we create the bottom 3 elements.
