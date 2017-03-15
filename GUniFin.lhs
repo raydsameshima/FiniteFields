@@ -173,6 +173,20 @@ Here is "a" final version, the univariate polynomial reconstruction with finite 
   *GUniFin> uniPolCoeff gs
   Just [1 % 3,1 % 2,1 % 1,0 % 1,0 % 1,1 % 1]
 
+  *GUniFin> let fs = map (\x -> (x,(3+x+(1%3)*x^9)/(1))) [1,3..101] :: Graph
+  *GUniFin> uniPolCoeff fs
+  Just [3 % 1,1 % 1,0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,1 % 3]
+  *GUniFin> let fs = map (\x -> (x,(3+x+(1%3)*x^10)/(1))) [1,3..101] :: Graph
+  *GUniFin> uniPolCoeff fs
+  *** Exception: newtonBT: need more evaluation
+  CallStack (from HasCallStack):
+    error, called at GUniFin.lhs:79:23 in main:GUniFin
+  *GUniFin> let fs = map (\x -> (x,(3+x+(1%3)*x^10)/(1))) [1,3..1001] :: Graph
+  *GUniFin> uniPolCoeff fs
+    *** Exception: newtonBT: need more evaluation
+    CallStack (from HasCallStack):
+      error, called at GUniFin.lhs:79:23 in main:GUniFin
+
 --
 
 Non sequential inputs Thiele-interpolation with finite fields.
@@ -288,23 +302,15 @@ We should detect them and handle them safely.
 >
 > -- This takes new point and the heads, and returns the new heads.
 > thieleHeads :: PDiff -> [PDiff] -> [PDiff]
-> -- thieleHeads _ []        = []
+> thieleHeads _ []        = []
 > thieleHeads f gg@(g:gs) = f : fg : (zipWith addZp' (tHs fg gs) gg)
 >   where
 >     fg  = reciproDiff f g
 >
-> tHs :: PDiff -> [PDiff] -> [PDiff]
-> tHs _ [] = []
-> tHs f gg@(g:gs) = fg : tHs fg gs
->   where fg = reciproDiff f g
->
->
-> -- Finally from two stairs (5 and 4 elements),
-> -- we create the bottom 3 elements.
-> fiveFour2three 
->   :: [[PDiff]] -- 5 and 4, under last2
->   -> [PDiff]   -- 3
-> fiveFour2three [ff@(_:fs), gg] = zipWith addZp' (map' reciproDiff gg) fs
+>     tHs :: PDiff -> [PDiff] -> [PDiff]
+>     tHs _ [] = []
+>     tHs f gg@(g:gs) = fg : tHs fg gs
+>       where fg = reciproDiff f g
 >
 > thieleTriangle' :: [PDiff] -> [[PDiff]]
 > thieleTriangle' fs 
@@ -321,16 +327,26 @@ We should detect them and handle them safely.
 >       where
 >         gfss = thieleComp g fss
 >
+
+
+
+
 > thieleComp :: PDiff -> [[PDiff]] -> [[PDiff]]
 > thieleComp g fss = wholeButLast ++ [three]
 >   where
 >     wholeButLast = (zipWith (:) hs fss)
 >     hs = thieleHeads g (map head fss)
 >     three = fiveFour2three $ last2 wholeButLast
+>     -- Finally from two stairs (5 and 4 elements),
+>     -- we create the bottom 3 elements.
+>     fiveFour2three 
+>       :: [[PDiff]] -- 5 and 4, under last2
+>       -> [PDiff]   -- 3
+>     fiveFour2three [ff@(_:fs), gg] = zipWith addZp' (map' reciproDiff gg) fs
 >
-> last2 :: [a] -> [a]
-> last2 [a,b] = [a,b]
-> last2 (_:bb@(_:_)) = last2 bb
+>     last2 :: [a] -> [a]
+>     last2 [a,b] = [a,b]
+>     last2 (_:bb@(_:_)) = last2 bb
 >
 > thieleTriangle :: Graph -> Int -> [[PDiff]]
 > thieleTriangle fs p = thieleTriangle' $ graph2PDiff p fs
@@ -346,23 +362,9 @@ We should detect them and handle them safely.
 >         | p /= q = error "thileCoeff: different primes"
 >         | otherwise = PDiff (x,y) ((v-w) `mod` p) p
 >
-  
-  *GUniFin> let fs = map (\x -> (x,(1+x)/(2+x))) [0,2,3,4,6,8,9] :: Graph 
-  *GUniFin> thieleCoeff'' fs 101
-  [PDiff {points = (0,0), value = 51, basePrime = 101}
-  ,PDiff {points = (0,2), value = 8, basePrime = 101}
-  ,PDiff {points = (0,3), value = 51, basePrime = 101}
-  ]
-  *GUniFin> thieleCoeff'' fs 103
-  [PDiff {points = (0,0), value = 52, basePrime = 103}
-  ,PDiff {points = (0,2), value = 8, basePrime = 103}
-  ,PDiff {points = (0,3), value = 52, basePrime = 103}
-  ]
-  *GUniFin> thieleCoeff'' fs 107
-  [PDiff {points = (0,0), value = 54, basePrime = 107}
-  ,PDiff {points = (0,2), value = 8, basePrime = 107}
-  ,PDiff {points = (0,3), value = 54, basePrime = 107}
-  ]  
+
+
+
 
 > t2cZp 
 >   :: [PDiff]              -- thieleCoeff'' fs p
@@ -436,6 +438,7 @@ We should detect them and handle them safely.
 > -- uniPolCoeff :: Graph -> Maybe [(Ratio Integer)]
 > -- uniPolCoeff gs = sequence . map reconstruct . transpose . map (preTrial gs) $ bigPrimes
   
+> -- Clearly this is double running implementation.
 > uniRatCoeff gs = (num, den)
 >   where
 >     num = map reconstruct . transpose . map fst $ lst
