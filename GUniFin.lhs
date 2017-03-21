@@ -15,7 +15,7 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 > import Control.Monad
 > --
 > import Polynomials
-> import Ffield
+> import Ffield hiding (takeUntil)
 > --
 > type Q = Ratio Int   -- Rational fields
 > type Graph = [(Q,Q)] -- [(x, f x) | x <- someFinieRange]
@@ -76,7 +76,7 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 >   | otherwise = helper [sf3] (drop 3 fs)
 >   where
 >     sf3 = reverse . take 3 $ fs -- [[f2,f1,f0]]
->     helper fss [] = error "newtonBT: need more evaluation" 
+>     helper fss [] = error "newtonTriangleZp: need more evaluation" 
 >     helper fss (f:fs)
 >       | isConsts 3 . last $ fss = fss
 >       | otherwise               = helper (add1 f fss) fs
@@ -183,9 +183,9 @@ Here is "a" final version, the univariate polynomial reconstruction with finite 
     error, called at GUniFin.lhs:79:23 in main:GUniFin
   *GUniFin> let fs = map (\x -> (x,(3+x+(1%3)*x^10)/(1))) [1,3..1001] :: Graph
   *GUniFin> uniPolCoeff fs
-    *** Exception: newtonBT: need more evaluation
-    CallStack (from HasCallStack):
-      error, called at GUniFin.lhs:79:23 in main:GUniFin
+  *** Exception: newtonBT: need more evaluation
+  CallStack (from HasCallStack):
+    error, called at GUniFin.lhs:79:23 in main:GUniFin
 
 --
 
@@ -277,8 +277,9 @@ We should detect them and handle them safely.
 >     first = reverse . take 4 $ fs
 >     second = map' reciproDiff first
 >
+> -- reversed order
 > reciproDiff :: PDiff -> PDiff -> PDiff
-> reciproDiff (PDiff (y,z') u p) (PDiff (w,x) v q)
+> reciproDiff (PDiff (_,z') u p) (PDiff (w,_) v q)
 >   | p /= q = error "reciproDiff: wrong base prime"
 >   | otherwise = PDiff (w,z') r p
 >   where
@@ -301,16 +302,46 @@ We should detect them and handle them safely.
 >     vw = (v + w) `mod` p
 >
 > -- This takes new point and the heads, and returns the new heads.
-> thieleHeads :: PDiff -> [PDiff] -> [PDiff]
+> thieleHeads 
+>   :: PDiff   -- a new element
+>   -> [PDiff] -- oldies
+>   -> [PDiff]
 > thieleHeads _ []        = []
 > thieleHeads f gg@(g:gs) = f : fg : (zipWith addZp' (tHs fg gs) gg)
 >   where
 >     fg  = reciproDiff f g
 >
->     tHs :: PDiff -> [PDiff] -> [PDiff]
+>     tHs :: PDiff -> [PDiff] -> [PDiff] -- reciprocal diff. part
 >     tHs _ [] = []
->     tHs f gg@(g:gs) = fg : tHs fg gs
->       where fg = reciproDiff f g
+>     tHs f' hh@(h:hs) = fh : tHs fh hs
+>       where 
+>         fh = reciproDiff f' h
+>
+> -- For debugging, thieleHeads does not work properly.
+> -- thieleHeads has two phases, one is reciprocal differences,
+> -- the other is shift and add
+> thieleHR -- reciprocal difference part 
+>   :: PDiff -> [PDiff] -> [PDiff]
+> thieleHR _ [] = []
+> thieleHR f (g:gs) = f : thieleHR fg gs
+>   where
+>     fg = reciproDiff f g
+>
+> thieleHeads' f gs
+>   | length gs < 3 = thieleHR f gs
+> thieleHeads' f gs@(g:h:hs)
+>   = f : fg : zipWith addZp' rs gs 
+>   where
+>     (_:fg:rs) =  thieleHR f gs
+
+
+
+
+
+
+
+
+
 >
 > thieleTriangle' :: [PDiff] -> [[PDiff]]
 > thieleTriangle' fs 
@@ -327,10 +358,6 @@ We should detect them and handle them safely.
 >       where
 >         gfss = thieleComp g fss
 >
-
-
-
-
 > thieleComp :: PDiff -> [[PDiff]] -> [[PDiff]]
 > thieleComp g fss = wholeButLast ++ [three]
 >   where
@@ -339,15 +366,56 @@ We should detect them and handle them safely.
 >     three = fiveFour2three $ last2 wholeButLast
 >     -- Finally from two stairs (5 and 4 elements),
 >     -- we create the bottom 3 elements.
->     fiveFour2three 
->       :: [[PDiff]] -- 5 and 4, under last2
->       -> [PDiff]   -- 3
->     fiveFour2three [ff@(_:fs), gg] = zipWith addZp' (map' reciproDiff gg) fs
 >
 >     last2 :: [a] -> [a]
 >     last2 [a,b] = [a,b]
 >     last2 (_:bb@(_:_)) = last2 bb
 >
+> fiveFour2three -- This works!
+>   :: [[PDiff]] -- 5 and 4, under last2
+>   -> [PDiff]   -- 3
+> fiveFour2three [ff@(_:fs), gg] = zipWith addZp' (map' reciproDiff gg) fs
+
+fiveFour2three does work, so ...
+
+> -- rho-matrix version
+> reciproDiffs 
+>   :: Int     -- prime
+>   -> Int     -- "degree"
+>   -> Graph
+>   -> [PDiff]
+> reciproDiffs p 0 fs = graph2PDiff p fs 
+> reciproDiffs p 1 fs = map' (flip reciproDiff) (reciproDiffs p 0 fs)
+> reciproDiffs p n fs = zipWith addZp' (map' (flip reciproDiff) (reciproDiffs p (n-1) fs))
+>                                      (tail $ reciproDiffs p (n-2) fs)
+
+  *GUniFin> let fs = map (\x -> (x,(1+2*x+x^2+3*x^5)/(1+(3%2)*x+x^2+(3%5)*x^5))) [1,3..51] :: Graph
+  *GUniFin> isConsts 3 . reciproDiffs 1000003 9 $ fs
+  False
+  *GUniFin> isConsts 3 . reciproDiffs 1000003 10 $ fs
+  True
+
+  *GUniFin> let fs = map (\x -> (x,(1+2*x+x^2+3*x^5)/(1+(3%2)*x+x^2+(3%5)*x^5))) [1,3..51] :: Graph
+  *GUniFin> map head . takeUntil (isConsts 3) $ [reciproDiffs 1000003 n fs | n <- [0..]]
+  [PDiff {points = (1,1), value = 560979, basePrime = 1000003},PDiff {points = (1,3), value = 23588, basePrime = 1000003},PDiff {points = (1,5), value = 338279, basePrime = 1000003},PDiff {points = (1,7), value = 551996, basePrime = 1000003},PDiff {points = (1,9), value = 843687, basePrime = 1000003},PDiff {points = (1,11), value = 365955, basePrime = 1000003},PDiff {points = (1,13), value = 44979, basePrime = 1000003},PDiff {points = (1,15), value = 59614, basePrime = 1000003},PDiff {points = (1,17), value = 132512, basePrime = 1000003},PDiff {points = (1,19), value = 647539, basePrime = 1000003}]
+
+> takeUntil -- slightly different from Ffield.lhs
+>   :: (a -> Bool) -> [a] -> [a]
+> takeUntil _ []     = []
+> takeUntil f (x:xs) 
+>   | f x == False = x : takeUntil f xs
+>   | f x == True  = [x]
+>
+> firstReciprocalDifferences :: Graph -> Int -> [PDiff]
+> firstReciprocalDifferences fs p 
+>   = map head . takeUntil (isConsts 3) $ [reciproDiffs p n fs | n <- [0..]]
+
+
+
+
+
+
+
 > thieleTriangle :: Graph -> Int -> [[PDiff]]
 > thieleTriangle fs p = thieleTriangle' $ graph2PDiff p fs
 >
@@ -356,7 +424,9 @@ We should detect them and handle them safely.
 >
 > thieleCoeff'' fs p = a:b:(zipWith subZp bs as)
 >     where
->       as@(a:b:bs) = thieleCoeff' fs p
+> --       as@(a:b:bs) = thieleCoeff' fs p
+>       as@(a:b:bs) = firstReciprocalDifferences fs p
+>
 >       subZp :: PDiff -> PDiff -> PDiff
 >       subZp (PDiff (x,y) v p) (PDiff (_,_) w q)
 >         | p /= q = error "thileCoeff: different primes"
@@ -444,3 +514,7 @@ We should detect them and handle them safely.
 >     num = map reconstruct . transpose . map fst $ lst
 >     den = map reconstruct . transpose . map snd $ lst
 >     lst = map (ratCanZp gs) bigPrimes
+
+  *GUniFin> let fs = map (\x -> (x,(1+2*x+x^2+3*x^5)/(1+(3%2)*x+x^2+(3%5)*x^5))) [1,3..51] :: Graph
+  *GUniFin> uniRatCoeff fs
+  ([Just (1 % 1),Just (2 % 1),Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (3 % 1)],[Just (1 % 1),Just (3 % 2),Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (3 % 5)])
