@@ -68,6 +68,7 @@ See the algorithm, examples, and pseudo code at:
 >
 > -- If a is "safe" value, we can use this.
 > inversep' :: Int -> Int -> Int
+> 0 `inversep'` _ = error "zero division"
 > a `inversep'` p = (x `mod` p)
 >   where (_,x,_) = exGCD a p
 >
@@ -107,7 +108,8 @@ See the algorithm, examples, and pseudo code at:
 > -- Hard code of big primes
 > -- We have chosen a finite number (100) version.
 > bigPrimes :: [Int]
-> bigPrimes = take 100 $ dropWhile (<10^4) primes
+> -- bigPrimes = take 100 $ dropWhile (<10^4) primes
+> bigPrimes = take 100 $ dropWhile (<10^6) primes
 
   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
   *Ffield> let ds = knownData (12%13)

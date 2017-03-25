@@ -303,13 +303,20 @@ We should detect them and handle them safely.
 >
 > -- This takes new point and the heads, and returns the new heads.
 > thieleHeads 
->   :: PDiff   -- a new element
->   -> [PDiff] -- oldies
->   -> [PDiff]
+>   :: PDiff   -- a new element  rho8
+>   -> [PDiff] -- oldies         [rho7, rho67, rho567, rho4567 ..]
+>   -> [PDiff] --                [rho8, rho78, rho678, rho5678 ..]
 > thieleHeads _ []        = []
-> thieleHeads f gg@(g:gs) = f : fg : (zipWith addZp' (tHs fg gs) gg)
+> thieleHeads f gg@(g:gs) = f : fg : helper fg gg
 >   where
 >     fg  = reciproDiff f g
+>
+>     helper _ bs
+>       | length bs < 3 = []
+>     helper a (b:bs@(c:d:_)) = e : helper e bs
+>       where
+>         e = addZp' (reciproDiff a c) 
+>                    b
 >
 >     tHs :: PDiff -> [PDiff] -> [PDiff] -- reciprocal diff. part
 >     tHs _ [] = []
@@ -361,7 +368,7 @@ We should detect them and handle them safely.
 > thieleComp :: PDiff -> [[PDiff]] -> [[PDiff]]
 > thieleComp g fss = wholeButLast ++ [three]
 >   where
->     wholeButLast = (zipWith (:) hs fss)
+>     wholeButLast = zipWith (:) hs fss
 >     hs = thieleHeads g (map head fss)
 >     three = fiveFour2three $ last2 wholeButLast
 >     -- Finally from two stairs (5 and 4 elements),
@@ -379,8 +386,9 @@ We should detect them and handle them safely.
 fiveFour2three does work, so ...
 
 > -- rho-matrix version
+> -- This implementation is quite straightforward, but no error handling.
 > reciproDiffs 
->   :: Int     -- prime
+>   :: Int     -- a prime
 >   -> Int     -- "degree"
 >   -> Graph
 >   -> [PDiff]
@@ -397,18 +405,32 @@ fiveFour2three does work, so ...
 
   *GUniFin> let fs = map (\x -> (x,(1+2*x+x^2+3*x^5)/(1+(3%2)*x+x^2+(3%5)*x^5))) [1,3..51] :: Graph
   *GUniFin> map head . takeUntil (isConsts 3) $ [reciproDiffs 1000003 n fs | n <- [0..]]
-  [PDiff {points = (1,1), value = 560979, basePrime = 1000003},PDiff {points = (1,3), value = 23588, basePrime = 1000003},PDiff {points = (1,5), value = 338279, basePrime = 1000003},PDiff {points = (1,7), value = 551996, basePrime = 1000003},PDiff {points = (1,9), value = 843687, basePrime = 1000003},PDiff {points = (1,11), value = 365955, basePrime = 1000003},PDiff {points = (1,13), value = 44979, basePrime = 1000003},PDiff {points = (1,15), value = 59614, basePrime = 1000003},PDiff {points = (1,17), value = 132512, basePrime = 1000003},PDiff {points = (1,19), value = 647539, basePrime = 1000003}]
+  [PDiff {points = (1,1), value = 560979, basePrime = 1000003}
+  ,PDiff {points = (1,3), value = 23588, basePrime = 1000003}
+  ,PDiff {points = (1,5), value = 338279, basePrime = 1000003}
+  ,PDiff {points = (1,7), value = 551996, basePrime = 1000003}
+  ,PDiff {points = (1,9), value = 843687, basePrime = 1000003}
+  ,PDiff {points = (1,11), value = 365955, basePrime = 1000003}
+  ,PDiff {points = (1,13), value = 44979, basePrime = 1000003}
+  ,PDiff {points = (1,15), value = 59614, basePrime = 1000003}
+  ,PDiff {points = (1,17), value = 132512, basePrime = 1000003}
+  ,PDiff {points = (1,19), value = 647539, basePrime = 1000003}
+  ]
 
 > takeUntil -- slightly different from Ffield.lhs
 >   :: (a -> Bool) -> [a] -> [a]
 > takeUntil _ []     = []
 > takeUntil f (x:xs) 
->   | f x == False = x : takeUntil f xs
->   | f x == True  = [x]
+>   | not (f x) = x : takeUntil f xs
+>   | f x       = [x]
 >
-> firstReciprocalDifferences :: Graph -> Int -> [PDiff]
+> -- The follwoing function is brute-force version of thiele matrix.
+> -- So no error (1/0) detection.
+> firstReciprocalDifferences 
+>   :: Graph -> Int -> [PDiff]
 > firstReciprocalDifferences fs p 
 >   = map head . takeUntil (isConsts 3) $ [reciproDiffs p n fs | n <- [0..]]
+
 
 
 
@@ -424,8 +446,8 @@ fiveFour2three does work, so ...
 >
 > thieleCoeff'' fs p = a:b:(zipWith subZp bs as)
 >     where
-> --       as@(a:b:bs) = thieleCoeff' fs p
->       as@(a:b:bs) = firstReciprocalDifferences fs p
+>       as@(a:b:bs) = thieleCoeff' fs p
+> --       as@(a:b:bs) = firstReciprocalDifferences fs p
 >
 >       subZp :: PDiff -> PDiff -> PDiff
 >       subZp (PDiff (x,y) v p) (PDiff (_,_) w q)
@@ -515,6 +537,9 @@ fiveFour2three does work, so ...
 >     den = map reconstruct . transpose . map snd $ lst
 >     lst = map (ratCanZp gs) bigPrimes
 
-  *GUniFin> let fs = map (\x -> (x,(1+2*x+x^2+3*x^5)/(1+(3%2)*x+x^2+(3%5)*x^5))) [1,3..51] :: Graph
-  *GUniFin> uniRatCoeff fs
-  ([Just (1 % 1),Just (2 % 1),Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (3 % 1)],[Just (1 % 1),Just (3 % 2),Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (3 % 5)])
+  > let fs = map (\x -> (x,(1+2*x+x^8)/(1+(3%2)*x+x^7))) [1..101] :: Graph
+  > uniRatCoeff fs
+  ([Just (1 % 1),Just (2 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
+  ,[Just (1 % 1),Just (3 % 2),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
+  )
+  
