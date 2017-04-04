@@ -16,6 +16,7 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 > --
 > import Polynomials
 > import Ffield hiding (takeUntil)
+> import Multivariate (transposeWith)
 > --
 > type Q = Ratio Int   -- Rational fields
 > type Graph = [(Q,Q)] -- [(x, f x) | x <- someFinieRange]
@@ -272,7 +273,9 @@ We should detect them and handle them safely.
 
 > -- We have assumed our out-puts are safe, i.e. no fake infinity.
 > initialThieleZp :: [PDiff] -> [[PDiff]]
-> initialThieleZp fs = [first, second]
+> initialThieleZp fs 
+>   | isConsts 3 fs = [first]   
+>   | otherwise = [first, second]
 >   where
 >     first = reverse . take 4 $ fs
 >     second = map' reciproDiff first
@@ -343,13 +346,6 @@ We should detect them and handle them safely.
 
 
 
-
-
-
-
-
-
->
 > thieleTriangle' :: [PDiff] -> [[PDiff]]
 > thieleTriangle' fs 
 >   | length fs < 4 = []
@@ -444,15 +440,18 @@ fiveFour2three does work, so ...
 > thieleCoeff' :: Graph -> Int -> [PDiff]
 > thieleCoeff' fs = map last . thieleTriangle fs 
 >
-> thieleCoeff'' fs p = a:b:(zipWith subZp bs as)
->     where
->       as@(a:b:bs) = thieleCoeff' fs p
-> --       as@(a:b:bs) = firstReciprocalDifferences fs p
+> -- thieleCoeff'' fs p = a:b:(zipWith subZp bs as)
+> thieleCoeff'' fs p 
+>   | length (thieleCoeff' fs p) == 1 = thieleCoeff' fs p
+>   | otherwise = a:b:(zipWith subZp bs as)
+>   where
+>     as@(a:b:bs) = thieleCoeff' fs p
+> --  as@(a:b:bs) = firstReciprocalDifferences fs p
 >
->       subZp :: PDiff -> PDiff -> PDiff
->       subZp (PDiff (x,y) v p) (PDiff (_,_) w q)
->         | p /= q = error "thileCoeff: different primes"
->         | otherwise = PDiff (x,y) ((v-w) `mod` p) p
+>     subZp :: PDiff -> PDiff -> PDiff
+>     subZp (PDiff (x,y) v p) (PDiff (_,_) w q)
+>       | p /= q = error "thileCoeff: different primes"
+>       | otherwise = PDiff (x,y) ((v-w) `mod` p) p
 >
 
 
@@ -464,7 +463,8 @@ fiveFour2three does work, so ...
 > t2cZp gs = (helper gs, p)
 >   where
 >     p = basePrime . head $ gs
->     helper [d,e] = ([de',1],[e']) -- base case
+>     helper [n]   = ([(value n) `mod` p], [1])
+>     helper [d,e] = ([de',1], [e']) -- base case
 >       where 
 >         de' = ((d'*e' `mod` p) - xd) `mod` p
 >         d'  = value d
@@ -531,6 +531,8 @@ fiveFour2three does work, so ...
 > -- uniPolCoeff gs = sequence . map reconstruct . transpose . map (preTrial gs) $ bigPrimes
   
 > -- Clearly this is double running implementation.
+> uniRatCoeff
+>   :: Graph -> ([Maybe (Ratio Integer)], [Maybe (Ratio Integer)])
 > uniRatCoeff gs = (num, den)
 >   where
 >     num = map reconstruct . transpose . map fst $ lst
@@ -543,3 +545,58 @@ fiveFour2three does work, so ...
   ,[Just (1 % 1),Just (3 % 2),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
   )
   
+
+> isJustZero n = Just (0%1) == n
+ 
+  *GUniFin> let cs = map (\t -> (t, (t^9+2)/(1+t^9))) [1..1001] :: Graph 
+  *GUniFin> uniRatCoeff cs
+  ([Just (2 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
+  ,[Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
+  )
+  *GUniFin> fst it
+  [Just (2 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
+  *GUniFin> filter (not . isJustZero . fst) $ zip it [0..]
+  [(Just (2 % 1),0),(Just (1 % 1),9)]
+
+> uniRatCoeffShort gs = (num', den')
+>   where
+>     (num, den) = uniRatCoeff gs
+>     num' = filter (not . isJustZero . fst) $ zip num [0..]
+>     den' = filter (not . isJustZero . fst) $ zip den [0..]
+
+  *GUniFin> let cs = map (\t -> (t, (t^9+2)/(1+t^9))) [1..1001] :: Graph 
+  *GUniFin> uniRatCoeff cs
+  ([Just (2 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
+  ,[Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
+  )
+  *GUniFin> uniRatCoeffShort cs
+  ([(Just (2 % 1),0),(Just (1 % 1),9)]
+  ,[(Just (1 % 1),0),(Just (1 % 1),9)]
+  )
+
+> uniRatCoeff' gs = (num', den')
+>   where
+>     (num, den) = uniRatCoeff gs
+>     num' = sequence num
+>     den' = sequence den
+
+> func2graph :: (Q -> Q) -> [Q] -> Graph
+> func2graph f xs = [(x, f x) | x <- xs]
+
+  *GUniFin> let g x = x^3 / (1+x)^3
+  *GUniFin> let graph = func2graph g [0,1,4,5,7,8,10,11,13,15,16,19,20]
+  *GUniFin> uniRatCoeff graph
+  ([Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
+  ,[Just (1 % 1),Just (3 % 1),Just (3 % 1),Just (1 % 1)]
+  )
+  *GUniFin> uniRatCoeffShort graph
+  ([(Just (1 % 1),3)]
+  ,[(Just (1 % 1),0),(Just (3 % 1),1),(Just (3 % 1),2),(Just (1 % 1),3)]
+  )
+
+  *GUniFin> uniRatCoeff $ func2graph (\t -> 1+t) [0..10]
+  ([Just (1 % 1),Just (1 % 1)],[Just (1 % 1)])
+  *GUniFin> uniRatCoeff $ func2graph (\t -> 1+(1%5)*t) [0..10]
+  ([Just (1 % 1),Just (1 % 5)],[Just (1 % 1)])
+  *GUniFin> uniRatCoeff $ func2graph (\t -> 1/(1+(1%5)*t)) [0..10]
+  ([Just (1 % 1),Just (0 % 1)],[Just (1 % 1),Just (1 % 5)])
