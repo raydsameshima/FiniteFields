@@ -68,7 +68,7 @@ See the algorithm, examples, and pseudo code at:
 >
 > -- If a is "safe" value, we can use this.
 > inversep' :: Int -> Int -> Int
-> 0 `inversep'` _ = error "zero division"
+> 0 `inversep'` _ = error "inversep': zero division"
 > a `inversep'` p = (x `mod` p)
 >   where (_,x,_) = exGCD a p
 >
