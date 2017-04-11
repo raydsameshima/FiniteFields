@@ -190,8 +190,8 @@ then apply rational "number" reconstruction.
 Here is "a" final version, the univariate polynomial reconstruction 
 with finite fields.
 
-> uniPolCoeff :: Graph -> Maybe [(Ratio Integer)]
-> uniPolCoeff gs = sequence . map reconstruct . transpose . 
+> uniPolCoeff :: Graph -> Maybe [(Ratio Int)]
+> uniPolCoeff gs = sequence . map reconstruct' . transpose . 
 >                  map (preTrial gs) $ bigPrimes
 
   *GUniFin> let gs = map (\x -> (x,x^5 + x^2 + (1%2)*x + 1%3)) 
@@ -332,14 +332,15 @@ We should detect them and handle them safely.
 >     
 >     h = reciproDiff g f
 >
->
+> -- to make safe first two stairs.
 > initialThieleZp' :: [PDiff] -> [[PDiff]]
 > initialThieleZp' fs 
->   | isConsts 3 fs = [first]   
->   | otherwise = [first, second]
+>   | isConsts 3 fs = [reverse $ take 3 fs]
+>   | otherwise     = [firsts, seconds]
 >   where
->     first  = undefined
->     second = undefined
+>     firsts = undefined
+>     seconds = undefined
+>
 
 
 
@@ -374,10 +375,7 @@ We should detect them and handle them safely.
 >   -> [PDiff] -- oldies         [rho7, rho67, rho567, rho4567 ..]
 >   -> [PDiff] --                [rho8, rho78, rho678, rho5678 ..]
 > thieleHeads _ []        = []
-> -- thieleHeads f gg@(g:gs) = f : fg : helper fg gg
-> thieleHeads f gg@(g:gs) 
->   | value f == value g = gg
->   | otherwise = f : fg : helper fg gg
+> thieleHeads f gg@(g:gs) = f : fg : helper fg gg
 >   where
 >     fg  = reciproDiff f g
 >
@@ -393,24 +391,7 @@ We should detect them and handle them safely.
 >     tHs f' hh@(h:hs) = fh : tHs fh hs
 >       where 
 >         fh = reciproDiff f' h
-> {-
-> -- For debugging, thieleHeads does not work properly.
-> -- thieleHeads has two phases, one is reciprocal differences,
-> -- the other is shift and add
-> thieleHR -- reciprocal difference part 
->   :: PDiff -> [PDiff] -> [PDiff]
-> thieleHR _ [] = []
-> thieleHR f (g:gs) = f : thieleHR fg gs
->   where
->     fg = reciproDiff f g
->
-> thieleHeads' f gs
->   | length gs < 3 = thieleHR f gs
-> thieleHeads' f gs@(g:h:hs)
->   = f : fg : zipWith addZp' rs gs 
->   where
->     (_:fg:rs) =  thieleHR f gs
-> -}
+
 
 
 > thieleTriangle' :: [PDiff] -> [[PDiff]]
@@ -660,11 +641,11 @@ fiveFour2three does work, so ...
   
 > -- Clearly this is double running implementation.
 > uniRatCoeff
->   :: Graph -> ([Maybe (Ratio Integer)], [Maybe (Ratio Integer)])
+>   :: Graph -> ([Maybe (Ratio Int)], [Maybe (Ratio Int)])
 > uniRatCoeff gs = (num, den)
 >   where
->     num = map reconstruct . transpose . map fst $ lst
->     den = map reconstruct . transpose . map snd $ lst
+>     num = map reconstruct' . transpose . map fst $ lst
+>     den = map reconstruct' . transpose . map snd $ lst
 >     lst = map (ratCanZp gs) bigPrimes
 
   > let fs = map (\x -> (x,(1+2*x+x^8)/(1+(3%2)*x+x^7))) [1..101] :: Graph
@@ -716,7 +697,7 @@ fiveFour2three does work, so ...
   )
 
 > uniRatCoeff'
->   :: Graph -> (Maybe [Ratio Integer], Maybe [Ratio Integer])
+>   :: Graph -> (Maybe [Ratio Int], Maybe [Ratio Int])
 > uniRatCoeff' gs = (num', den')
 >   where
 >     (num, den) = uniRatCoeff gs
@@ -747,7 +728,7 @@ fiveFour2three does work, so ...
 > -- Up to degree~100 version.
 > ratFunc2Coeff
 >   :: (Q -> Q) -- rational function
->   -> (Maybe [Ratio Integer], Maybe [Ratio Integer])
+>   -> (Maybe [Ratio Int], Maybe [Ratio Int])
 > ratFunc2Coeff f = uniRatCoeff' . func2graph f $ [0..100]
 
 

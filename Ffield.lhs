@@ -191,6 +191,14 @@ In order to use CRT, we should cast its type.
 >       | otherwise                     = matches n as
 >     makeList = map (fmap fst . guess) . scanl1 crtRec' . toInteger2 . filter (isJust . fst)
 
+> reconstruct' :: [(Maybe Int, Int)] -> Maybe (Ratio Int)
+> reconstruct' = fmap coersion . reconstruct
+>   where
+>     coersion :: Ratio Integer -> Ratio Int
+>     coersion q = (fromInteger . numerator $ q) 
+>                    % (fromInteger . denominator $ q)
+
+
 -- QuickCheck
 
   *Ffield> let q = 513197683989569 % 1047805145658 :: Ratio Int
