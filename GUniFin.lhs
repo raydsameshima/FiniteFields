@@ -16,7 +16,6 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 > --
 > import Polynomials
 > import Ffield hiding (takeUntil)
-> -- import Multivariate (transposeWith)
 > --
 > type Q = Ratio Int   -- Rational fields
 > type Graph = [(Q,Q)] -- [(x, f x) | x <- someFinieRange]
