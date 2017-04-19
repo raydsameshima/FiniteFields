@@ -355,3 +355,6 @@ Note that, the sampling points for n=10 case are
   ,Just [[1 % 1],[0 % 1,3 % 1],[0 % 1,0 % 1,3 % 1],[0 % 1,0 % 1,0 % 1,1 % 1]])
   (1.73 secs, 1,234,282,424 bytes)
 
+> wilFunc2 :: Int -> Int -> Ratio Int
+> wilFunc2 x y = x^4 * y^2 * (1+y+y^2)^2 % (1+y)^4
+
