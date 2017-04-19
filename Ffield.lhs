@@ -9,7 +9,9 @@ https://arxiv.org/pdf/1608.01902.pdf
 > import Data.Numbers.Primes
 > import Test.QuickCheck
 
-> coprime :: Integral a => a -> a -> Bool
+> coprime 
+>   :: Integral a => 
+>      a -> a -> Bool
 > coprime a b = gcd a b == 1
 
 Consider a finite ring
@@ -18,7 +20,8 @@ of some Int number.
 If any non-zero element has its multiplication inverse, then the ring is a field:
 
 > -- Our target should be in Int.
-> isField :: Int -> Bool
+> isField 
+>   :: Int -> Bool
 > isField = isPrime
 
 Here we would like to implement the extended Euclidean algorithm.
@@ -27,7 +30,9 @@ See the algorithm, examples, and pseudo code at:
   https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
   http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7
 
-> exGCD' :: (Integral n) => n -> n -> ([n], [n], [n], [n])
+> exGCD' 
+>   :: (Integral n) => 
+>      n -> n -> ([n], [n], [n], [n])
 > exGCD' a b = (qs, rs, ss, ts)
 >   where
 >     qs = zipWith quot rs (tail rs)
@@ -35,18 +40,20 @@ See the algorithm, examples, and pseudo code at:
 >     r' = steps a b
 >     ss = steps 1 0
 >     ts = steps 0 1
+>
 >     steps a b = rr
 >       where 
 >         rr@(_:rs) = a:b: zipWith (-) rr (zipWith (*) qs rs)
 >
-> takeUntil :: (a -> Bool) -> [a] -> [a]
+> takeUntil 
+>   :: (a -> Bool) -> [a] -> [a]
 > takeUntil p = foldr func []
 >   where
 >     func x xs 
 >       | p x       = []
 >       | otherwise = x : xs
 >
-> -- a*x + b*y = gcd a b
+> -- a*x + b*y = gcd a b -- Bezout's identity
 > exGCD 
 >   :: Integral t => 
 >      t -> t -> (t, t, t)
@@ -67,16 +74,21 @@ See the algorithm, examples, and pseudo code at:
 >     else Nothing
 >
 > -- If a is "safe" value, we can use this.
-> inversep' :: Int -> Int -> Int
+> inversep' 
+>   :: Int -> Int -> Int
 > 0 `inversep'` _ = error "inversep': zero division"
 > a `inversep'` p = (x `mod` p)
->   where (_,x,_) = exGCD a p
+>   where 
+>     (_,x,_) = exGCD a p
 >
-> inversesp :: Int -> [Maybe Int]
+> -- Returns a list of inveres of given ring Z_p.
+> inversesp 
+>   :: Int -> [Maybe Int]
 > inversesp p = map (`inversep` p) [1..(p-1)]
 >
 > -- A map from Q to Z_p, where p is a prime.
-> modp :: Ratio Int -> Int -> Maybe Int
+> modp 
+>   :: Ratio Int -> Int -> Maybe Int
 > q `modp` p 
 >   | coprime b p = Just $ (a * (bi `mod` p)) `mod` p
 >   | otherwise   = Nothing
@@ -85,31 +97,47 @@ See the algorithm, examples, and pseudo code at:
 >     Just bi = b `inversep` p
 >
 > -- When the denominator of q is not proprtional to p, use this.
-> modp' :: Ratio Int -> Int -> Int
+> modp' 
+>   :: Ratio Int -> Int -> Int
 > q `modp'` p = (a * (bi `mod` p)) `mod` p
 >   where
 >     (a,b)   = (numerator q, denominator q)
 >     bi = b `inversep'` p
 >
 > -- This is guess function without Chinese Reminder Theorem.
-> guess :: Integral t => 
->          (Maybe t, t)       -- (q `modp` p, p)
->       -> Maybe (Ratio t, t)
+> guess 
+>   :: Integral t => 
+>      (Maybe t, t)       -- (q `modp` p, p)
+>   -> Maybe (Ratio t, t)
 > guess (Nothing, _) = Nothing
 > guess (Just a, p) = let (_,rs,ss,_) = exGCD' a p in
 >   Just (select rs ss p, p)
 >     where
->       select :: Integral t => [t] -> [t] -> t -> Ratio t
+>       select 
+>         :: Integral t => 
+>            [t] -> [t] -> t -> Ratio t
 >       select [] _ _ = 0%1
 >       select (r:rs) (s:ss) p
 >         | s /= 0 && r*r <= p && s*s <= p = r%s
->         | otherwise = select rs ss p
+>         | otherwise                      = select rs ss p
 >
 > -- Hard code of big primes
 > -- We have chosen a finite number (100) version.
 > bigPrimes :: [Int]
-> -- bigPrimes = take 100 $ dropWhile (<10^4) primes
-> bigPrimes = take 100 $ dropWhile (<10^6) primes
+> bigPrimes = take 100 $ dropWhile (<10^4) primes
+> -- bigPrimes = take 100 $ dropWhile (< 10^6) primes
+
+  *Ffield> bigPrimes 
+  [10007,10009,10037,10039,10061,10067,10069,10079,10091,10093,10099,10103
+  ,10111,10133,10139,10141,10151,10159,10163,10169,10177,10181,10193,10211
+  ,10223,10243,10247,10253,10259,10267,10271,10273,10289,10301,10303,10313
+  ,10321,10331,10333,10337,10343,10357,10369,10391,10399,10427,10429,10433
+  ,10453,10457,10459,10463,10477,10487,10499,10501,10513,10529,10531,10559
+  ,10567,10589,10597,10601,10607,10613,10627,10631,10639,10651,10657,10663
+  ,10667,10687,10691,10709,10711,10723,10729,10733,10739,10753,10771,10781
+  ,10789,10799,10831,10837,10847,10853,10859,10861,10867,10883,10889,10891
+  ,10903,10909,10937,10939
+  ]
 
   *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
   *Ffield> let ds = knownData (12%13)
@@ -184,12 +212,15 @@ In order to use CRT, we should cast its type.
   Just (1123 % 1135,100160063)
 
 > reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer)
-> reconstruct = matches 10 . makeList -- 10 times match
+> -- reconstruct = matches 10 . makeList -- 10 times match
+> reconstruct = matches 5 . makeList -- 5 times match
 >   where
 >     matches n (a:as)
 >       | all (a==) $ take (n-1) as = a
 >       | otherwise                     = matches n as
->     makeList = map (fmap fst . guess) . scanl1 crtRec' . toInteger2 . filter (isJust . fst)
+>
+>     makeList = map (fmap fst . guess) . scanl1 crtRec' . toInteger2 
+>                . filter (isJust . fst)
 
 > reconstruct' :: [(Maybe Int, Int)] -> Maybe (Ratio Int)
 > reconstruct' = fmap coersion . reconstruct
@@ -198,6 +229,16 @@ In order to use CRT, we should cast its type.
 >     coersion q = (fromInteger . numerator $ q) 
 >                    % (fromInteger . denominator $ q)
 
+We should determine the number of match to cover the range of machine size Integer, i.e., Int.
+
+  *Ffield> let mI = maxBound :: Int
+  (0.00 secs, 44,184 bytes)
+  *Ffield> logBase 10 (fromIntegral mI)
+  18.964889726830812
+  (0.01 secs, 105,904 bytes)
+
+Since our choice of bigPrimes are
+  10^4
 
 -- QuickCheck
 
