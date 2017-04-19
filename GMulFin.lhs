@@ -136,8 +136,9 @@ This means that the numerator has t^4, and it clealy is x^2*y^2.
 >   where
 >     num = helper fst
 >     den = helper snd
->     helper third = join . fmap (mapM (uniPolCoeff . (zip ys)) . transposeWith (0 % 1)) . mapM third $ gs
->     gs = map (\t -> ratFunc2Coeff (homogeneous f 1 t)) ys
+>     helper third = join . fmap (mapM (uniPolCoeff . (zip ys)) 
+>                    . transposeWith (0 % 1)) . mapM third $ gs
+>     gs = map (\y -> ratFunc2Coeff (homogeneous f 1 y)) ys
 >                    
 > --  helper third = join . fmap (sequence . (map (uniPolCoeff . (zip ys))) 
 > --                 . (transposeWith (0%1))) . sequence . map third $ gs
@@ -184,3 +185,8 @@ This means that the numerator has t^4, and it clealy is x^2*y^2.
   (Just [[0 % 1],[0 % 1],[0 % 1],[0 % 1],[0 % 1,1 % 1]]
   ,Just [[1 % 1],[0 % 1],[1 % 1,(-2) % 1,1 % 1],[0 % 1]]
   )
+
+--
+
+> wilFunc2 x y = (x^4*y^2)*(1+y+y^2)^2 / (1+y)^4
+
