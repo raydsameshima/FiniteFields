@@ -9,7 +9,7 @@ of two-variable function.
 > import Data.Ratio
 > import Control.Monad (join)
 
-> import GUniFin -- (uniPolCoeff, uniRatCoeff)
+> import GUniFin (Q, uniPolCoeff, uniRatCoeff, ratFunc2Coeff)
 > import Multivariate (transposeWith)
 
 > -- a test function
