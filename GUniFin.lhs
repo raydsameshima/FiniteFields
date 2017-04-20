@@ -228,9 +228,9 @@ Rough estimation says, in 64-bits system with sequential inputs,
 the upper limit of degree is about 15.
 If we use non sequential inputs, this upper limit will go down.
 
--- polinomials
+-- up to here, polinomials
 --
--- rational functions
+-- from now on, rational functions
 
 Non sequential inputs Thiele-interpolation with finite fields.
 
@@ -310,8 +310,7 @@ We should detect them and handle them safely.
 >     first  = reverse . take 4 $ fs
 >     second = map' reciproDiff first
 
-
-
+> {-
 > -- To make safe initials.
 > initialThieleTriangleZp :: [PDiff] -> [[PDiff]]
 > initialThieleTriangleZp ff@(f:fs)
@@ -339,9 +338,7 @@ We should detect them and handle them safely.
 >   where
 >     firsts = undefined
 >     seconds = undefined
->
-
-
+> -}
 
 > -- reversed order
 > reciproDiff :: PDiff -> PDiff -> PDiff
@@ -390,9 +387,7 @@ We should detect them and handle them safely.
 >     tHs f' hh@(h:hs) = fh : tHs fh hs
 >       where 
 >         fh = reciproDiff f' h
-
-
-
+>
 > thieleTriangle' :: [PDiff] -> [[PDiff]]
 > thieleTriangle' fs 
 >   | length fs < 4 = []
@@ -425,67 +420,7 @@ We should detect them and handle them safely.
 >   :: [[PDiff]] -- 5 and 4, under last2
 >   -> [PDiff]   -- 3
 > fiveFour2three [ff@(_:fs), gg] = zipWith addZp' (map' reciproDiff gg) fs
-
-fiveFour2three does work, so ...
-
-> -- rho-matrix version
-> -- This implementation is quite straightforward, but no error handling.
-> reciproDiffs 
->   :: Int     -- a prime
->   -> Int     -- "degree"
->   -> Graph
->   -> [PDiff]
-> reciproDiffs p 0 fs = graph2PDiff p fs 
-> reciproDiffs p 1 fs = map' (flip reciproDiff) (reciproDiffs p 0 fs)
-> reciproDiffs p n fs 
->   = zipWith addZp' (map' (flip reciproDiff) (reciproDiffs p (n-1) fs))
->                    (tail $ reciproDiffs p (n-2) fs)
-
-  *GUniFin> let fs = map (\x -> (x
-                                ,(1+2*x+x^2+3*x^5)/(1+(3%2)*x+x^2+(3%5)*x^5)
-                                )
-                         ) 
-                         [1,3..51] :: Graph
-  *GUniFin> isConsts 3 . reciproDiffs 1000003 9 $ fs
-  False
-  *GUniFin> isConsts 3 . reciproDiffs 1000003 10 $ fs
-  True
-
-  *GUniFin> let fs = map (\x -> (x
-                                ,(1+2*x+x^2+3*x^5)/(1+(3%2)*x+x^2+(3%5)*x^5)
-                                )
-                         ) 
-                         [1,3..51] :: Graph
-  *GUniFin> map head . takeUntil (isConsts 3) 
-                       $ [reciproDiffs 1000003 n fs | n <- [0..]]
-  [PDiff {points = (1,1), value = 560979, basePrime = 1000003}
-  ,PDiff {points = (1,3), value = 23588, basePrime = 1000003}
-  ,PDiff {points = (1,5), value = 338279, basePrime = 1000003}
-  ,PDiff {points = (1,7), value = 551996, basePrime = 1000003}
-  ,PDiff {points = (1,9), value = 843687, basePrime = 1000003}
-  ,PDiff {points = (1,11), value = 365955, basePrime = 1000003}
-  ,PDiff {points = (1,13), value = 44979, basePrime = 1000003}
-  ,PDiff {points = (1,15), value = 59614, basePrime = 1000003}
-  ,PDiff {points = (1,17), value = 132512, basePrime = 1000003}
-  ,PDiff {points = (1,19), value = 647539, basePrime = 1000003}
-  ]
-
-> takeUntil -- slightly different from Ffield.lhs
->   :: (a -> Bool) -> [a] -> [a]
-> takeUntil _ []     = []
-> takeUntil f (x:xs) 
->   | not (f x) = x : takeUntil f xs
->   | f x       = [x]
 >
-> -- The follwoing function is brute-force version of thiele matrix.
-> -- So no error (1/0) detection.
-> firstReciprocalDifferences 
->   :: Graph -> Int -> [PDiff]
-> firstReciprocalDifferences fs p 
->   = map head . takeUntil (isConsts 3) $ [reciproDiffs p n fs | n <- [0..]]
-
-
-
 > thieleTriangle :: Graph -> Int -> [[PDiff]]
 > thieleTriangle fs p = thieleTriangle' $ graph2PDiff p fs
 >
@@ -506,8 +441,6 @@ fiveFour2three does work, so ...
 >       | otherwise = PDiff (x,y) ((v-w) `mod` p) p
 >
 
-
-
 > t2cZp 
 >   :: [PDiff]              -- thieleCoeff'' fs p
 >   -> (([Int],[Int]), Int) -- (rat-func, basePrime)
@@ -524,7 +457,7 @@ fiveFour2three does work, so ...
 >     helper (d:ds) = (den', num)
 >       where
 >         (num, den) = helper ds
->         den'  = map (`mod` p) $ (z * den) + (map (`mod` p) $ num'' - den'')
+>         den'  = map (`mod` p) $ (z * den) + (map (`mod` p) $ num''-den'')
 >         num'' = map (`mod` p) ((value d) .* num)
 >         den'' = map (`mod` p) ((snd . points $ d) .* den)
 >
@@ -643,57 +576,49 @@ fiveFour2three does work, so ...
 >   :: Graph -> ([Maybe (Ratio Int)], [Maybe (Ratio Int)])
 > uniRatCoeff gs = (num, den)
 >   where
->     num = map reconstruct' . transpose . map fst $ lst
->     den = map reconstruct' . transpose . map snd $ lst
->     lst = map (ratCanZp gs) bigPrimes
+>     (num,den) = (helper fst, helper snd)
+>     helper third 
+>       = map reconstruct' . transpose 
+>         . map (third . ratCanZp gs) $ bigPrimes
 
-  > let fs = map (\x -> (x,(1+2*x+x^8)/(1+(3%2)*x+x^7))) [1..101] :: Graph
-  > uniRatCoeff fs
-  ([Just (1 % 1),Just (2 % 1),Just (0 % 1),Just (0 % 1)
-   ,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)
+  *GUniFin> let fs = map (\x -> (x,(1+2*x+x^10)/(1+(3%2)*x+x^5))) [0..101] :: Graph
+  (0.01 secs, 44,232 bytes)
+  *GUniFin> uniRatCoeff fs
+  ([Just (1 % 1),Just (2 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
+   ,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
+   ,Just (1 % 1)
    ]
-  ,[Just (1 % 1),Just (3 % 2),Just (0 % 1),Just (0 % 1)
-   ,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)
+  ,[Just (1 % 1),Just (3 % 2),Just (0 % 1),Just (0 % 1),Just (0 % 1)
+   ,Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
    ]
   )
+  (1.72 secs, 1,424,003,616 bytes)
 
 > isJustZero n = Just (0%1) == n
- 
-  *GUniFin> let cs = map (\t -> (t, (t^9+2)/(1+t^9))) [1..1001] :: Graph 
-  *GUniFin> uniRatCoeff cs
-  ([Just (2 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
-   ,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)
-   ]
-  ,[Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
-   ,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)
-   ]
-  )
-  *GUniFin> fst it
-  [Just (2 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
-  ,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)
-  ]
-  *GUniFin> filter (not . isJustZero . fst) $ zip it [0..]
-  [(Just (2 % 1),0),(Just (1 % 1),9)]
-
+> 
 > uniRatCoeffShort gs = (num', den')
 >   where
 >     (num, den) = uniRatCoeff gs
->     num' = filter (not . isJustZero . fst) $ zip num [0..]
->     den' = filter (not . isJustZero . fst) $ zip den [0..]
-
-  *GUniFin> let cs = map (\t -> (t, (t^9+2)/(1+t^9))) [1..1001] :: Graph 
-  *GUniFin> uniRatCoeff cs
-  ([Just (2 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
-   ,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)
+>     (num', den') = (helper num, helper den)
+>     helper nd = filter (not . isJustZero . fst) $ zip nd [0..]
+  
+  *GUniFin> let fs = map (\x -> (x,(1+2*x+x^10)/(1+(3%2)*x+x^5))) [0..101] :: Graph
+  (0.01 secs, 44,320 bytes)
+  *GUniFin> uniRatCoeff fs
+  ([Just (1 % 1),Just (2 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
+   ,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
+   ,Just (1 % 1)
    ]
-  ,[Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
-   ,Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)
+  ,[Just (1 % 1),Just (3 % 2),Just (0 % 1),Just (0 % 1),Just (0 % 1)
+   ,Just (1 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (0 % 1)
    ]
   )
-  *GUniFin> uniRatCoeffShort cs
-  ([(Just (2 % 1),0),(Just (1 % 1),9)]
-  ,[(Just (1 % 1),0),(Just (1 % 1),9)]
+  (1.72 secs, 1,424,009,472 bytes)
+  *GUniFin> uniRatCoeffShort  fs
+  ([(Just (1 % 1),0),(Just (2 % 1),1),(Just (1 % 1),10)]
+  ,[(Just (1 % 1),0),(Just (3 % 2),1),(Just (1 % 1),5)]
   )
+  (1.74 secs, 1,422,577,184 bytes)
 
 > uniRatCoeff'
 >   :: Graph -> (Maybe [Ratio Int], Maybe [Ratio Int])
@@ -706,23 +631,18 @@ fiveFour2three does work, so ...
 > func2graph :: (Q -> Q) -> [Q] -> Graph
 > func2graph f xs = [(x, f x) | x <- xs]
 
-  *GUniFin> let g x = x^3 / (1+x)^3
-  *GUniFin> let graph = func2graph g [0,1,4,5,7,8,10,11,13,15,16,19,20]
-  *GUniFin> uniRatCoeff graph
-  ([Just (0 % 1),Just (0 % 1),Just (0 % 1),Just (1 % 1)]
-  ,[Just (1 % 1),Just (3 % 1),Just (3 % 1),Just (1 % 1)]
-  )
-  *GUniFin> uniRatCoeffShort graph
+  *GUniFin> func2graph g [0,3..30]
+  [(0 % 1,0 % 1),(3 % 1,27 % 64),(6 % 1,216 % 343),(9 % 1,729 % 1000)
+  ,(12 % 1,1728 % 2197),(15 % 1,3375 % 4096),(18 % 1,5832 % 6859)
+  ,(21 % 1,9261 % 10648),(24 % 1,13824 % 15625),(27 % 1,19683 % 21952)
+  ,(30 % 1,27000 % 29791)
+  ]
+  (0.01 secs, 363,080 bytes)
+  *GUniFin> uniRatCoeffShort it
   ([(Just (1 % 1),3)]
   ,[(Just (1 % 1),0),(Just (3 % 1),1),(Just (3 % 1),2),(Just (1 % 1),3)]
   )
-
-  *GUniFin> uniRatCoeff $ func2graph (\t -> 1+t) [0..10]
-  ([Just (1 % 1),Just (1 % 1)],[Just (1 % 1)])
-  *GUniFin> uniRatCoeff $ func2graph (\t -> 1+(1%5)*t) [0..10]
-  ([Just (1 % 1),Just (1 % 5)],[Just (1 % 1)])
-  *GUniFin> uniRatCoeff $ func2graph (\t -> 1/(1+(1%5)*t)) [0..10]
-  ([Just (1 % 1),Just (0 % 1)],[Just (1 % 1),Just (1 % 5)])
+  (0.30 secs, 231,980,488 bytes) 
 
 > -- Up to degree~100 version.
 > ratFunc2Coeff
@@ -730,5 +650,167 @@ fiveFour2three does work, so ...
 >   -> (Maybe [Ratio Int], Maybe [Ratio Int])
 > ratFunc2Coeff f = uniRatCoeff' . func2graph f $ [0..100]
 
+--
+
+We want to use safe list, i.e., the given graph as much as possible.
+So, the easiest way could be
+  pick a prime
+  construct Thiele triangle up to consts.
+  if we face fake infinity before it matches, 
+    then return Nothing and use another prime
+Since we have a lot of bigPrimes.
+  
+  *GUniFin> let g x = x^4 / (1+x)^3
+  *GUniFin> func2graph g [0..10]
+  [(0 % 1,0 % 1),(1 % 1,1 % 8),(2 % 1,16 % 27),(3 % 1,81 % 64)
+  ,(4 % 1,256 % 125),(5 % 1,625 % 216),(6 % 1,1296 % 343),(7 % 1,2401 % 512)
+  ,(8 % 1,4096 % 729),(9 % 1,6561 % 1000),(10 % 1,10000 % 1331)
+  ]
+  *GUniFin> let p = head bigPrimes 
+  *GUniFin> p
+  10007
+  *GUniFin> graph2PDiff p $ func2graph g [0..10]
+  [PDiff {points = (0,0), value = 0, basePrime = 10007}
+  ,PDiff {points = (1,1), value = 1251, basePrime = 10007}
+  ,PDiff {points = (2,2), value = 2595, basePrime = 10007}
+  ,PDiff {points = (3,3), value = 6412, basePrime = 10007}
+  ,PDiff {points = (4,4), value = 1363, basePrime = 10007}
+  ,PDiff {points = (5,5), value = 2273, basePrime = 10007}
+  ,PDiff {points = (6,6), value = 1375, basePrime = 10007}
+  ,PDiff {points = (7,7), value = 8624, basePrime = 10007}
+  ,PDiff {points = (8,8), value = 9038, basePrime = 10007}
+  ,PDiff {points = (9,9), value = 7782, basePrime = 10007}
+  ,PDiff {points = (10,10), value = 7150, basePrime = 10007}
+  ]
+
+We need Maybe-wrapped version of reciprocal (inverse) difference.
+
+> -- normal order for rho-matrix
+> inverseDiff 
+>   :: PDiff -> PDiff -> Maybe PDiff
+> inverseDiff (PDiff (w,_) v p) (PDiff (_,z') u _) -- z in reserved
+>   | v == u    = Nothing
+>   | otherwise = return $ PDiff (w,z') r p
+>   where
+>     r = ((zw) * (uv `inversep'` p)) `mod` p
+>     zw = (z' - w) `mod` p
+>     uv = (u - v) `mod` p  
+>
+> inverseDiff' :: Maybe PDiff -> Maybe PDiff -> Maybe PDiff
+> inverseDiff' Nothing  _        = Nothing
+> inverseDiff' _        Nothing  = Nothing
+> inverseDiff' (Just a) (Just b) = inverseDiff a b
+
+> -- rho-matrix version
+> -- This implementation is quite straightforward, but no error handling.
+> inverseDiffs 
+>   :: Int     -- a prime
+>   -> Int     -- "degree" or the depth of thiele TRAPEZOID
+>   -> Graph
+>   -> [Maybe PDiff]
+> inverseDiffs p 0 fs = map return $ graph2PDiff p fs 
+> inverseDiffs p 1 fs = map' inverseDiff $ graph2PDiff p fs
+> inverseDiffs p n fs 
+>   = zipWith addPDiff (map' inverseDiff' (inverseDiffs p (n-1) fs))
+>                      (tail $ inverseDiffs p (n-2) fs)
+>
+> addPDiff :: Maybe PDiff -> Maybe PDiff -> Maybe PDiff
+> addPDiff Nothing _ = Nothing
+> addPDiff _ Nothing = Nothing
+> addPDiff (Just a) (Just b) = return $ addZp' a b
+  
+  *GUniFin> let f x = x / (1+x^2)
+  *GUniFin> let fs = func2graph f [0..10]
+  *GUniFin> sequence $ filter isJust $ inverseDiffs 10007 4 fs
+  Just [PDiff {points = (2,6), value = 0, basePrime = 10007}
+       ,PDiff {points = (3,7), value = 0, basePrime = 10007}
+       ,PDiff {points = (4,8), value = 0, basePrime = 10007}
+       ,PDiff {points = (5,9), value = 0, basePrime = 10007}
+       ,PDiff {points = (6,10), value = 0, basePrime = 10007}
+       ]
+  *GUniFin> fmap (isConsts 3) it
+  Just True
+    
+> isConsts' 
+>   :: Int -> [Maybe PDiff] -> Bool
+> isConsts' n fs
+>   | Just True == fmap (isConsts n) fs' = True
+>   | otherwise                          = False
+>   where
+>     fs' = sequence . filter isJust $ fs
+>
+> -- This is the main function which returns Nothing when we face 
+> -- so many fake infinities with really bad prime.
+> thieleTrapezoid 
+>   :: Graph -> Int -> Maybe [[Maybe PDiff]]
+> thieleTrapezoid fs p
+>   | or $ map (isConsts' 3) gs = return gs' 
+>   | otherwise                 = Nothing
+>   where
+>     gs' = aMatrix fs p
+>     gs  = map (filter isJust) gs'
+>
+>     aMatrix 
+>       :: Graph -> Int -> [[Maybe PDiff]]
+>     aMatrix fs p = takeUntil (isConsts' 3) 
+>                      [inverseDiffs p n fs | n <- [0..]]
+> 
+> takeUntil 
+>   :: (a -> Bool) -> [a] -> [a]
+> takeUntil _ []     = []
+> takeUntil f (x:xs) 
+>   | not (f x) = x : takeUntil f xs
+>   | f x       = [x]
+
+Finally, we need the Thiele coefficients!
+
+ 
+
+> {-
 
 
+  *GUniFin> let fs = map (\x -> (x
+                                ,(1+2*x+x^2+3*x^5)/(1+(3%2)*x+x^2+(3%5)*x^5)
+                                )
+                         ) 
+                         [1,3..51] :: Graph
+  *GUniFin> isConsts 3 . reciproDiffs 1000003 9 $ fs
+  False
+  *GUniFin> isConsts 3 . reciproDiffs 1000003 10 $ fs
+  True
+
+  *GUniFin> let fs = map (\x -> (x
+                                ,(1+2*x+x^2+3*x^5)/(1+(3%2)*x+x^2+(3%5)*x^5)
+                                )
+                         ) 
+                         [1,3..51] :: Graph
+  *GUniFin> map head . takeUntil (isConsts 3) 
+                       $ [reciproDiffs 1000003 n fs | n <- [0..]]
+  [PDiff {points = (1,1), value = 560979, basePrime = 1000003}
+  ,PDiff {points = (1,3), value = 23588, basePrime = 1000003}
+  ,PDiff {points = (1,5), value = 338279, basePrime = 1000003}
+  ,PDiff {points = (1,7), value = 551996, basePrime = 1000003}
+  ,PDiff {points = (1,9), value = 843687, basePrime = 1000003}
+  ,PDiff {points = (1,11), value = 365955, basePrime = 1000003}
+  ,PDiff {points = (1,13), value = 44979, basePrime = 1000003}
+  ,PDiff {points = (1,15), value = 59614, basePrime = 1000003}
+  ,PDiff {points = (1,17), value = 132512, basePrime = 1000003}
+  ,PDiff {points = (1,19), value = 647539, basePrime = 1000003}
+  ]
+
+
+> takeUntil -- slightly different from Ffield.lhs
+>   :: (a -> Bool) -> [a] -> [a]
+> takeUntil _ []     = []
+> takeUntil f (x:xs) 
+>   | not (f x) = x : takeUntil f xs
+>   | f x       = [x]
+>
+> -- The follwoing function is brute-force version of thiele matrix.
+> -- So no error (1/0) detection.
+> firstReciprocalDifferences 
+>   :: Graph -> Int -> [PDiff]
+> firstReciprocalDifferences fs p 
+>   = map head . takeUntil (isConsts 3) $ [reciproDiffs p n fs | n <- [0..]]
+
+> -}
