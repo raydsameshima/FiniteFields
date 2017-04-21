@@ -9,6 +9,15 @@ https://arxiv.org/pdf/1608.01902.pdf
 > import Data.Numbers.Primes
 > import Test.QuickCheck
 
+> -- Eucledian algorithm.
+> myGCD :: Integral a => a -> a -> a
+> myGCD a b
+>   | b < 0 = myGCD a (-b)
+> myGCD a b
+>   | a == b = a
+>   | b >  a = myGCD b a
+>   | b <  a = myGCD (a-b) b
+
 > coprime 
 >   :: Integral a => 
 >      a -> a -> Bool
@@ -36,7 +45,7 @@ See the algorithm, examples, and pseudo code at:
 > exGCD' a b = (qs, rs, ss, ts)
 >   where
 >     qs = zipWith quot rs (tail rs)
->     rs = takeUntil (==0) r'
+>     rs = takeBefore (==0) r'
 >     r' = steps a b
 >     ss = steps 1 0
 >     ts = steps 0 1
@@ -45,9 +54,9 @@ See the algorithm, examples, and pseudo code at:
 >       where 
 >         rr@(_:rs) = a:b: zipWith (-) rr (zipWith (*) qs rs)
 >
-> takeUntil 
+> takeBefore 
 >   :: (a -> Bool) -> [a] -> [a]
-> takeUntil p = foldr func []
+> takeBefore p = foldr func []
 >   where
 >     func x xs 
 >       | p x       = []
