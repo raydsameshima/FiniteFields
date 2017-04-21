@@ -10,8 +10,8 @@ Algebraic Geometry and Finite Fields
 abstract:
 (From APS meeting)
 The evaluation of scattering amplitudes in quantum field theory allows us
-to compare the phenomenological prediction of particle theory 
-with the measurement at collider experiments.
+to compare the phenomenological prediction of particle theory with the 
+measurement at collider experiments.
 The study of scattering amplitudes, in terms of their symmetries and 
 analytic properties, provides a theoretical framework to develop techniques 
 and efficient algorithms for the evaluation of physical cross sections and
@@ -21,14 +21,17 @@ Loop amplitudes, which are needed to reduce the theoretical uncertainty, are
 more challenging since they involves a large number of Feynman diagrams, 
 expressed as integrals of rational functions.
 At one-loop, the problem has been solved thanks to the combined effect of
-integrand reduction, such as the OPP method at higher orders, starting with 
+integrand reduction, such as the OPP method and unitarity.
+However, plenty of work is still needed at higher orders, starting with 
 the two-loop case.
 Recently, integrand reduction has been revisited using algebraic geometry.
-In this presentation, we review the salient features of integrand reduction 
-for dimensionally regulated Feynman integrals, and describe an interesting
-technique for their reduction based on multivariate polynomial division.
-We also show a novel approach to improve its efficiency by introducing
-finite fields.
+
+I will review the salient features of integrand reduction for dimensionally 
+regulated Feynman integrals, and describe an interesting technique for their
+reduction based on multivariate polynomial division.
+I will explain the basics of functional reconstruction techniques, and show
+a novel approach to improve its efficiency by introducing finite fields.
+
 
 
 containts:
