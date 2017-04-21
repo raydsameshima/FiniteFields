@@ -1,0 +1,64 @@
+secondExam.txt
+
+date: May 26 2017 (2017/05/26)
+
+title:
+(From APS meeting)
+Integrand Reduction reloaded
+Algebraic Geometry and Finite Fields
+
+abstract:
+(From APS meeting)
+The evaluation of scattering amplitudes in quantum field theory allows us
+to compare the phenomenological prediction of particle theory 
+with the measurement at collider experiments.
+The study of scattering amplitudes, in terms of their symmetries and 
+analytic properties, provides a theoretical framework to develop techniques 
+and efficient algorithms for the evaluation of physical cross sections and
+differential distributions.
+Tree-level calculations have been known for a long time.
+Loop amplitudes, which are needed to reduce the theoretical uncertainty, are
+more challenging since they involves a large number of Feynman diagrams, 
+expressed as integrals of rational functions.
+At one-loop, the problem has been solved thanks to the combined effect of
+integrand reduction, such as the OPP method at higher orders, starting with 
+the two-loop case.
+Recently, integrand reduction has been revisited using algebraic geometry.
+In this presentation, we review the salient features of integrand reduction 
+for dimensionally regulated Feynman integrals, and describe an interesting
+technique for their reduction based on multivariate polynomial division.
+We also show a novel approach to improve its efficiency by introducing
+finite fields.
+
+
+containts:
+
+Physics
+  Scattering Amplitudes
+  OPP (Multivariate Polynomial Division)
+    (Facts: 4 and (4-2\epsilon) cases)
+
+Techniques
+  Algebraic Geometry
+    Multivariate Polynomial Division
+    Groebner basis  
+  Functional reconstruction 
+    Newton and Thiele interpolation methods
+    Finite Fields
+      Rational Number reconstruction (with CRT)
+    Toward Multivariate functions
+
+  Haskell language
+
+    
+(ttZ and ttW paper with Andrea)
+  LO, NLO, and NLO(no qg) numerical evaluation of total cross section
+    MG5_aMC
+    Fortran
+
+  What I did before this paper
+    ttW and ttZ production at tree level
+      FORM 
+      Maxima
+
+
