@@ -15,7 +15,7 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 > import Control.Monad
 > --
 > import Polynomials
-> import Ffield hiding (takeUntil)
+> import Ffield 
 > --
 > type Q = Ratio Int   -- Rational fields
 > type Graph = [(Q,Q)] -- [(x, f x) | x <- someFinieRange]
@@ -869,4 +869,10 @@ Finally, we need the Thiele coefficients!
   ,Just [1 % 1,4 % 1,6 % 1,4 % 1,1 % 1]
   )
   (10.98 secs, 8,836,586,776 bytes)
+  *GUniFin> let f x = x^3 / (1+x)^4
+  *GUniFin> let fs = func2graph f [1,3..31]
+  *GUniFin> uniRatCoeffm fs
+  (Just [0 % 1,0 % 1,0 % 1,1 % 1,0 % 1]
+  ,Just [1 % 1,4 % 1,6 % 1,4 % 1,1 % 1]
+  )
 
