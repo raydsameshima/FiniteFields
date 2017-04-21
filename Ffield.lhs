@@ -254,7 +254,7 @@ Since our choice of bigPrimes are
 >   where
 >     matches n (a:as)
 >       | all (a==) $ take (n-1) as = a
->       | otherwise                     = matches n as
+>       | otherwise                 = matches n as
 >
 >     makeList = map (fmap fst . guess) . scanl1 crtRec' . toInteger2 
 >                . filter (isJust . fst)
