@@ -18,15 +18,11 @@ https://arxiv.org/pdf/1608.01902.pdf
 >   | b >  a = myGCD b a
 >   | b <  a = myGCD (a-b) b
 
-> coprime 
->   :: Integral a => 
->      a -> a -> Bool
-> coprime a b = gcd a b == 1
-
 Consider a finite ring
   Z_n := [0..(n-1)]
 of some Int number.
-If any non-zero element has its multiplication inverse, then the ring is a field:
+If any non-zero element has its multiplication inverse, 
+then the ring is a field:
 
 > -- Our target should be in Int.
 > isField 
@@ -62,17 +58,23 @@ See the algorithm, examples, and pseudo code at:
 >       | p x       = []
 >       | otherwise = x : xs
 >
-> -- a*x + b*y = gcd a b -- Bezout's identity
+> -- Bezout's identity a*x + b*y = gcd a b 
 > exGCD 
 >   :: Integral t => 
 >      t -> t -> (t, t, t)
-> exGCD a b = (g, x, y)
+> exGCD a b = (g, x, y) 
 >   where
 >     (_,r,s,t) = exGCD' a b
 >     g = last r
 >     x = last . init $ s
 >     y = last . init $ t
->
+
+> -- We use built-in function gcd.
+> coprime 
+>   :: Integral a => 
+>      a -> a -> Bool
+> coprime a b = gcd a b == 1
+
 > -- a^{-1} (in Z_p) == a `inversep` p
 > inversep 
 >   :: Integral a => 
@@ -167,19 +169,31 @@ See the algorithm, examples, and pseudo code at:
 
 Chinese Remainder Theorem, and its usage
  
-> imagesAndPrimes :: Ratio Int -> [(Maybe Int, Int)]
+> imagesAndPrimes 
+>   :: Ratio Int -> [(Maybe Int, Int)]
 > imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
+
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData
+  *Ffield> take 2 knownData
+  [(Just 6003,10007),(Just 9782,10009)]
+  *Ffield> map guess it
+  [Just ((-6) % 5,10007),Just (21 % 44,10009)]
  
 Our data is a list of the type
   [(Maybe Int, Int)]
 In order to use CRT, we should cast its type.
 
-> toInteger2 :: [(Maybe Int, Int)] -> [(Maybe Integer, Integer)]
+> toInteger2 
+>   :: [(Maybe Int, Int)] -> [(Maybe Integer, Integer)]
 > toInteger2 = map helper
 >   where 
 >     helper (x,y) = (fmap toInteger x, toInteger y)
 >
-> crtRec':: Integral a => (Maybe a, a) -> (Maybe a, a) -> (Maybe a, a)
+> crtRec'
+>   :: Integral a => 
+>      (Maybe a, a) -> (Maybe a, a) -> (Maybe a, a)
 > crtRec' (Nothing,p) (_,q)       = (Nothing, p*q)
 > crtRec' (_,p)       (Nothing,q) = (Nothing, p*q)
 > crtRec' (Just a1,p1) (Just a2,p2) = (Just a,p)
@@ -189,7 +203,9 @@ In order to use CRT, we should cast its type.
 >     Just m2 = p2 `inversep` p1
 >     p = p1*p2
 >
-> matches3 :: Eq a => [Maybe (a,b)] -> Maybe (a,b)
+> matches3 
+>   :: Eq a => 
+>      [Maybe (a,b)] -> Maybe (a,b)
 > matches3 (b1@(Just (q1,p1)):bb@((Just (q2,_)):(Just (q3,_)):_))
 >   | q1==q2 && q2==q3 = b1
 >   | otherwise        = matches3 bb
@@ -203,8 +219,6 @@ In order to use CRT, we should cast its type.
 
   *Ffield> matches3 it
   Nothing
-
-  *Ffield> scanl1 crtRec' ds
 
   *Ffield> scanl1 crtRec' . toInteger2 $ ds
   [(Just 3272,10007)
@@ -220,7 +234,21 @@ In order to use CRT, we should cast its type.
   *Ffield> matches3 it
   Just (1123 % 1135,100160063)
 
-> reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer)
+We should determine the number of matches to cover the range of machine size
+Integer, i.e., Int of Haskell.
+
+  *Ffield> let mI = maxBound :: Int
+  *Ffield> mI == 2^63-1
+  True
+  *Ffield> logBase 10 (fromIntegral mI)
+  18.964889726830812
+
+Since our choice of bigPrimes are
+  O(10^4)
+5 times is enough to cover the machine size integers.
+
+> reconstruct 
+>   :: [(Maybe Int, Int)] -> Maybe (Ratio Integer)
 > -- reconstruct = matches 10 . makeList -- 10 times match
 > reconstruct = matches 5 . makeList -- 5 times match
 >   where
@@ -230,24 +258,20 @@ In order to use CRT, we should cast its type.
 >
 >     makeList = map (fmap fst . guess) . scanl1 crtRec' . toInteger2 
 >                . filter (isJust . fst)
-
-> reconstruct' :: [(Maybe Int, Int)] -> Maybe (Ratio Int)
+>
+> -- cast version
+> reconstruct' 
+>   :: [(Maybe Int, Int)] -> Maybe (Ratio Int)
 > reconstruct' = fmap coersion . reconstruct
 >   where
 >     coersion :: Ratio Integer -> Ratio Int
 >     coersion q = (fromInteger . numerator $ q) 
 >                    % (fromInteger . denominator $ q)
-
-We should determine the number of match to cover the range of machine size Integer, i.e., Int.
-
-  *Ffield> let mI = maxBound :: Int
-  (0.00 secs, 44,184 bytes)
-  *Ffield> logBase 10 (fromIntegral mI)
-  18.964889726830812
-  (0.01 secs, 105,904 bytes)
-
-Since our choice of bigPrimes are
-  10^4
+  
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> reconstruct knownData 
+  Just (895 % 922)
 
 -- QuickCheck
 
