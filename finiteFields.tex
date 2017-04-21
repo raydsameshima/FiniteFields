@@ -110,20 +110,9 @@ Instead of loops, we use (implicit) recursions in functional language.\footnote{
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Basics}
-We have assumed living knowledge on (axiomatic, i.e., ZFC) set theory, algebraic structures.
+We have assumed living knowledge on (axiomatic, i.e., ZFC) set theory and basic algebraic structures.
 
 \section{Finite fields}
-\begin{verbatim}
-Ffield.lhs
-
-https://arxiv.org/pdf/1608.01902.pdf
-
-> module Ffield where
-
-> import Data.Ratio 
-> import Data.Maybe
-> import Data.Numbers.Primes
-\end{verbatim}
 
 \subsection{Rings}
 A ring $(R,+,*)$ is a structured set $R$ with two binary operations
@@ -290,7 +279,7 @@ s_i &:=& s_{i-2} - q_i * s_{i-1} \\
 t_i &:=& t_{i-2} - q_i * t_{i-1}.
 \end{eqnarray}
 The termination condition\footnote{
-This algorithm will terminate eventually, since the sequence $\{r_i\}_i$ is non-negative by definition of $q_i$, but strictly decreasing.
+This algorithm will terminate eventually, since the sequence $\{r_i\}_i$ is non-negative by definition of $q_i$, but strictly decreasing, i.e., decreasing natural numbers.
 Therefore, $\{r_i\}_i$ will meet $0$ in finite step $k$.
 } is
 \begin{eqnarray}
@@ -347,24 +336,29 @@ Here we would like to implement the extended Euclidean algorithm.
 See the algorithm, examples, and pseudo code at:
 
   https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
+  http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7
 
-> exGCD' :: (Integral n) => n -> n -> ([n], [n], [n], [n])
+> exGCD' 
+>   :: (Integral n) => 
+>      n -> n -> ([n], [n], [n], [n])
 > exGCD' a b = (qs, rs, ss, ts)
 >   where
 >     qs = zipWith quot rs (tail rs)
->     rs = takeUntil (==0) r'
+>     rs = takeBefore (==0) r'
 >     r' = steps a b
 >     ss = steps 1 0
 >     ts = steps 0 1
+>
 >     steps a b = rr
 >       where 
 >         rr@(_:rs) = a:b: zipWith (-) rr (zipWith (*) qs rs)
 >
-> takeUntil :: (a -> Bool) -> [a] -> [a]
-> takeUntil p = foldr func []
+> takeBefore 
+>   :: (a -> Bool) -> [a] -> [a]
+> takeBefore p = foldr func []
 >   where
 >     func x xs 
->       | p x = []
+>       | p x       = []
 >       | otherwise = x : xs
 \end{verbatim}
 Here we have used so called lazy lists, and higher order function\footnote{
@@ -405,7 +399,7 @@ Now what we should do is extract gcd of $a$ and $b$, and $(x, y)$ from the tuple
 >     x = last . init $ s
 >     y = last . init $ t
 \end{verbatim}
-where the underscore \verb+_+ is a special symbol in Haskell that hits every pattern, since we do not need the quotient list.
+where the underscore \verb+_+ is a special symbol in Haskell that hits every pattern, since we do not need to evaluate the quotient list \verb+qs+.
 So, in order to get gcd and $(x, y)$ we don't need quotients list.
 \begin{verbatim}
   *Ffield> exGCD 46 240
@@ -483,7 +477,7 @@ Let us pick 11 as a prime and consider $\mathbb{Z}_{11}$:
   ,(1,1,-2),(1,-1,2),(1,2,-3),(1,3,-4),(1,-4,5),(1,1,-1)
   ]
 \end{verbatim}
-This list of three-tuple let us know the candidate of inverse.
+This list of three-tuple let us know the candidates of inverses.
 Take the last one, \verb+(1,1,-1)+.
 This is the image of \verb+exGcd 11 10+, and 
 \begin{eqnarray}
@@ -548,7 +542,7 @@ By introducing this forgetful map, we can use
 \begin{eqnarray}
 \times : (\mathbb{Z}, \mathbb{Z}) \to \mathbb{Z} 
 \end{eqnarray}
-of normal product on $\mathbb{Z}$.
+of normal product on $\mathbb{Z}$ in eq.(\ref{modpForRational}).
 }
 \begin{eqnarray}
 \text{\textquestiondown} : \mathbb{Z}_p \hookrightarrow \mathbb{Z}.
@@ -561,6 +555,7 @@ by\footnote{
 This is an example of operator overloadings.
 }
 \begin{eqnarray}
+\label{modpForRational}
 q = \frac{a}{b} \mapsto (q \mod p) := \left( \left( a \times \text{\textquestiondown} \left( b^{-1} \mod p\right) \right) \mod p \right).
 \end{eqnarray}
 
@@ -577,21 +572,30 @@ Similarly, use parenthesis we can use an infix binary operator to a function:
 \end{eqnarray}
 }
 \begin{verbatim}
-A map from Q to Z_p.
-
-> -- p should be prime.
-> modp :: Integral a => Ratio a -> a -> a
-> q `modp` p = (a * (bi `mod` p)) `mod` p
+> -- A map from Q to Z_p, where p is a prime.
+> modp 
+>   :: Ratio Int -> Int -> Maybe Int
+> q `modp` p 
+>   | coprime b p = Just $ (a * (bi `mod` p)) `mod` p
+>   | otherwise   = Nothing
 >   where
->     (a,b) = (numerator q, denominator q)
->     bi = fromJust (b `inversep` p)
+>     (a,b)   = (numerator q, denominator q)
+>     Just bi = b `inversep` p
+>
+> -- When the denominator of q is not proprtional to p, use this.
+> modp' 
+>   :: Ratio Int -> Int -> Int
+> q `modp'` p = (a * (bi `mod` p)) `mod` p
+>   where
+>     (a,b)   = (numerator q, denominator q)
+>     bi = b `inversep'` p
 \end{verbatim}
 Let us consider a rational number $\frac{3}{7}$ on a finite field $\mathbb{Z}_{11}$:
 \begin{verbatim}
 Example: on Z_{11}
 Consider (3 % 7).
 
-  *Ffield> let q = 3%7
+  *Ffield> let q = (3%7)
   *Ffield> 3 `mod` 11
   3
   *Ffield> 7 `inversep` 11
@@ -599,11 +603,11 @@ Consider (3 % 7).
   *Ffield> (3*8) `mod` 11
   2
 \end{verbatim}
-For example, pick 7:
-\begin{verbatim}  
-  *Ffield> 7*8 == 11*5+1
-  True
-\end{verbatim}
+% For example, pick 7:
+% \begin{verbatim}  
+%  *Ffield> 7*8 == 11*5+1
+%   True
+% \end{verbatim}
 Therefore, on $\mathbb{Z}_{11}$, $(7^{-1} \mod 11)$ is equal to $(8 \mod 11)$ and
 \begin{eqnarray}
 \frac{3}{7} \in \mathbb{Q} &\mapsto& (3 \times \text{\textquestiondown}(7^{-1} \mod 11) \mod 11) \\
@@ -614,9 +618,8 @@ Therefore, on $\mathbb{Z}_{11}$, $(7^{-1} \mod 11)$ is equal to $(8 \mod 11)$ an
 Haskell returns the same result
 \begin{verbatim}  
   *Ffield> q `modp` 11
-  2
+  Just 2
 \end{verbatim}
-and consistent.
 
 \subsection{Reconstruction from $\mathbb{Z}_p$ to $\mathbb{Q}$}
 Consider a rational number $q$ and its image $a \in \mathbb{Z}_p$.
@@ -643,14 +646,14 @@ as the termination condition for this reconstruction.
 
 \subsubsection{Haskell implementation}
 Let us first try to reconstruct from the image $(\frac{1}{3} \mod p)$ of some prime $p$.
-Here we have chosen three primes
+Here we choose three primes
 \begin{verbatim}
 Reconstruction Z_p -> Q
   *Ffield> let q = (1%3)
   *Ffield> take 3 $ dropWhile (<100) primes
   [101,103,107]
 \end{verbatim}
-The images are basically given by the first elements of second lists ($s_0$'s):
+The following images are basically given by the first elements of second lists ($s_0$'s):
 \begin{verbatim}  
   *Ffield> q `modp` 101
   34
@@ -662,127 +665,174 @@ The images are basically given by the first elements of second lists ($s_0$'s):
   *Ffield> try 107
   ([0,2,1,35],[36,107,36,35,1],[1,0,1,-2,3,-107],[0,1,0,1,-1,36])  
 \end{verbatim}
-Look at the first hit of termination condition eq.(\ref{terminationOfRec}), $r_4=1$ and $s_4=3$.
-They give us the same guess $\frac{1}{3}$, and that the reconstructed number.
+Look at the first hit of termination condition eq.(\ref{terminationOfRec}), $r_4=1$ and $s_4=3$ of $\mathbb{Z}_{101}$.
+The same facts on $\mathbb{Z}_{103}$ and $\mathbb{Z}_{107}$ give us the same guess $\frac{1}{3}$, and that the reconstructed number.
 
-From the above observations we can make a simple "guess" function:
+From the above observations we can make a simple \verb+guess+ function:
 \begin{verbatim}
-> guess :: Integral t =>
->          (t, t)       -- (q `modp` p, p)
->       -> (Ratio t, t)
-> guess (a, p) = let (_,rs,ss,_) = exGCD' a p in
->   (select rs ss p, p)
+> -- This is guess function without Chinese Reminder Theorem.
+> guess 
+>   :: Integral t => 
+>      (Maybe t, t)       -- (q `modp` p, p)
+>   -> Maybe (Ratio t, t)
+> guess (Nothing, _) = Nothing
+> guess (Just a, p) = let (_,rs,ss,_) = exGCD' a p in
+>   Just (select rs ss p, p)
 >     where
->       select :: Integral t => [t] -> [t] -> t -> Ratio t
+>       select 
+>         :: Integral t => 
+>            [t] -> [t] -> t -> Ratio t
 >       select [] _ _ = 0%1
 >       select (r:rs) (s:ss) p
->         | s /= 0 && r^2 <= p && s^2 <= p = r%s
->         | otherwise = select rs ss p
+>         | s /= 0 && r*r <= p && s*s <= p = r%s
+>         | otherwise                      = select rs ss p
 \end{verbatim}
-We have put a list of big primes as follows.
+
+We put a list of big primes as follows.
 \begin{verbatim}
 > -- Hard code of big primes
-> -- For chinese reminder theorem we declare it as [Integer].
-> bigPrimes :: [Integer]
-> bigPrimes = dropWhile (< 897473) $ takeWhile (< 978948) primes  
-\end{verbatim}
-We choose 3 times match as the termination condition.
-\begin{verbatim}
-> matches3 :: Eq a => [a] -> a
-> matches3 (a:bb@(b:c:cs))
->   | a == b && b == c = a
->   | otherwise        = matches3 bb
-\end{verbatim}
-Finally, we can check our gadgets.
+> -- We have chosen a finite number (100) version.
+> bigPrimes :: [Int]
+> bigPrimes = take 100 $ dropWhile (<10^4) primes
 
-What we know is a list of (q `modp` p) and prime p for several (big) primes.
-\begin{verbatim}
-  *Ffield> let q = 10%19
-  *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes 
-  *Ffield> take 3 knownData 
-  [(614061,897473),(377894,897497),(566842,897499)]
-  *Ffield> matches3 $  map (fst . guess) knownData
-  10 % 19
+  *Ffield> bigPrimes 
+  [10007,10009,10037,10039,10061,10067,10069,10079,10091,10093,10099,10103
+  ,10111,10133,10139,10141,10151,10159,10163,10169,10177,10181,10193,10211
+  ,10223,10243,10247,10253,10259,10267,10271,10273,10289,10301,10303,10313
+  ,10321,10331,10333,10337,10343,10357,10369,10391,10399,10427,10429,10433
+  ,10453,10457,10459,10463,10477,10487,10499,10501,10513,10529,10531,10559
+  ,10567,10589,10597,10601,10607,10613,10627,10631,10639,10651,10657,10663
+  ,10667,10687,10691,10709,10711,10723,10729,10733,10739,10753,10771,10781
+  ,10789,10799,10831,10837,10847,10853,10859,10861,10867,10883,10889,10891
+  ,10903,10909,10937,10939
+  ]
 \end{verbatim}
-The following is the function we need, its input is the list of tuple which first element is the image in $\mathbb{Z}_p$ and second element is that prime $p$.
-\begin{verbatim}
-> reconstruct :: Integral a =>
->                [(a, a)]  -- :: [(Z_p, primes)]
->             -> Ratio a
-> reconstruct aps = matches3 $ map (fst . guess) aps
-
-Here is a naive test:
-  > let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32
-             ,869 % 232,778 % 123,331 % 739]
-  > let modmap q = zip (map (modp q) bigPrimes) bigPrimes 
-  > let longList = map modmap qs
-  > map reconstruct longList 
-  [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32
-  ,869 % 232,778 % 123,331 % 739]
-  > it == qs
-  True
-\end{verbatim}
-
-For later use, let us define
-\begin{verbatim}
-> imagesAndPrimes ::  Rational-> [(Integer, Integer)]
-> imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
-\end{verbatim}
-to generate a list of images (of our target rational number) in $Z_p$ and the base primes.
-
-As another example, we have slightly involved function:
-\begin{verbatim}
-> matches3' :: Eq a => [(a, t)] -> (a, t)
-> matches3' (a0@(a,_):bb@((b,_):(c,_):cs))
->   | a == b && b == c = a0
->   | otherwise        = matches3' bb
-\end{verbatim}
-Let us see the first good guess, Haskell tells us that in order to reconstruct, say $\frac{331}{739}$, we should take three primes start from 614693:
-\begin{verbatim}
-  *Ffield> let knowData q = zip (map (modp q) primes) primes
-  *Ffield> matches3' $ map guess $ knowData (331%739)
-  (331 % 739,614693)
-  (18.31 secs, 12,393,394,032 bytes)
-  
-  *Ffield> matches3' $ map guess $ knowData (11%13)
-  (11 % 13,311)
-  (0.02 secs, 2,319,136 bytes)
-  *Ffield> matches3' $ map guess $ knowData (1%13)
-  (1 % 13,191)
-  (0.01 secs, 1,443,704 bytes)
-  *Ffield> matches3' $ map guess $ knowData (1%3)
-  (1 % 3,13)
-  (0.01 secs, 268,592 bytes)
-  *Ffield> matches3' $ map guess $ knowData (11%31)
-  (11 % 31,1129)
-  (0.03 secs, 8,516,568 bytes)
-  *Ffield> matches3' $ map guess $ knowData (12%312)
-  (1 % 26,709)
-\end{verbatim}
-
-\subsubsection{A problem}
-Since our choice of \texttt{bigPrimes} are order $10^6$, our reconstruction can fail for rational numbers of
+This choice of primes of order $O(10^4)$ let our \verb+guess+ function reconstruct rational numbers up to
 \begin{eqnarray}
-\frac{O(10^3)}{O(10^3)},
+\frac{O(10^2)}{O(10^2)}.
 \end{eqnarray}
-say
+
+\subsubsection{Good and bad examples}
+Our \verb+guess+ function can find correct answer from the images of $\frac{12}{13}$.
 \begin{verbatim}
-  *Ffield> let q = 895%922
-  *Ffield> let knownData = imagesAndPrimes q
-  *Ffield> take 4 knownData 
-  [(882873,897473)
-  ,(365035,897497)
-  ,(705735,897499)
-  ,(511060,897517)
-  ]
-  *Ffield> map guess it
-  [((-854) % 123,897473)
-  ,((-656) % 327,897497)
-  ,((-192) % 805,897499)
-  ,((-491) % 497,897517)
-  ]
+  *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
+  *Ffield> let ds = knownData (12%13)
+  *Ffield> map guess ds
+  [Just (12 % 13,10007)
+  ,Just (12 % 13,10009)
+  ,Just (12 % 13,10037)
+  ,Just (12 % 13,10039) ..
 \end{verbatim}
-We can solve this by introducing the following theorem.
+However, for $\frac{112}{113}$, it gets wrong answer.
+\begin{verbatim}
+  *Ffield> let ds' = knownData (112%113)
+  *Ffield> map guess ds'
+  [Just ((-39) % 50,10007)
+  ,Just ((-41) % 48,10009)
+  ,Just ((-69) % 20,10037)
+  ,Just ((-71) % 18,10039) ..
+\end{verbatim}
+
+A solution of this problem is next subsection.
+
+%
+%We choose 3 times match as the termination condition.
+%\begin{verbatim}
+%> matches3 :: Eq a => [a] -> a
+%> matches3 (a:bb@(b:c:cs))
+%>   | a == b && b == c = a
+%>   | otherwise        = matches3 bb
+%\end{verbatim}
+%Finally, we can check our gadgets.
+%
+%What we know is a list of (q `modp` p) and prime p for several (big) primes.
+%\begin{verbatim}
+%  *Ffield> let q = 10%19
+%  *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes 
+%  *Ffield> take 3 knownData 
+%  [(614061,897473),(377894,897497),(566842,897499)]
+%  *Ffield> matches3 $  map (fst . guess) knownData
+%  10 % 19
+%\end{verbatim}
+%The following is the function we need, its input is the list of tuple which first element is the image in $\mathbb{Z}_p$ and second element is that prime $p$.
+%\begin{verbatim}
+%> reconstruct :: Integral a =>
+%>                [(a, a)]  -- :: [(Z_p, primes)]
+%>             -> Ratio a
+%> reconstruct aps = matches3 $ map (fst . guess) aps
+%
+%Here is a naive test:
+%  > let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32
+%             ,869 % 232,778 % 123,331 % 739]
+%  > let modmap q = zip (map (modp q) bigPrimes) bigPrimes 
+%  > let longList = map modmap qs
+%  > map reconstruct longList 
+%  [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32
+%  ,869 % 232,778 % 123,331 % 739]
+%  > it == qs
+%  True
+%\end{verbatim}
+%
+%For later use, let us define
+%\begin{verbatim}
+%> imagesAndPrimes ::  Rational-> [(Integer, Integer)]
+%> imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
+%\end{verbatim}
+%to generate a list of images (of our target rational number) in $Z_p$ and the base primes.
+%
+%As another example, we have slightly involved function:
+%\begin{verbatim}
+%> matches3' :: Eq a => [(a, t)] -> (a, t)
+%> matches3' (a0@(a,_):bb@((b,_):(c,_):cs))
+%>   | a == b && b == c = a0
+%>   | otherwise        = matches3' bb
+%\end{verbatim}
+%Let us see the first good guess, Haskell tells us that in order to reconstruct, say $\frac{331}{739}$, we should take three primes start from 614693:
+%\begin{verbatim}
+%  *Ffield> let knowData q = zip (map (modp q) primes) primes
+%  *Ffield> matches3' $ map guess $ knowData (331%739)
+%  (331 % 739,614693)
+%  (18.31 secs, 12,393,394,032 bytes)
+%  
+%  *Ffield> matches3' $ map guess $ knowData (11%13)
+%  (11 % 13,311)
+%  (0.02 secs, 2,319,136 bytes)
+%  *Ffield> matches3' $ map guess $ knowData (1%13)
+%  (1 % 13,191)
+%  (0.01 secs, 1,443,704 bytes)
+%  *Ffield> matches3' $ map guess $ knowData (1%3)
+%  (1 % 3,13)
+%  (0.01 secs, 268,592 bytes)
+%  *Ffield> matches3' $ map guess $ knowData (11%31)
+%  (11 % 31,1129)
+%  (0.03 secs, 8,516,568 bytes)
+%  *Ffield> matches3' $ map guess $ knowData (12%312)
+%  (1 % 26,709)
+%\end{verbatim}
+%
+%\subsubsection{A problem}
+%Since our choice of \texttt{bigPrimes} are order $10^6$, our reconstruction can fail for rational numbers of
+%\begin{eqnarray}
+%\frac{O(10^3)}{O(10^3)},
+%\end{eqnarray}
+%say
+%\begin{verbatim}
+%  *Ffield> let q = 895%922
+%  *Ffield> let knownData = imagesAndPrimes q
+%  *Ffield> take 4 knownData 
+%  [(882873,897473)
+%  ,(365035,897497)
+%  ,(705735,897499)
+%  ,(511060,897517)
+%  ]
+%  *Ffield> map guess it
+%  [((-854) % 123,897473)
+%  ,((-656) % 327,897497)
+%  ,((-192) % 805,897499)
+%  ,((-491) % 497,897517)
+%  ]
+%\end{verbatim}
+%We can solve this by introducing the following theorem.
 
 \subsection{Chinese remainder theorem}
 From wikipedia\footnote{
@@ -791,7 +841,7 @@ From wikipedia\footnote{
 \begin{quotation}
 There are certain things whose number is unknown. If we count them by threes, we have two left over; by fives, we have three left over; and by sevens, two are left over. How many things are there? 
 \end{quotation}
-Here is a solution with Haskell:
+Here is a solution with Haskell, using list comprehension.
 \begin{verbatim}
 *Ffield> let lst = [n|n<-[0..], mod n 3==2, mod n 5==3, mod n 7==2]
 *Ffield> head lst
@@ -873,37 +923,77 @@ $\blacksquare$
 %\end{eqnarray}
 
 \subsubsection{Haskell implementation}
-Let us see how our naive \texttt{guess} function fail one more time:
+Let us see how our naive \texttt{guess} function fail one more time.
+We make a helper function for tests.
 \begin{verbatim}
-Chinese Remainder Theorem, and its usage
- 
-  *Ffield> let q = 895%922
-  *Ffield> let knownData = imagesAndPrimes q
-  *Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData 
-  *Ffield> take 2 knownData 
-  [(882873,897473),(365035,897497)]
-  *Ffield> map guess it
-  [((-854) % 123,897473),((-656) % 327,897497)]
+> imagesAndPrimes :: Ratio Int -> [(Maybe Int, Int)]
+> imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
+\end{verbatim}
+
+\begin{verbatim}
+*Ffield> let q = 895%922
+*Ffield> let knownData = imagesAndPrimes q
+*Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData
+*Ffield> take 2 knownData
+[(Just 6003,10007),(Just 9782,10009)]
+*Ffield> map guess it
+[Just ((-6) % 5,10007),Just (21 % 44,10009)]
 \end{verbatim}
 
 It suffices to make a binary version of Chinese Remainder theorem in Haskell:
 \begin{verbatim}
-> crtRec' :: Integral t => (t, t) -> (t, t) -> (t, t)
-> crtRec' (a1,p1) (a2,p2) = (a,p)
+Our data is a list of the type
+  [(Maybe Int, Int)]
+In order to use CRT, we should cast its type.
+
+> toInteger2 :: [(Maybe Int, Int)] -> [(Maybe Integer, Integer)]
+> toInteger2 = map helper
+>   where 
+>     helper (x,y) = (fmap toInteger x, toInteger y)
+>
+> crtRec':: Integral a => (Maybe a, a) -> (Maybe a, a) -> (Maybe a, a)
+> crtRec' (Nothing,p) (_,q)       = (Nothing, p*q)
+> crtRec' (_,p)       (Nothing,q) = (Nothing, p*q)
+> crtRec' (Just a1,p1) (Just a2,p2) = (Just a,p)
 >   where
 >     a = (a1*p2*m2 + a2*p1*m1) `mod` p
->     m1 = fromJust (p1 `inversep` p2) 
->     m2 = fromJust (p2 `inversep` p1)
+>     Just m1 = p1 `inversep` p2 
+>     Just m2 = p2 `inversep` p1
 >     p = p1*p2
+
 \end{verbatim}
 \texttt{crtRec'} function takes two tuples of image in $\mathbb{Z}_p$ and primes, and returns these combination.
+
 Now let us fold.
 \begin{verbatim}
-> pile :: (a -> a -> a) -> [a] -> [a]
-> pile f [] = []
-> pile f dd@(d:ds) = d : zipWith' f (pile f dd) ds
+
+  *Ffield> let ds = imagesAndPrimes (1123%1135)
+  *Ffield> map guess ds
+  [Just (25 % 52,10007)
+  ,Just ((-81) % 34,10009)
+  ,Just ((-88) % 63,10037) ..
+
+  *Ffield> matches3 it
+  Nothing
+
+  *Ffield> scanl1 crtRec' ds
+
+  *Ffield> scanl1 crtRec' . toInteger2 $ ds
+  [(Just 3272,10007)
+  ,(Just 14913702,100160063)
+  ,(Just 298491901442,1005306552331) ..
+
+  *Ffield> map guess it
+  [Just (25 % 52,10007)
+  ,Just (1123 % 1135,100160063)
+  ,Just (1123 % 1135,1005306552331)
+  ,Just (1123 % 1135,10092272478850909) ..
+
+  *Ffield> matches3 it
+  Just (1123 % 1135,100160063)
+
 \end{verbatim}
-Schematically, this \texttt{pile f} function takes
+Schematically, this \texttt{scanl1 f} function takes
 \begin{eqnarray}
 \left[d_0, d_1, d_2, d_3, \cdots \right]
 \end{eqnarray}
@@ -911,85 +1001,99 @@ and returns
 \begin{eqnarray}
 \left[d_0, f(d_0,d_1), f(f(d_0,d_1),d_2), f(f(f(d_0,d_1),d_2), d_3), \cdots \right]
 \end{eqnarray}
-We have used another higher order function which is slightly modified from standard definition:
+%We have used another higher order function which is slightly modified from standard definition:
+%\begin{verbatim}
+%> -- Strict zipWith, from:
+%> --   http://d.hatena.ne.jp/kazu-yamamoto/touch/20100624/1277348961
+%> zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
+%> zipWith' f (a:as) (b:bs) = (x `seq` x) : zipWith' f as bs
+%>   where x = f a b
+%> zipWith' _ _      _      = []
+%\end{verbatim}
+%
+%Let us check our implementation.
+%\begin{verbatim}
+%  *Ffield> let q = 895%922
+%  *Ffield> let knownData = imagesAndPrimes q
+%  *Ffield> take 4 knownData 
+%  [(882873,897473)
+%  ,(365035,897497)
+%  ,(705735,897499)
+%  ,(511060,897517)
+%  ]
+%  *Ffield> pile crtRec' it
+%  [(882873,897473)
+%  ,(86488560937,805479325081)
+%  ,(397525881357811624,722916888780872419)
+%  ,(232931448259966259937614,648830197267942270883623)
+%  ]
+%  *Ffield> map guess it
+%  [((-854) % 123,897473)
+%  ,(895 % 922,805479325081)
+%  ,(895 % 922,722916888780872419)
+%  ,(895 % 922,648830197267942270883623)
+%\end{verbatim}
+%So on a product ring $\mathbb{Z}_{805479325081}$, we get the right answer.
+
+\subsection{\texttt{reconstruct}: from image in $\mathbb{Z}_p$ to rational number}
+From above discussion, here we define a function which takes a list of images in $\mathbb{Z}_p$ and returns the rational number.
+It, basically, takes a list of image (of our target rational number) and primes, then applying Chinese Remainder theorem recursively, return several guess of rational number.
+
 \begin{verbatim}
-> -- Strict zipWith, from:
-> --   http://d.hatena.ne.jp/kazu-yamamoto/touch/20100624/1277348961
-> zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
-> zipWith' f (a:as) (b:bs) = (x `seq` x) : zipWith' f as bs
->   where x = f a b
-> zipWith' _ _      _      = []
+We should determine the number of matches to cover the range 
+of machine size integer, i.e., Int of Haskell.
+
+  *Ffield> let mI = maxBound :: Int
+  *Ffield> mI == 2^63-1
+  True
+  *Ffield> logBase 10 (fromIntegral mI)
+  18.964889726830812
+
+Since our choice of bigPrimes are
+  O(10^4)
+5 times is enough to cover the machine size integers.
+
+> reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer)
+> reconstruct = matches 5 . makeList -- 5 times match
+>   where
+>     matches n (a:as)
+>       | all (a==) $ take (n-1) as = a
+>       | otherwise                 = matches n as
+>
+>     makeList = map (fmap fst . guess) . scanl1 crtRec' . toInteger2 
+>                . filter (isJust . fst)
+
+> reconstruct' :: [(Maybe Int, Int)] -> Maybe (Ratio Int)
+> reconstruct' = fmap coersion . reconstruct
+>   where
+>     coersion :: Ratio Integer -> Ratio Int
+>     coersion q = (fromInteger . numerator $ q) 
+>                    % (fromInteger . denominator $ q)
+
+  *Ffield> let q = 513197683989569 % 1047805145658 :: Ratio Int
+  *Ffield> let ds = imagesAndPrimes q
+  *Ffield> let answer = fmap fromRational . reconstruct $ ds
+  *Ffield> answer :: Maybe (Ratio Int)
+  Just (513197683989569 % 1047805145658)
 \end{verbatim}
 
-Let us check our implementation.
-\begin{verbatim}
-  *Ffield> let q = 895%922
-  *Ffield> let knownData = imagesAndPrimes q
-  *Ffield> take 4 knownData 
-  [(882873,897473)
-  ,(365035,897497)
-  ,(705735,897499)
-  ,(511060,897517)
-  ]
-  *Ffield> pile crtRec' it
-  [(882873,897473)
-  ,(86488560937,805479325081)
-  ,(397525881357811624,722916888780872419)
-  ,(232931448259966259937614,648830197267942270883623)
-  ]
-  *Ffield> map guess it
-  [((-854) % 123,897473)
-  ,(895 % 922,805479325081)
-  ,(895 % 922,722916888780872419)
-  ,(895 % 922,648830197267942270883623)
-\end{verbatim}
-So on a product ring $\mathbb{Z}_{805479325081}$, we get the right answer.
-
-\subsection{\texttt{recCRT}: from image in $\mathbb{Z}_p$ to rational number}
-From above discussion, here we can define a function which takes a list of images in $\mathbb{Z}_p$ and returns the rational number.
-What we do is, basically, to take a list of image (of our target rational number) and primes, then applying Chinese Remainder theorem recursively, return several guess of rational number.
-\begin{verbatim}
-> recCRT :: Integral a => [(a,a)] -> Ratio a
-> recCRT = reconstruct . pile crtRec'
-
-> recCRT' = matches3' . map guess . pile crtRec'
-
-  *Ffield> let q = 895%922
-  *Ffield> let knownData = imagesAndPrimes q
-  *Ffield> recCRT knownData 
-  895 % 922
-  *Ffield> recCRT' knownData 
-  (895 % 922,805479325081)
-\end{verbatim}
 Here is some random checks and results.
+
 \begin{verbatim}
-todo: use QuickCheck
+-- QuickCheck
 
-> trial = do
->   n <- randomRIO (0,10000) :: IO Integer
->   d <- randomRIO (1,10000) :: IO Integer
->   let q = (n%d)
->   putStrLn $ "input: " ++ show q
->   return $ recCRT' . imagesAndPrimes $ q
+> prop_rec :: Ratio Int -> Bool
+> prop_rec q = Just q == answer
+>   where
+>    answer :: Maybe (Ratio Int)
+>    answer = fmap fromRational . reconstruct $ ds
+>    ds = imagesAndPrimes q
 
-  *Ffield> trial
-  input: 1080 % 6931
-  (1080 % 6931,805479325081)
-  *Ffield> trial
-  input: 2323 % 1248
-  (2323 % 1248,805479325081)
-  *Ffield> trial
-  input: 6583 % 1528
-  (6583 % 1528,805479325081)
-  *Ffield> trial
-  input: 721 % 423
-  (721 % 423,897473)
-  *Ffield> trial
-  input: 9967 % 7410
-  (9967 % 7410,805479325081)
+  *Ffield> quickCheckWith stdArgs { maxSuccess = 100000 } prop_rec 
+  +++ OK, passed 100000 tests.
 \end{verbatim}
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Polynomials and rational functions}
 The following discussion on an arbitrary field $\mathbb{K}$.
 
@@ -2452,211 +2556,438 @@ Thus, we finally get the following function
   ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]])
 \end{verbatim}
 
-
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Functional reconstruction over finite fields}
 \section{Univariate polynomials}
-We choose our new target the first differences, since once we get it, to reconstruct polynomial is an easy task.
-Once we get the first differences of a polynomial, we get the coefficient list by applying \texttt{npol2pol . newtonC} on it.
-
-\subsection{Pre-cook}
-We need a convertor, or function-modular which takes function and prime, and returns a function on $\mathbb{Z}_p$.
+\subsection{Special data types}
+We introduce few new data types.
 \begin{verbatim}
-> -- Function-modular.
-> fmodp :: Integral c => (a -> Ratio c) -> c -> a -> c
-> f `fmodp` p = (`modp` p) . f
+> type Q = Ratio Int   -- Rational fields
+> type Graph = [(Q,Q)] -- [(x, f x) | x <- someFinieRange]
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> let fs = map f [0..]
-  *FROverZp> take 5 $ map (f `fmodp` 101) [0..]
-  [34,93,87,16,82]
-  *FROverZp> take 5 $ map (`modp` 101) fs
-  [34,93,87,16,82]
+> -- using record syntax
+> data PDiff 
+>   = PDiff { points    :: (Int, Int) -- end points
+>           , value     :: Int        -- Zp value
+>           , basePrime :: Int
+>           }
+>   deriving (Show, Read)
 \end{verbatim}
 
-What we can access is the output list of our target polynomial.
-On $\mathbb{Z}_p$, our input is a finite list
-\begin{eqnarray}
-\texttt{[0,1,2 .. (p-1)]}
-\end{eqnarray}
-so as the output list.
+To apply difference analysis, we introduce a higher order function.
 \begin{verbatim}
-> accessibleData :: (Ratio Int -> Ratio Int) -> Int -> [Int]
-> accessibleData f p = take p $ map (f `fmodp` p) [0..]
-> 
-> accessibleData' :: [Ratio Int] -> Int -> [Int]
-> accessibleData' fs p = take p $ map (`modp` p) fs
+> -- f [a,b,c ..] -> [(f a b), (f b c) ..]
+> -- pair wise application
+> map' :: (a -> a -> b) -> [a] -> [b]
+> map' f as = zipWith f as (tail as)
 \end{verbatim}
 
-\subsection{Difference analysis on $\mathbb{Z}_p$}
-Play the same game over prime field $\mathbb{Z}_p$, i.e., every arithmetic in under $\mod p$.
-
+\subsection{Implementations}
 \begin{verbatim}
-Difference analysis over Z_p
-Every arithmetic should be on Z_p, i.e., (`mod` p).
-
-> difsp :: Integral b => b -> [b] -> [b]
-> difsp p xs = map (`mod` p) (zipWith (-) (tail xs) xs)
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> take 5 $ accessibleData f 101
-  [34,93,87,16,82]
-  *FROverZp> difsp 101 it
-  [59,95,30,66]
-  *FROverZp> difsp 101 it
-  [36,36,36]
-  *FROverZp> difsp 101 it
-  [0,0]
-\end{verbatim}
-Here what we do is, first to take the differences (\texttt{zipWith (-) (tail xs) xs}) and take modular $p$ for all element (\texttt{map (`mod` p)}).
-Now we can recursively apply this \texttt{difsp} over our data.
-\begin{verbatim}
-> difListsp :: Integral b => b -> [[b]] -> [[b]]
-> difListsp _ [] = []
-> difListsp p xx@(xs:xxs) =
->   if isConst xs then xx
->                 else difListsp p $ difsp p xs : xx
->   where
->     isConst (i:jj@(j:js)) = all (==i) jj
->     isConst _ = error "difListsp: "
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> map head $ difListsp 101 [accessibleData f 101]
-  [36,59,34]
-\end{verbatim}
-
-\subsection{Eager and lazy degree}
-From the above difference analysis on $\mathbb{Z}_p$, we get degree of the polynomial.
-Here we have a combination of two degree functions, one is eager and the other lazy:
-\begin{verbatim}
-Degree, eager and lazy versions
-
-> degreep' p xs = length (difListsp p [xs]) -1
-> degreep'Lazy p xs = helper xs 0
->   where
->     helper as@(a:b:c:_) n
->       | a==b && b==c = n -- two times matching
->       | otherwise    = helper (difsp p as) (n+1)
+> -- To select Z_p valid inputs.
+> sample :: Int   -- prime
+>        -> Graph -- increasing input
+>        -> Graph 
+> sample p = filter ((< (fromIntegral p)) . fst)
 >
-> degreep :: Integral b => b -> [b] -> Int
-> degreep p xs = let l = degreep'Lazy p xs in
->   degreep' p $ take (l+2) xs
-
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> let myDeg p = degreep p $ accessibleData f p
-  *FROverZp> myDeg 101
-  2
-  *FROverZp> myDeg 103
-  2
-  *FROverZp> myDeg 107
-  2
-  *FROverZp> degreep 101 $ accessibleData 
-    (\n -> (1%2)+(2%3)*n+(3%4)*n^2+(6%7)*n^7) 101
-  7
-\end{verbatim}
-Now we can take first differences.
-\begin{verbatim}
-> firstDifsp :: Integral a => a -> [a] -> [a]
-> firstDifsp p xs = reverse $ map head $ difListsp p [xs']
+> -- To eliminate (1%p) type "fake" infinity.
+> -- After eliminating these, we can freely use 'modp', primed version.
+> check :: Int   -- prime
+>       -> Graph 
+>       -> Graph -- safe data sets
+> check p = filter (not . isDanger p)
 >   where
->     xs' = take n xs
->     n   = 2+ degreep p xs
+>     isDanger -- To detect (1%p) type infinity.
+>       :: Int -- prime 
+>       -> (Q,Q) -> Bool
+>     isDanger p (_, fx) = (d `rem` p) == 0
+>       where 
+>         d = denominator fx
+> 
+> project :: Int -> (Q,Q) -> (Int, Int)
+> project p (x, fx) -- for simplicity
+>   | denominator x == 1 = (numerator x, fx `modp'` p)
+>   | otherwise          = error "project: integer input?"
+>
+> -- From Graph to Zp (safe) values.
+> onZp 
+>   :: Int                -- base prime
+>   -> Graph
+>   -> [(Int, Int)] -- in-out on Zp value 
+> onZp p = map (project p) . check p . sample p
+>
+> toPDiff 
+>   :: Int        -- prime
+>   -> (Int, Int) -- in and out mod p 
+>   -> PDiff
+> toPDiff p (x,fx) = PDiff (x,x) fx p
+>
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> firstDifsp 101 $ accessibleData f 101
-  [34,59,36]
-  *FROverZp> firstDifsp 101 $ accessibleData 
-    (\n -> (1%2)+(2%3)*n+(3%4)*n^2+(6%7)*n^7) 101
-  [51,66,59,33,29,58,32,78]
 \end{verbatim}
 
-\subsection{Term by term reconstruction}
-The output list of \texttt{firstDifsp} are basically the coefficients of Newton representation on $\mathbb{Z}_p$.
-So we zip it with our base prime $p$ and map these pair over several primes.
 \begin{verbatim}
-> wellOrd :: [[a]] -> [[a]]
-> wellOrd xss 
->   | null (head xss) = [] 
->   | otherwise       = map head xss : wellOrd (map tail xss)
+> newtonTriangleZp :: [PDiff] -> [[PDiff]]
+> newtonTriangleZp fs
+>   | length fs < 3 = []
+>   | otherwise     = helper [sf3] (drop 3 fs)
+>   where
+>     sf3 = reverse . take 3 $ fs -- [[f2,f1,f0]]
+>     helper fss [] = error "newtonTriangleZp: need more evaluation" 
+>     helper fss (f:fs)
+>       | isConsts 3 . last $ fss = fss
+>       | otherwise               = helper (add1 f fss) fs
+>
+> isConsts 
+>   :: Int -- 3times match
+>   -> [PDiff] -> Bool
+> isConsts n ds
+>   | length ds < n = False    
+> -- isConsts n ds     = all (==l) $ take (n-1) ls
+>   | otherwise     = all (==l) $ take (n-1) ls
+>   where 
+>     (l:ls) = map value ds
+>
+> -- backward, each [PDiff] is decreasing inputs (i.e., reversed)
+> add1 :: PDiff -> [[PDiff]] -> [[PDiff]]
+> add1 f [gs] = fgs : [zipWith bdiffStep fgs gs] -- singleton
+>   where 
+>     fgs = f:gs
+> add1 f (gg@(g:gs) : hhs) -- gg is reversed order
+>             = (f:gg) : add1 fg hhs
+>   where
+>     fg = bdiffStep f g
+>
+> -- backward
+> bdiffStep :: PDiff -> PDiff -> PDiff
+> bdiffStep (PDiff (y,y') g q) (PDiff (x,x') f p)
+>   | p == q    = PDiff (x,y') finiteDiff p
+>   | otherwise = error "bdiffStep: different primes?"
+>   where
+>     finiteDiff = ((fg % xy') `modp'` p)
+>     xy' = (x - y' `mod` p)
+>     fg = ((f-g) `mod` p) 
+>
+> graph2Zp :: Int -> Graph -> [(Int, Int)]
+> graph2Zp p = onZp p . check p . sample p 
+>
+> graph2PDiff :: Int -> Graph -> [PDiff]
+> graph2PDiff p = map (toPDiff p) . graph2Zp p
+>
+> newtonTriangleZp' :: Int -> Graph -> [[PDiff]]
+> newtonTriangleZp' p = newtonTriangleZp . graph2PDiff p
+> 
+> newtonCoeffZp :: Int -> Graph -> [PDiff]
+> newtonCoeffZp p = map head . newtonTriangleZp' p
 
-  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
-  *FROverZp> let fps p = accessibleData f p
-  *FROverZp> let ourData p = firstDifsp p (fps p)
-  *FROverZp> let fivePrimes = take 5 bigPrimes 
-  *FROverZp> map (\p -> zip (ourData p) (repeat p)) fivePrimes 
-  [[(299158,897473),(867559,897473),(299160,897473)]
-  ,[(299166,897497),(329084,897497),(299168,897497)]
-  ,[(598333,897499),(388918,897499),(598335,897499)]
-  ,[(598345,897517),(29919,897517),(598347,897517)]
-  ,[(299176,897527),(329095,897527),(299178,897527)]
+  *GUniFin> let gs = map (\x -> (x,x^2 + (1%2)*x + 1%3)) 
+                         [1,2,4,5,9,10,11] :: Graph 
+  *GUniFin> newtonCoeffZp 101 gs
+  [PDiff {points = (9,9), value = 69, basePrime = 101}
+  ,PDiff {points = (5,9), value = 65, basePrime = 101}
+  ,PDiff {points = (4,9), value = 1, basePrime = 101}
   ]
-  *FROverZp> wellOrd it
-  [[(299158,897473),(299166,897497),(598333,897499)
-   ,(598345,897517),(299176,897527)]
-  ,[(867559,897473),(329084,897497),(388918,897499)
-   ,(29919,897517),(329095,897527)]
-  ,[(299160,897473),(299168,897497),(598335,897499)
-   ,(598347,897517),(299178,897527)]
+  *GUniFin> map (\x -> (Just . value $ x, basePrime x)) it
+  [(Just 69,101),(Just 65,101),(Just 1,101)]
+
+We take formally the canonical form on Zp, 
+then apply rational "number" reconstruction.
+
+> n2cZp :: [PDiff] -> ([Int], Int)
+> n2cZp graph = (helper graph, p)
+>   where
+>     p = basePrime . head $ graph
+>     helper [d]    = [value d]
+>     helper (d:ds) = map (`mod` p) $ ([value d] + (z * next)) 
+>                                    - (map (`mod` p) (zd .* next))
+>       where 
+>         zd = fst . points $ d
+>         next = helper ds
+>
+> format :: ([Int],Int) -> [(Maybe Int, Int)]
+> format (as,p) = [(return a,p) | a <- as]
+  
+  *GUniFin> let gs = map (\x -> (x,x^2 + (1%2)*x + 1%3)) 
+                         [0,2,3,5,7,8,11] :: Graph 
+  *GUniFin> newtonCoeffZp 10007 gs
+  [PDiff {points = (7,7), value = 8392, basePrime = 10007}
+  ,PDiff {points = (5,7), value = 5016, basePrime = 10007}
+  ,PDiff {points = (3,7), value = 1, basePrime = 10007}
   ]
-  *FROverZp> :t it
-  it :: [[(Int, Int)]]
-\end{verbatim}
-Finally we get the images of first differences over prime fields.
+  *GUniFin> n2cZp it
+  ([3336,5004,1],10007)
+  *GUniFin> format it
+  [(Just 3336,10007),(Just 5004,10007),(Just 1,10007)]
+  *GUniFin> map guess it
+  [Just (1 % 3,10007),Just (1 % 2,10007),Just (1 % 1,10007)]
 
-One minor issue is to change the data type, since our tools (say the functions of Chinese Remainder Theorem) use limit-less integer \texttt{Integer}.
-\begin{verbatim}
-> toInteger2 :: (Integral a1, Integral a) => (a, a1) -> (Integer, Integer)
-> toInteger2 (a,b) = (toInteger a, toInteger b)
-\end{verbatim}
+  *GUniFin> let gs = map (\x -> (x,x^2 + (1%2)*x + 1%3)) 
+                         [0,2,3,5,7,8,11] :: Graph 
+  *GUniFin> map guess . format . n2cZp . newtonCoeffZp 10007 $ gs
+  [Just (1 % 3,10007),Just (1 % 2,10007),Just (1 % 1,10007)]
+  *GUniFin> let gs = map (\x -> (x,x^5 + x^2 + (1%2)*x + 1%3)) 
+                         [0,2,3,5,7,8,11,13,17,18,19,21,24,28,31,33,34] 
+                         :: Graph 
+  *GUniFin> map guess . format . n2cZp . newtonCoeffZp 10007 $ gs
+  [Just (1 % 3,10007),Just (1 % 2,10007),Just (1 % 1,10007)
+  ,Just (0 % 1,10007),Just (0 % 1,10007),Just (1 % 1,10007)
+  ] 
 
-Let us take an example:
-\begin{verbatim}
-  *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
-  *FROverZp> let fps p = accessibleData f p
-  *FROverZp> let longList = map (map toInteger2) $ wellOrd $ 
-    map (\p -> zip (firstDifsp p (fps p)) (repeat p)) bigPrimes 
-  *FROverZp> map recCRT' longList 
-  [(895 % 922,805479325081)
-  ,(17448553 % 8649888,722916888780872419)
-  ,(2323 % 624,805479325081)
+> preTrial gs p = format . n2cZp . newtonCoeffZp p $ gs
+
+  *GUniFin> let gs = map (\x -> (x,x^5 + x^2 + (1%2)*x + 1%3)) 
+                         [0,2,3,5,7,8,11,13,17,18,19,21,24,28,31,33,34] 
+                         :: Graph 
+  *GUniFin> map reconstruct . transpose . map (preTrial gs) $ bigPrimes 
+  [Just (1 % 3),Just (1 % 2),Just (1 % 1)
+  ,Just (0 % 1),Just (0 % 1),Just (1 % 1)
   ]
 
-This result is consistent to that of on Q:
+Here is "a" final version, the univariate polynomial reconstruction 
+with finite fields.
 
-  *FROverZp> :l Univariate
-  [1 of 2] Compiling Polynomials      ( Polynomials.hs, interpreted )
-  [2 of 2] Compiling Univariate       ( Univariate.lhs, interpreted )
-  Ok, modules loaded: Univariate, Polynomials.
-  *Univariate> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
-  *Univariate> firstDifs (map f [0..20])
-  [895 % 922,17448553 % 8649888,2323 % 624]
-\end{verbatim}
+> uniPolCoeff :: Graph -> Maybe [(Ratio Int)]
+> uniPolCoeff gs
+>   = (mapM reconstruct' . transpose . map (preTrial gs)) bigPrimes
 
-\subsection{\texttt{list2polZp}: from the output list to coefficient lists}
-Finally we get the function which takes an output list of our unknown univariate polynomial and returns the coefficient.
-\begin{verbatim}
-> list2firstDifZp' fs = 
->   map recCRT' $ map (map toInteger2) $ wellOrd $ map helper bigPrimes
->   where helper p = zip (firstDifsp p (accessibleData' fs p)) (repeat p)
-
-  *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
-  *FROverZp> let fs = map f [0..]
-  *FROverZp> list2firstDifZp' fs
-  [(895 % 922,805479325081)
-  ,(17448553 % 8649888,722916888780872419)
-  ,(2323 % 624,805479325081)
+  *GUniFin> let gs = map (\x -> (x,x^5 + x^2 + (1%2)*x + 1%3)) 
+                         [0,2,3,5,7,8,11,13,17,18,19,21,24,28,31,33,34]
+                         :: Graph
+  *GUniFin> gs
+  [(0 % 1,1 % 3),(2 % 1,112 % 3),(3 % 1,1523 % 6),(5 % 1,18917 % 6)
+  ,(7 % 1,101159 % 6),(8 % 1,98509 % 3),(11 % 1,967067 % 6)
+  ,(13 % 1,2228813 % 6),(17 % 1,8520929 % 6),(18 % 1,5669704 % 3)
+  ,(19 % 1,14858819 % 6),(21 % 1,24507317 % 6),(24 % 1,23889637 % 3)
+  ,(28 % 1,51633499 % 3),(31 % 1,171780767 % 6),(33 % 1,234818993 % 6)
+  ,(34 % 1,136309792 % 3)
   ]
-  *FROverZp> map fst it
-  [895 % 922,17448553 % 8649888,2323 % 624]
-  *FROverZp> newtonC it
-  [895 % 922,17448553 % 8649888,2323 % 1248]
-  *FROverZp> npol2pol it
-  [895 % 922,1080 % 6931,2323 % 1248]
+  *GUniFin> uniPolCoeff gs
+  Just [1 % 3,1 % 2,1 % 1,0 % 1,0 % 1,1 % 1]
 
-> list2polZp :: [Ratio Int] -> [Ratio Integer]
-> list2polZp = npol2pol . newtonC . (map fst) . list2firstDifZp'
+  *GUniFin> let fs = map (\x -> (x,(3+x+(1%3)*x^9)/(1))) 
+                         [1,3..101] :: Graph
+  *GUniFin> uniPolCoeff fs
+  Just [3 % 1,1 % 1,0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,0 % 1,1 % 3]
+  *GUniFin> let fs = map (\x -> (x,(3+x+(1%3)*x^10)/(1))) 
+                         [1,3..101] :: Graph
+  *GUniFin> uniPolCoeff fs
+  *** Exception: newtonBT: need more evaluation
+  CallStack (from HasCallStack):
+    error, called at GUniFin.lhs:79:23 in main:GUniFin
+  *GUniFin> let fs = map (\x -> (x,(3+x+(1%3)*x^10)/(1))) 
+                         [1,3..1001] :: Graph
+  *GUniFin> uniPolCoeff fs
+  *** Exception: newtonBT: need more evaluation
+  CallStack (from HasCallStack):
+    error, called at GUniFin.lhs:79:23 in main:GUniFin
+
+Rough estimation says, in 64-bits system with sequential inputs,
+the upper limit of degree is about 15.
+If we use non sequential inputs, this upper limit will go down.
 \end{verbatim}
+
+\section{Univariate rational functions}
+
+%
+%We choose our new target the first differences, since once we get it, to reconstruct polynomial is an easy task.
+%Once we get the first differences of a polynomial, we get the coefficient list by applying \texttt{npol2pol . newtonC} on it.
+%
+%\subsection{Pre-cook}
+%We need a convertor, or function-modular which takes function and prime, and returns a function on $\mathbb{Z}_p$.
+%\begin{verbatim}
+%> -- Function-modular.
+%> fmodp :: Integral c => (a -> Ratio c) -> c -> a -> c
+%> f `fmodp` p = (`modp` p) . f
+%
+%  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+%  *FROverZp> let fs = map f [0..]
+%  *FROverZp> take 5 $ map (f `fmodp` 101) [0..]
+%  [34,93,87,16,82]
+%  *FROverZp> take 5 $ map (`modp` 101) fs
+%  [34,93,87,16,82]
+%\end{verbatim}
+%
+%What we can access is the output list of our target polynomial.
+%On $\mathbb{Z}_p$, our input is a finite list
+%\begin{eqnarray}
+%\texttt{[0,1,2 .. (p-1)]}
+%\end{eqnarray}
+%so as the output list.
+%\begin{verbatim}
+%> accessibleData :: (Ratio Int -> Ratio Int) -> Int -> [Int]
+%> accessibleData f p = take p $ map (f `fmodp` p) [0..]
+%> 
+%> accessibleData' :: [Ratio Int] -> Int -> [Int]
+%> accessibleData' fs p = take p $ map (`modp` p) fs
+%\end{verbatim}
+%
+%\subsection{Difference analysis on $\mathbb{Z}_p$}
+%Play the same game over prime field $\mathbb{Z}_p$, i.e., every arithmetic in under $\mod p$.
+%
+%\begin{verbatim}
+%Difference analysis over Z_p
+%Every arithmetic should be on Z_p, i.e., (`mod` p).
+%
+%> difsp :: Integral b => b -> [b] -> [b]
+%> difsp p xs = map (`mod` p) (zipWith (-) (tail xs) xs)
+%
+%  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+%  *FROverZp> take 5 $ accessibleData f 101
+%  [34,93,87,16,82]
+%  *FROverZp> difsp 101 it
+%  [59,95,30,66]
+%  *FROverZp> difsp 101 it
+%  [36,36,36]
+%  *FROverZp> difsp 101 it
+%  [0,0]
+%\end{verbatim}
+%Here what we do is, first to take the differences (\texttt{zipWith (-) (tail xs) xs}) and take modular $p$ for all element (\texttt{map (`mod` p)}).
+%Now we can recursively apply this \texttt{difsp} over our data.
+%\begin{verbatim}
+%> difListsp :: Integral b => b -> [[b]] -> [[b]]
+%> difListsp _ [] = []
+%> difListsp p xx@(xs:xxs) =
+%>   if isConst xs then xx
+%>                 else difListsp p $ difsp p xs : xx
+%>   where
+%>     isConst (i:jj@(j:js)) = all (==i) jj
+%>     isConst _ = error "difListsp: "
+%
+%  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+%  *FROverZp> map head $ difListsp 101 [accessibleData f 101]
+%  [36,59,34]
+%\end{verbatim}
+%
+%\subsection{Eager and lazy degree}
+%From the above difference analysis on $\mathbb{Z}_p$, we get degree of the polynomial.
+%Here we have a combination of two degree functions, one is eager and the other lazy:
+%\begin{verbatim}
+%Degree, eager and lazy versions
+%
+%> degreep' p xs = length (difListsp p [xs]) -1
+%> degreep'Lazy p xs = helper xs 0
+%>   where
+%>     helper as@(a:b:c:_) n
+%>       | a==b && b==c = n -- two times matching
+%>       | otherwise    = helper (difsp p as) (n+1)
+%>
+%> degreep :: Integral b => b -> [b] -> Int
+%> degreep p xs = let l = degreep'Lazy p xs in
+%>   degreep' p $ take (l+2) xs
+%
+%  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+%  *FROverZp> let myDeg p = degreep p $ accessibleData f p
+%  *FROverZp> myDeg 101
+%  2
+%  *FROverZp> myDeg 103
+%  2
+%  *FROverZp> myDeg 107
+%  2
+%  *FROverZp> degreep 101 $ accessibleData 
+%    (\n -> (1%2)+(2%3)*n+(3%4)*n^2+(6%7)*n^7) 101
+%  7
+%\end{verbatim}
+%Now we can take first differences.
+%\begin{verbatim}
+%> firstDifsp :: Integral a => a -> [a] -> [a]
+%> firstDifsp p xs = reverse $ map head $ difListsp p [xs']
+%>   where
+%>     xs' = take n xs
+%>     n   = 2+ degreep p xs
+%
+%  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+%  *FROverZp> firstDifsp 101 $ accessibleData f 101
+%  [34,59,36]
+%  *FROverZp> firstDifsp 101 $ accessibleData 
+%    (\n -> (1%2)+(2%3)*n+(3%4)*n^2+(6%7)*n^7) 101
+%  [51,66,59,33,29,58,32,78]
+%\end{verbatim}
+%
+%\subsection{Term by term reconstruction}
+%The output list of \texttt{firstDifsp} are basically the coefficients of Newton representation on $\mathbb{Z}_p$.
+%So we zip it with our base prime $p$ and map these pair over several primes.
+%\begin{verbatim}
+%> wellOrd :: [[a]] -> [[a]]
+%> wellOrd xss 
+%>   | null (head xss) = [] 
+%>   | otherwise       = map head xss : wellOrd (map tail xss)
+%
+%  *FROverZp> let f x = (1%3) + (3%5)*x + (7%6)*x^2
+%  *FROverZp> let fps p = accessibleData f p
+%  *FROverZp> let ourData p = firstDifsp p (fps p)
+%  *FROverZp> let fivePrimes = take 5 bigPrimes 
+%  *FROverZp> map (\p -> zip (ourData p) (repeat p)) fivePrimes 
+%  [[(299158,897473),(867559,897473),(299160,897473)]
+%  ,[(299166,897497),(329084,897497),(299168,897497)]
+%  ,[(598333,897499),(388918,897499),(598335,897499)]
+%  ,[(598345,897517),(29919,897517),(598347,897517)]
+%  ,[(299176,897527),(329095,897527),(299178,897527)]
+%  ]
+%  *FROverZp> wellOrd it
+%  [[(299158,897473),(299166,897497),(598333,897499)
+%   ,(598345,897517),(299176,897527)]
+%  ,[(867559,897473),(329084,897497),(388918,897499)
+%   ,(29919,897517),(329095,897527)]
+%  ,[(299160,897473),(299168,897497),(598335,897499)
+%   ,(598347,897517),(299178,897527)]
+%  ]
+%  *FROverZp> :t it
+%  it :: [[(Int, Int)]]
+%\end{verbatim}
+%Finally we get the images of first differences over prime fields.
+%
+%One minor issue is to change the data type, since our tools (say the functions of Chinese Remainder Theorem) use limit-less integer \texttt{Integer}.
+%\begin{verbatim}
+%> toInteger2 :: (Integral a1, Integral a) => (a, a1) -> (Integer, Integer)
+%> toInteger2 (a,b) = (toInteger a, toInteger b)
+%\end{verbatim}
+%
+%Let us take an example:
+%\begin{verbatim}
+%  *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
+%  *FROverZp> let fps p = accessibleData f p
+%  *FROverZp> let longList = map (map toInteger2) $ wellOrd $ 
+%    map (\p -> zip (firstDifsp p (fps p)) (repeat p)) bigPrimes 
+%  *FROverZp> map recCRT' longList 
+%  [(895 % 922,805479325081)
+%  ,(17448553 % 8649888,722916888780872419)
+%  ,(2323 % 624,805479325081)
+%  ]
+%
+%This result is consistent to that of on Q:
+%
+%  *FROverZp> :l Univariate
+%  [1 of 2] Compiling Polynomials      ( Polynomials.hs, interpreted )
+%  [2 of 2] Compiling Univariate       ( Univariate.lhs, interpreted )
+%  Ok, modules loaded: Univariate, Polynomials.
+%  *Univariate> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
+%  *Univariate> firstDifs (map f [0..20])
+%  [895 % 922,17448553 % 8649888,2323 % 624]
+%\end{verbatim}
+%
+%\subsection{\texttt{list2polZp}: from the output list to coefficient lists}
+%Finally we get the function which takes an output list of our unknown univariate polynomial and returns the coefficient.
+%\begin{verbatim}
+%> list2firstDifZp' fs = 
+%>   map recCRT' $ map (map toInteger2) $ wellOrd $ map helper bigPrimes
+%>   where helper p = zip (firstDifsp p (accessibleData' fs p)) (repeat p)
+%
+%  *FROverZp> let f x = (895 % 922) + (1080 % 6931)*x + (2323 % 1248)*x^2
+%  *FROverZp> let fs = map f [0..]
+%  *FROverZp> list2firstDifZp' fs
+%  [(895 % 922,805479325081)
+%  ,(17448553 % 8649888,722916888780872419)
+%  ,(2323 % 624,805479325081)
+%  ]
+%  *FROverZp> map fst it
+%  [895 % 922,17448553 % 8649888,2323 % 624]
+%  *FROverZp> newtonC it
+%  [895 % 922,17448553 % 8649888,2323 % 1248]
+%  *FROverZp> npol2pol it
+%  [895 % 922,1080 % 6931,2323 % 1248]
+%
+%> list2polZp :: [Ratio Int] -> [Ratio Integer]
+%> list2polZp = npol2pol . newtonC . (map fst) . list2firstDifZp'
+%\end{verbatim}
 
 \section{TBA Univariate rational functions}
 
@@ -2692,8 +3023,11 @@ Finally we get the function which takes an output list of our unknown univariate
 \section{\texttt{Multivariate.lhs}}
 \lstinputlisting[caption=Multivariate.lhs,label=Multivariate]{Multivariate.lhs}
 
-\section{\texttt{FROverZp.lhs}}
-\lstinputlisting[caption=FROverZp.lhs,label=FROverZp]{FROverZp.lhs}
+\section{\texttt{GUniFin.lhs}}
+\lstinputlisting[caption=GUniFin.lhs,label=GUniFin]{GUniFin.lhs}
+
+\section{\texttt{GMulFin.lhs}}
+\lstinputlisting[caption=GMulFin.lhs,label=GMulFin]{GMulFin.lhs}
 
 
 \end{document}

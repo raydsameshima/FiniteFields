@@ -36,7 +36,7 @@ Accessible input is pairs of in-out, i.e., a (sub) graph of f.
 > check :: Int   -- prime
 >       -> Graph 
 >       -> Graph -- safe data sets
-> check p gs = filter (not . isDanger p) gs
+> check p = filter (not . isDanger p)
 >   where
 >     isDanger -- To detect (1%p) type infinity.
 >       :: Int -- prime 
@@ -191,8 +191,8 @@ Here is "a" final version, the univariate polynomial reconstruction
 with finite fields.
 
 > uniPolCoeff :: Graph -> Maybe [(Ratio Int)]
-> uniPolCoeff gs = sequence . map reconstruct' . transpose . 
->                  map (preTrial gs) $ bigPrimes
+> uniPolCoeff gs
+>   = (mapM reconstruct' . transpose . map (preTrial gs)) bigPrimes
 
   *GUniFin> let gs = map (\x -> (x,x^5 + x^2 + (1%2)*x + 1%3)) 
                          [0,2,3,5,7,8,11,13,17,18,19,21,24,28,31,33,34]
@@ -857,8 +857,10 @@ Finally, we need the Thiele coefficients!
 >     num = helper fst
 >     den = helper snd
 >     helper third 
->       = join . fmap (sequence . map reconstruct . transpose . map third) 
->         . sequence . map (ratCanZp' fs) $ bigPrimes
+>       = join . fmap (mapM reconstruct . transpose . map third)
+>         . mapM (ratCanZp' fs) $ bigPrimes
+> --    = join . fmap (sequence . map reconstruct . transpose . map third) 
+> --      . sequence . map (ratCanZp' fs) $ bigPrimes
   
   *GUniFin> let f x = x^3 / (1+x)^4
   (0.01 secs, 48,440 bytes)
