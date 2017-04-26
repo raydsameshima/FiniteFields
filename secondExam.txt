@@ -4,8 +4,7 @@ date: May 26 2017 (2017/05/26)
 
 title:
 (From APS meeting)
-Integrand Reduction reloaded
-Algebraic Geometry and Finite Fields
+Integrand Reduction reloaded; Algebraic Geometry and Finite Fields
 
 abstract:
 (From APS meeting)
@@ -26,11 +25,27 @@ However, plenty of work is still needed at higher orders, starting with
 the two-loop case.
 Recently, integrand reduction has been revisited using algebraic geometry.
 
-I will review the salient features of integrand reduction for dimensionally 
-regulated Feynman integrals, and describe an interesting technique for their
-reduction based on multivariate polynomial division.
-I will explain the basics of functional reconstruction techniques, and show
-a novel approach to improve its efficiency by introducing finite fields.
+Algebraic geometry provides a systematic formalism to deal with integral
+reduction as multivariate polynomial division, and Groebner basis plays
+a main role in the reduction.
+After the reduction, outcomes can be mathematically complicated forms.
+Instead of treating them symbolically to canonicalize, we can simply 
+evaluate such functions on integers and reconstruct them.
+This functional reconstruction uses four basic arithmetic operation, i.e., addition, subtraction, multiplication and division.
+We usually perform such operations over the rational number field on 
+computer systems.
+The rational number field consists of an infinite set, and this fact can 
+cause overflow in the intermediate step of canonicalization.
+By introducing a finite field, which is quotient ring of a prime, these four
+operations are closed in a finite set, and no overflows.
+We also gain the efficiency of reconstruction over finite fields.
+We can remap the canonicalized function on the rational field using Chinese remainder theorem.
+
+
+
+
+
+
 
 
 
