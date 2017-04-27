@@ -7,7 +7,6 @@ title:
 Integrand Reduction reloaded; Algebraic Geometry and Finite Fields
 
 abstract:
-(From APS meeting)
 The evaluation of scattering amplitudes in quantum field theory allows us
 to compare the phenomenological prediction of particle theory with the 
 measurement at collider experiments.
@@ -27,7 +26,7 @@ Recently, integrand reduction has been revisited using algebraic geometry.
 
 Algebraic geometry provides a systematic formalism to deal with integral
 reduction as multivariate polynomial division, and Groebner basis plays
-a main role in the reduction.
+a main role in the reduction process.
 After the reduction, outcomes can be mathematically complicated forms.
 Instead of treating them symbolically to canonicalize, we can simply 
 evaluate such functions on integers and reconstruct them.
@@ -36,10 +35,11 @@ We usually perform such operations over the rational number field on
 computer systems.
 The rational number field consists of an infinite set, and this fact can 
 cause overflow in the intermediate step of canonicalization.
-By introducing a finite field, which is quotient ring of a prime, these four
-operations are closed in a finite set, and no overflows.
-We also gain the efficiency of reconstruction over finite fields.
-We can remap the canonicalized function on the rational field using Chinese remainder theorem.
+By introducing a finite field, which is a quotient ring of a prime, these
+four operations are closed in a finite set and no overflows, and indeed are
+more efficiently performed.
+We can remap, from finite fields, the canonicalized function on the rational
+field using Chinese remainder theorem.
 
 
 
