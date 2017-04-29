@@ -1,73 +1,73 @@
 secondExam.txt
 
-date: May 26 2017 (2017/05/26)
+Name: 
+  Ray D. Sameshima
+Affiliation:
+  Graduate School and University Center, City University of New York
+  New York City College of Technology, City University of New York
+Banner ID number: 
+  000118225
+Supervisors:
+  Andrea Ferroglia (City Tech and Graduate Center, CUNY)
+  Giovanni Ossola (City Tech and Graduate Center, CUNY) 
 
-title:
-(From APS meeting)
+Date: 
+  May 26 2017 (2017/05/26)
+Time: 
+  10:30 am - 12:30 pm
+Place: 
+  the President's conference room at City Tech
+
+Title:
 Integrand Reduction reloaded; Algebraic Geometry and Finite Fields
 
-abstract:
-The evaluation of scattering amplitudes in quantum field theory allows us
-to compare the phenomenological prediction of particle theory with the 
-measurement at collider experiments.
-The study of scattering amplitudes, in terms of their symmetries and 
-analytic properties, provides a theoretical framework to develop techniques 
-and efficient algorithms for the evaluation of physical cross sections and
-differential distributions.
+Abstract:
+The evaluation of scattering amplitudes in quantum field theory allows us to compare the phenomenological prediction of particle theory with the measurement at collider experiments.
+The study of scattering amplitudes, in terms of their symmetries and analytic properties, provides a theoretical framework to develop techniques and efficient algorithms for the evaluation of physical cross sections and differential distributions.
 Tree-level calculations have been known for a long time.
-Loop amplitudes, which are needed to reduce the theoretical uncertainty, are
-more challenging since they involves a large number of Feynman diagrams, 
-expressed as integrals of rational functions.
-At one-loop, the problem has been solved thanks to the combined effect of
-integrand reduction, such as the OPP method and unitarity.
-However, plenty of work is still needed at higher orders, starting with 
-the two-loop case.
+Loop amplitudes, which are needed to reduce the theoretical uncertainty, are more challenging since they involve a large number of Feynman diagrams, expressed as integrals of rational functions.
+At one-loop, the problem has been solved thanks to the combined effect of integrand reduction, such as the OPP method, and unitarity.
+However, plenty of work is still needed at higher orders, starting with the two-loop case.
+
 Recently, integrand reduction has been revisited using algebraic geometry.
-
-Algebraic geometry provides a systematic formalism to deal with integral
-reduction as multivariate polynomial division, and Groebner basis plays
-a main role in the reduction process.
+Algebraic geometry provides a systematic formalism to deal with integral reduction as multivariate polynomial division, and Groebner basis plays a main role in the reduction process.
 After the reduction, outcomes can be mathematically complicated forms.
-Instead of treating them symbolically to canonicalize, we can simply 
-evaluate such functions on integers and reconstruct them.
-This functional reconstruction uses four basic arithmetic operation, i.e., addition, subtraction, multiplication and division.
-We usually perform such operations over the rational number field on 
-computer systems.
-The rational number field consists of an infinite set, and this fact can 
-cause overflow in the intermediate step of canonicalization.
-By introducing a finite field, which is a quotient ring of a prime, these
-four operations are closed in a finite set and no overflows, and indeed are
-more efficiently performed.
-We can remap, from finite fields, the canonicalized function on the rational
-field using Chinese remainder theorem.
+Instead of treating them symbolically, we can simply evaluate such functions on integer values to reconstruct them.
+This functional reconstruction uses simply four basic arithmetic operation, i.e., addition, subtraction, multiplication and division.
+We usually perform such operations over the rational number field on computer systems.
+The rational number field consists of an infinite set, and this fact can cause overflow in intermediate steps.
+By introducing a finite field, which is a quotient ring of a prime, these four operations are closed in a finite set, and indeed are more efficiently performed.
 
 
-
-
-
-
-
-
-
-containts:
+Outlines
 
 Physics
-  Scattering Amplitudes
+  Scattering Amplitudes; General introduction
+    Generation, reduction, and evaluation
+
   OPP (Multivariate Polynomial Division)
-    (Facts: 4 and (4-2\epsilon) cases)
+    Integrand reduction
+    Master Integrals
+    Examples
+      1-loop over 4 and (4-2\epsilon) dim 
 
 Techniques
   Algebraic Geometry
     Multivariate Polynomial Division
-    Groebner basis  
+    Groebner basis
+      Scattering amplitude in AG context
+      Higher (all) loops
+
   Functional reconstruction 
     Newton and Thiele interpolation methods
     Finite Fields
       Rational Number reconstruction (with CRT)
     Toward Multivariate functions
 
-  Haskell language
-
+Summary
+  ideas, techniques
+  Haskell
+  Working examples (e.g., 2 var.)
     
 (ttZ and ttW paper with Andrea)
   LO, NLO, and NLO(no qg) numerical evaluation of total cross section
