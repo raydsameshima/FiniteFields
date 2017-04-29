@@ -42,18 +42,11 @@ makeGraph_
 > gunc x = (1%1)/((x-1)*(x-2))
 
 > main = do
->   makeGraph_ gunc [0..10]
-
-  rds:ToyBox rds$ runghc catchIO.lhs >> graph.dat
-  rds:ToyBox rds$ cat graph.dat 
-  (0 % 1,1 % 2)
-  (3 % 1,1 % 2)
-  (4 % 1,1 % 6)
-  (5 % 1,1 % 12)
-  (6 % 1,1 % 20)
-  (7 % 1,1 % 30)
-  (8 % 1,1 % 42)
-  (9 % 1,1 % 56)
-  (10 % 1,1 % 72)
+>   arg <- getLine
+>   let d = read arg :: Int
+>   if d < 0 
+>     then return ()
+>     else
+>       makeGraph_ gunc $ take d [0..]
 
 
