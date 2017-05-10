@@ -1180,64 +1180,67 @@ Univariate.lhs
 
 \subsection{A polynomial as a list of coefficients}
 Let us start \texttt{instance} declaration, which enable us to use basic arithmetics, e.g., addition and multiplication.
-\begin{verbatim}
--- Polynomials.hs
--- http://homepages.cwi.nl/~jve/rcrh/Polynomials.hs
 
-module Polynomials where
+\lstinputlisting[caption=Polynomials.hs,label=Polynomials]{Polynomials.hs}
 
-default (Integer, Rational, Double) 
-
--- polynomials, as coefficients lists
-instance (Num a, Ord a) => Num [a] where
-  fromInteger c = [fromInteger c] 
-  -- operator overloading
-  negate []     = []
-  negate (f:fs) = (negate f) : (negate fs)
-
-  signum [] = []
-  signum gs 
-    | signum (last gs) < (fromInteger 0) = negate z
-    | otherwise = z
-
-  abs [] = []
-  abs gs 
-    | signum gs == z = gs
-    | otherwise      = negate gs
-
-  fs     + []     = fs
-  []     + gs     = gs
-  (f:fs) + (g:gs) = f+g : fs+gs
-
-  fs     * []     = []
-  []     * gs     = []
-  (f:fs) * gg@(g:gs) = f*g : (f .* gs + fs * gg)
-
-delta :: (Num a, Ord a) => [a] -> [a]
-delta = ([1,-1] *)
-
-shift :: [a] -> [a]
-shift = tail 
-
-p2fct :: Num a => [a] -> a -> a
-p2fct [] x = 0
-p2fct (a:as) x = a + (x * p2fct as x)
-
-comp :: (Eq a, Num a, Ord a) => [a] -> [a] -> [a]
-comp _     []      = error ".."
-comp []     _      = []
-comp (f:fs) g0@(0:gs) = f : gs * (comp fs g0)
-comp (f:fs) gg@(g:gs) = ([f] + [g] * (comp fs gg))
-                      + (0 : gs * (comp fs gg))
-
-deriv :: Num a => [a] -> [a]
-deriv []     = []
-deriv (f:fs) = deriv1 fs 1 
-  where 
-    deriv1 []     _ = []
-    deriv1 (g:gs) n = n*g : deriv1 gs (n+1)
-
-\end{verbatim}
+%\begin{verbatim}
+%-- Polynomials.hs
+%-- http://homepages.cwi.nl/~jve/rcrh/Polynomials.hs
+%
+%module Polynomials where
+%
+%default (Integer, Rational, Double) 
+%
+%-- polynomials, as coefficients lists
+%instance (Num a, Ord a) => Num [a] where
+%  fromInteger c = [fromInteger c] 
+%  -- operator overloading
+%  negate []     = []
+%  negate (f:fs) = (negate f) : (negate fs)
+%
+%  signum [] = []
+%  signum gs 
+%    | signum (last gs) < (fromInteger 0) = negate z
+%    | otherwise = z
+%
+%  abs [] = []
+%  abs gs 
+%    | signum gs == z = gs
+%    | otherwise      = negate gs
+%
+%  fs     + []     = fs
+%  []     + gs     = gs
+%  (f:fs) + (g:gs) = f+g : fs+gs
+%
+%  fs     * []     = []
+%  []     * gs     = []
+%  (f:fs) * gg@(g:gs) = f*g : (f .* gs + fs * gg)
+%
+%delta :: (Num a, Ord a) => [a] -> [a]
+%delta = ([1,-1] *)
+%
+%shift :: [a] -> [a]
+%shift = tail 
+%
+%p2fct :: Num a => [a] -> a -> a
+%p2fct [] x = 0
+%p2fct (a:as) x = a + (x * p2fct as x)
+%
+%comp :: (Eq a, Num a, Ord a) => [a] -> [a] -> [a]
+%comp _     []      = error ".."
+%comp []     _      = []
+%comp (f:fs) g0@(0:gs) = f : gs * (comp fs g0)
+%comp (f:fs) gg@(g:gs) = ([f] + [g] * (comp fs gg))
+%                      + (0 : gs * (comp fs gg))
+%
+%deriv :: Num a => [a] -> [a]
+%deriv []     = []
+%deriv (f:fs) = deriv1 fs 1 
+%  where 
+%    deriv1 []     _ = []
+%    deriv1 (g:gs) n = n*g : deriv1 gs (n+1)
+%
+%\end{verbatim}
 Note that the above operators are overloaded, say \texttt{(*)}, \texttt{f*g} is a multiplication of two numbers but \texttt{fs*gg} is a multiplication of two list of coefficients.
 We can not extend this overloading to scalar multiplication, since Haskell type system takes the operands of \texttt{(*)} the same type
 \begin{eqnarray}
@@ -1455,7 +1458,7 @@ f_0(z) &=& a_0 \\
 f_1(z) &=& a_0 + (z-y_0)a_1 \\
 \nonumber
 &\vdots& \\
-f_r(z) &=& a_0 + (z-y_0) \left(a_1 + (z-y_1)(\cdots + (z - y_{r-1})a_r \right) \\
+f_r(z) &=& a_0 + (z-y_0) \left(a_1 + (z-y_1)\left(a_2  \cdots \left( a_{r-1} + (z - y_{r-1})a_r \right) \right) \cdots \right) \qquad \\
 &=& f_{r-1}(z) + (z-y_0) (z-y_1) \cdots (z - y_{r-1})a_r,
 \end{eqnarray}
 where
@@ -1493,257 +1496,257 @@ as the reconstructed polynomial, it is convenient to convert it into the canonic
 This conversion only requires addition and multiplication of univariate polynomials.
 These operations are reasonably cheap, especially on $\mathbb{Z}_p$. 
 
-\subsection{Simplification of our problem}
-Without loss of generality, we can put 
-\begin{eqnarray}
-\texttt{[0..]}
-\end{eqnarray}
-as our input list. 
-We usually take its finite part but we assume it has enough length.
-Corresponding to above input,
-\begin{eqnarray}
-\texttt{map f [0..] = [f 0, f 1, ..]}
-\end{eqnarray}
-of \texttt{f :: Ratio Int -> Ratio Int} is our output list.
-
-Then we have slightly simpler forms of coefficients:
-\begin{eqnarray}
-f_r(z) &:=& a_0 + z*\left( a_1 +(z-1)\left(a_2 + (z-2)\left(a_3 + \cdots + (z-r+1)a_r \right) \right) \right) \qquad\qquad \\
-a_0 &=& f(0) \\
-a_1 &=& f(y_1) - a_0 \\
-&=& f(1) - f(0) =: \Delta(f)(0) \\
-a_2 &=& \frac{f(2)-a_0}{2}-a_1 \\
-&=& \frac{f(2) - f(0)}{2} - \left( f(1) - f(0) \right) \\
-&=& \frac{f(2)-2f(1)-f(0)}{2} \\
-&=& \frac{\left( f(2)-f(1) \right) -\left(f(1)-f(0) \right)}{2} =: \frac{\Delta^2(f)(0)}{2} \\
-\nonumber
-&\vdots&\\
-a_r &=& \frac{\Delta^r(f)(0)}{r!},
-\end{eqnarray}
-where $\Delta$ is the difference operator in eq.(\ref{difference}):
-\begin{eqnarray}
-\Delta(f)(n) := f(n+1) - f(n).
-\end{eqnarray}
-
-In order to simplify our expression, we introduce a falling power:
-\begin{eqnarray}
-(x)_0 &:=& 1 \\
-(x)_n &:=& x(x-1) \cdots (x-n+1) \\
-&=& \prod_{i=0}^{n-1} (x-i).
-\end{eqnarray}
-
-Under these settings, we have
-\begin{eqnarray}
-f(z) &=& f_R(z) \\
-&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} (x)_r,
-\end{eqnarray}
-where we have assume
-\begin{eqnarray}
-\Delta^{R+1}(f) = [0,0,\cdots].
-\end{eqnarray}
-
-
-\subsubsection{Example}
-Consider a polynomial
-\begin{eqnarray}
-f(z) := 2*z^3+3*z,
-\end{eqnarray}
-and its out put list
-\begin{eqnarray}
-\left[ f(0), f(1), f(3), \cdots\right] = \left[0,5,22,63,140,265, \cdots \right]
-\end{eqnarray}
-This polynomial is 3rd degree, so we compute up to $\Delta^3(f)(0)$:
-\begin{eqnarray}
-f(0) &=& 0 \\
-\Delta(f)(0) &=& f(1) - f(0) = 5\\
-\nonumber
-\Delta^2(f)(0) &=& \Delta(f)(1) - \Delta(f)(0) \\
-&=& f(2) - f(1) - 5 = 22 -5 -5= 12 \\
-\nonumber
-\Delta^3(f)(0) &=& \Delta^2(f)(1) - \Delta^2(f)(0) \\
-&=& f(3)-f(2) - \left\{ f(2) - f(1)\right\} - 12 = 12
-\end{eqnarray}
-so we get
-\begin{eqnarray}
-\label{exOfDiff}
-\left[0,5,12,12\right]
-\end{eqnarray}
-as the first difference list.
-Therefore, we get the falling power representation of $f$:
-\begin{eqnarray}
-f(z) &=& 5(x)_1 + \frac{12}{2}(x)_2 + \frac{12}{3!}(x)_3 \\
-\label{exOfNewton} &=&  5(x)_1 + 6(x)_2 + 2(x)_3.
-\end{eqnarray}
-
-\section{Univariate polynomial reconstruction with Haskell}
-\subsection{Newton interpolation formula with Haskell}
-First, the falling power is naturally given by recursively:
-\begin{verbatim}
-> infixr 8 ^- -- falling power
-> (^-) :: (Integral a) => a -> a -> a
-> x ^- 0 = 1
-> x ^- n = (x ^- (n-1)) * (x - n + 1)
-\end{verbatim}
-
-Assume the differences are given in a list
-\begin{eqnarray}
-\texttt{xs} = \left[f(0), \Delta(f)(0), \Delta^2(f)(0), \cdots \right].
-\end{eqnarray}
-Then the implementation of the Newton interpolation formula is as follows:
-\begin{verbatim}
-> newtonC :: (Fractional t, Enum t) => [t] -> [t]
-> newtonC xs = [x / factorial k | (x,k) <- zip xs [0..]]
->   where
->     factorial k = product [1..fromInteger k]
-\end{verbatim}
-Consider a polynomial
-\begin{eqnarray}
-\verb|f x = 2*x^3+3*x|
-\end{eqnarray}
-Let us try to reconstruct this polynomial from output list.
-In order to get the list \verb+[x_0, x_1 ..]+, take \texttt{difLists} and pick the first elements:
-\begin{verbatim}
-  > let f x = 2*x^3+3*x
-  > take 10 $ map f [0..]
-  [0,5,22,63,140,265,450,707,1048,1485]
-  > difLists [it]
-  [[12,12,12,12,12,12,12]
-  ,[12,24,36,48,60,72,84,96]
-  ,[5,17,41,77,125,185,257,341,437]
-  ,[0,5,22,63,140,265,450,707,1048,1485]
-  ]
-  > reverse $ map head it
-  [0,5,12,12]
-\end{verbatim}
-This list is the same as eq.(\ref{exOfDiff}) and we get the same expression as eq.(\ref{exOfNewton}) $5(x)_1 + 6(x)_2 + 2(x)_3$:
-\begin{verbatim}  
-  > newtonC it
-  [0 % 1,5 % 1,6 % 1,2 % 1]
-\end{verbatim}
-
-The list of first differences, i.e.,
-\begin{eqnarray}
-\left[ f(0), \Delta(f)(0), \Delta^2(f)(0), \cdots \right]
-\end{eqnarray}
-can be computed as follows:
-\begin{verbatim}
-> firstDifs :: (Eq a, Num a) => [a] -> [a]
-> firstDifs xs = reverse $ map head $ difLists [xs]
-\end{verbatim}
-Mapping a list of integers to a Newton representation:
-\begin{verbatim}
-> list2npol :: (Integral a) => [Ratio a] -> [Ratio a]
-> list2npol = newtonC . firstDifs
-
-  *NewtonInterpolation> take 10 $ map f [0..]
-  [0,5,22,63,140,265,450,707,1048,1485]
-  *NewtonInterpolation> list2npol it
-  [0 % 1,5 % 1,6 % 1,2 % 1]
-\end{verbatim}
-Therefore, we get the Newton coefficients from the output list.
-
-\subsection{Stirling numbers of the first kind}
-We need to map Newton falling powers to standard powers to get the canonical representation.  
-This is a matter of applying combinatorics, by means of a convention formula that uses the so-called Stirling cyclic numbers 
-\begin{eqnarray}
-\left[\begin{array}{c}n \\k \end{array}\right]
-\end{eqnarray}
-Its defining relation is, $\forall n > 0$,
-\begin{eqnarray}
-(x)_n = \sum_{k=1}^n (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k, 
-\end{eqnarray}
-and
-\begin{eqnarray}
-\left[\begin{array}{c}0 \\0 \end{array}\right] := 1.
-\end{eqnarray}
-From the highest order, $x^n$, we get
-\begin{eqnarray}
-\left[\begin{array}{c}n \\n \end{array}\right] = 1, \forall n > 0.
-\end{eqnarray}
-We also put
-\begin{eqnarray}
-\left[\begin{array}{c}0 \\1 \end{array}\right] = \left[\begin{array}{c}0 \\2 \end{array}\right] = \left[\begin{array}{c}0 \\3 \end{array}\right] = \cdots = 0,
-\end{eqnarray}
-and
-\begin{eqnarray}
-\left[\begin{array}{c}1 \\ 0 \end{array}\right] = \left[\begin{array}{c}2  \\ 0 \end{array}\right] =\left[\begin{array}{c}3 \\ 0 \end{array}\right] = \cdots = 0.
-\end{eqnarray}
-
-The key equation is
-\begin{eqnarray}
-(x)_n = (x)_{n-1}*  (x-n+1)
-\end{eqnarray}
-and we get
-\begin{eqnarray}
-(x)_n &=& \sum_{k=1}^n (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k\\
-&=& x^n + \sum_{k=1}^{n-1} (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k\\
-(x)_{n-1}*  (x-n+1) &=&  \sum_{k=1}^{n-1} (-)^{n-1-k} \left\{ \left[\begin{array}{c}n-1 \\k \end{array}\right] x^{k+1} -(n-1) \left[\begin{array}{c}n-1 \\k \end{array}\right] x^k \right\} \qquad \qquad \\
-&=& \sum_{l=2}^n (-)^{n-l} \left[\begin{array}{c}n-1 \\l-1 \end{array}\right] x^l + (n-1)\sum_{k=1}^{n-1} (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k \\
-\nonumber &=& x^n + (n-1)(-)^{n-1} x \\
-&&+ \sum_{k=2}^{n-1} (-)^{n-k} \left\{ \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right] \right\} x^k \\
-&=& x^n + \sum_{k=1}^{n-1} (-)^{n-k} \left\{ \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right] \right\} x^k 
-\end{eqnarray}
-Therefore, $\forall n,k > 0$,
-\begin{eqnarray}
-\left[\begin{array}{c}n \\k \end{array}\right] = \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right]
-\end{eqnarray}
-
-Now we have the following canonical, power representation of reconstructed polynomial
-\begin{eqnarray}
-f(z) &=& f_R(z) \\
-&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} (x)_r \\
-&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} \sum_{k=1}^r (-)^{r-k} \left[\begin{array}{c}r \\k \end{array}\right] x^k, 
-\end{eqnarray}
-So, what shall we do is to sum up order by order.
-
-Here is an implementation, first the Stirling numbers:
-\begin{verbatim}
-> stirlingC :: Integer -> Integer -> Integer
-> stirlingC 0 0 = 1
-> stirlingC 0 _ = 0
-> stirlingC n k = (n-1)*(stirlingC (n-1) k) + stirlingC (n-1) (k-1)
-\end{verbatim}
-This definition can be used to convert from falling powers to standard powers.
-\begin{verbatim}
-> fall2pol :: (Integral a) => a -> [a]
-> fall2pol 0 = [1]
-> fall2pol n = 0   -- No constant term. 
->            : [(-1)^(n-k) * stirlingC n k| k<-[1..n]]
-\end{verbatim}
-We use \texttt{fall2pol} to convert Newton representations to standard polynomials in coefficients list representation.
-Here we have uses \verb+sum+ to collect same order terms in list representation.
-\begin{verbatim}
-> npol2pol :: (Integral a) => [Ratio a] -> [Ratio a]
-> npol2pol xs = sum [ [x] * map fromInteger (fall2pol k)
->                   | (x,k) <- zip xs [0..]
->                   ]
-\end{verbatim}
-
-\subsection{\texttt{list2pol}: from output list to canonical coefficients}
-Finally, here is the function for computing a polynomial from an output sequence:
-\begin{verbatim}
-> list2pol :: (Integral a) => [Ratio a] -> [Ratio a]
-> list2pol = npol2pol . list2npol
-\end{verbatim}
-Here are some checks on these functions:
-\begin{verbatim}
-Reconstruction as curve fitting
-  *NewtonInterpolation> list2pol $ map (\n -> 7*n^2+3*n-4) [0..100]
-  [(-4) % 1,3 % 1,7 % 1]
-
-  *NewtonInterpolation> list2pol [0,1,5,14,30]
-  [0 % 1,1 % 6,1 % 2,1 % 3]
-  *NewtonInterpolation> map (\n -> n%6 + n^2%2 + n^3%3) [0..4]
-  [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1]
-
-  *NewtonInterpolation> map (p2fct $ list2pol [0,1,5,14,30]) [0..8]
-  [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1,55 % 1,91 % 1,140 % 1,204 % 1]
-
-\end{verbatim}
-First example shows that from the sufficiently long output list, we can reconstruct the list of coefficients.
-Second example shows that from a given outputs, we have a list coefficients.
-Then use these coefficients, we define the output list of the function, and they match.
-The last example shows that from a limited (but sufficient) output information, we reconstruct a function and get extra outputs outside from the given data.
+%\subsection{Simplification of our problem}
+%Without loss of generality, we can put 
+%\begin{eqnarray}
+%\texttt{[0..]}
+%\end{eqnarray}
+%as our input list. 
+%We usually take its finite part but we assume it has enough length.
+%Corresponding to above input,
+%\begin{eqnarray}
+%\texttt{map f [0..] = [f 0, f 1, ..]}
+%\end{eqnarray}
+%of \texttt{f :: Ratio Int -> Ratio Int} is our output list.
+%
+%Then we have slightly simpler forms of coefficients:
+%\begin{eqnarray}
+%f_r(z) &:=& a_0 + z*\left( a_1 +(z-1)\left(a_2 + (z-2)\left(a_3 + \cdots + (z-r+1)a_r \right) \right) \right) \qquad\qquad \\
+%a_0 &=& f(0) \\
+%a_1 &=& f(y_1) - a_0 \\
+%&=& f(1) - f(0) =: \Delta(f)(0) \\
+%a_2 &=& \frac{f(2)-a_0}{2}-a_1 \\
+%&=& \frac{f(2) - f(0)}{2} - \left( f(1) - f(0) \right) \\
+%&=& \frac{f(2)-2f(1)-f(0)}{2} \\
+%&=& \frac{\left( f(2)-f(1) \right) -\left(f(1)-f(0) \right)}{2} =: \frac{\Delta^2(f)(0)}{2} \\
+%\nonumber
+%&\vdots&\\
+%a_r &=& \frac{\Delta^r(f)(0)}{r!},
+%\end{eqnarray}
+%where $\Delta$ is the difference operator in eq.(\ref{difference}):
+%\begin{eqnarray}
+%\Delta(f)(n) := f(n+1) - f(n).
+%\end{eqnarray}
+%
+%In order to simplify our expression, we introduce a falling power:
+%\begin{eqnarray}
+%(x)_0 &:=& 1 \\
+%(x)_n &:=& x(x-1) \cdots (x-n+1) \\
+%&=& \prod_{i=0}^{n-1} (x-i).
+%\end{eqnarray}
+%
+%Under these settings, we have
+%\begin{eqnarray}
+%f(z) &=& f_R(z) \\
+%&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} (x)_r,
+%\end{eqnarray}
+%where we have assume
+%\begin{eqnarray}
+%\Delta^{R+1}(f) = [0,0,\cdots].
+%\end{eqnarray}
+%
+%
+%\subsubsection{Example}
+%Consider a polynomial
+%\begin{eqnarray}
+%f(z) := 2*z^3+3*z,
+%\end{eqnarray}
+%and its out put list
+%\begin{eqnarray}
+%\left[ f(0), f(1), f(3), \cdots\right] = \left[0,5,22,63,140,265, \cdots \right]
+%\end{eqnarray}
+%This polynomial is 3rd degree, so we compute up to $\Delta^3(f)(0)$:
+%\begin{eqnarray}
+%f(0) &=& 0 \\
+%\Delta(f)(0) &=& f(1) - f(0) = 5\\
+%\nonumber
+%\Delta^2(f)(0) &=& \Delta(f)(1) - \Delta(f)(0) \\
+%&=& f(2) - f(1) - 5 = 22 -5 -5= 12 \\
+%\nonumber
+%\Delta^3(f)(0) &=& \Delta^2(f)(1) - \Delta^2(f)(0) \\
+%&=& f(3)-f(2) - \left\{ f(2) - f(1)\right\} - 12 = 12
+%\end{eqnarray}
+%so we get
+%\begin{eqnarray}
+%\label{exOfDiff}
+%\left[0,5,12,12\right]
+%\end{eqnarray}
+%as the first difference list.
+%Therefore, we get the falling power representation of $f$:
+%\begin{eqnarray}
+%f(z) &=& 5(x)_1 + \frac{12}{2}(x)_2 + \frac{12}{3!}(x)_3 \\
+%\label{exOfNewton} &=&  5(x)_1 + 6(x)_2 + 2(x)_3.
+%\end{eqnarray}
+%
+%\section{Univariate polynomial reconstruction with Haskell}
+%\subsection{Newton interpolation formula with Haskell}
+%First, the falling power is naturally given by recursively:
+%\begin{verbatim}
+%> infixr 8 ^- -- falling power
+%> (^-) :: (Integral a) => a -> a -> a
+%> x ^- 0 = 1
+%> x ^- n = (x ^- (n-1)) * (x - n + 1)
+%\end{verbatim}
+%
+%Assume the differences are given in a list
+%\begin{eqnarray}
+%\texttt{xs} = \left[f(0), \Delta(f)(0), \Delta^2(f)(0), \cdots \right].
+%\end{eqnarray}
+%Then the implementation of the Newton interpolation formula is as follows:
+%\begin{verbatim}
+%> newtonC :: (Fractional t, Enum t) => [t] -> [t]
+%> newtonC xs = [x / factorial k | (x,k) <- zip xs [0..]]
+%>   where
+%>     factorial k = product [1..fromInteger k]
+%\end{verbatim}
+%Consider a polynomial
+%\begin{eqnarray}
+%\verb|f x = 2*x^3+3*x|
+%\end{eqnarray}
+%Let us try to reconstruct this polynomial from output list.
+%In order to get the list \verb+[x_0, x_1 ..]+, take \texttt{difLists} and pick the first elements:
+%\begin{verbatim}
+%  > let f x = 2*x^3+3*x
+%  > take 10 $ map f [0..]
+%  [0,5,22,63,140,265,450,707,1048,1485]
+%  > difLists [it]
+%  [[12,12,12,12,12,12,12]
+%  ,[12,24,36,48,60,72,84,96]
+%  ,[5,17,41,77,125,185,257,341,437]
+%  ,[0,5,22,63,140,265,450,707,1048,1485]
+%  ]
+%  > reverse $ map head it
+%  [0,5,12,12]
+%\end{verbatim}
+%This list is the same as eq.(\ref{exOfDiff}) and we get the same expression as eq.(\ref{exOfNewton}) $5(x)_1 + 6(x)_2 + 2(x)_3$:
+%\begin{verbatim}  
+%  > newtonC it
+%  [0 % 1,5 % 1,6 % 1,2 % 1]
+%\end{verbatim}
+%
+%The list of first differences, i.e.,
+%\begin{eqnarray}
+%\left[ f(0), \Delta(f)(0), \Delta^2(f)(0), \cdots \right]
+%\end{eqnarray}
+%can be computed as follows:
+%\begin{verbatim}
+%> firstDifs :: (Eq a, Num a) => [a] -> [a]
+%> firstDifs xs = reverse $ map head $ difLists [xs]
+%\end{verbatim}
+%Mapping a list of integers to a Newton representation:
+%\begin{verbatim}
+%> list2npol :: (Integral a) => [Ratio a] -> [Ratio a]
+%> list2npol = newtonC . firstDifs
+%
+%  *NewtonInterpolation> take 10 $ map f [0..]
+%  [0,5,22,63,140,265,450,707,1048,1485]
+%  *NewtonInterpolation> list2npol it
+%  [0 % 1,5 % 1,6 % 1,2 % 1]
+%\end{verbatim}
+%Therefore, we get the Newton coefficients from the output list.
+%
+%\subsection{Stirling numbers of the first kind}
+%We need to map Newton falling powers to standard powers to get the canonical representation.  
+%This is a matter of applying combinatorics, by means of a convention formula that uses the so-called Stirling cyclic numbers 
+%\begin{eqnarray}
+%\left[\begin{array}{c}n \\k \end{array}\right]
+%\end{eqnarray}
+%Its defining relation is, $\forall n > 0$,
+%\begin{eqnarray}
+%(x)_n = \sum_{k=1}^n (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k, 
+%\end{eqnarray}
+%and
+%\begin{eqnarray}
+%\left[\begin{array}{c}0 \\0 \end{array}\right] := 1.
+%\end{eqnarray}
+%From the highest order, $x^n$, we get
+%\begin{eqnarray}
+%\left[\begin{array}{c}n \\n \end{array}\right] = 1, \forall n > 0.
+%\end{eqnarray}
+%We also put
+%\begin{eqnarray}
+%\left[\begin{array}{c}0 \\1 \end{array}\right] = \left[\begin{array}{c}0 \\2 \end{array}\right] = \left[\begin{array}{c}0 \\3 \end{array}\right] = \cdots = 0,
+%\end{eqnarray}
+%and
+%\begin{eqnarray}
+%\left[\begin{array}{c}1 \\ 0 \end{array}\right] = \left[\begin{array}{c}2  \\ 0 \end{array}\right] =\left[\begin{array}{c}3 \\ 0 \end{array}\right] = \cdots = 0.
+%\end{eqnarray}
+%
+%The key equation is
+%\begin{eqnarray}
+%(x)_n = (x)_{n-1}*  (x-n+1)
+%\end{eqnarray}
+%and we get
+%\begin{eqnarray}
+%(x)_n &=& \sum_{k=1}^n (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k\\
+%&=& x^n + \sum_{k=1}^{n-1} (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k\\
+%(x)_{n-1}*  (x-n+1) &=&  \sum_{k=1}^{n-1} (-)^{n-1-k} \left\{ \left[\begin{array}{c}n-1 \\k \end{array}\right] x^{k+1} -(n-1) \left[\begin{array}{c}n-1 \\k \end{array}\right] x^k \right\} \qquad \qquad \\
+%&=& \sum_{l=2}^n (-)^{n-l} \left[\begin{array}{c}n-1 \\l-1 \end{array}\right] x^l + (n-1)\sum_{k=1}^{n-1} (-)^{n-k} \left[\begin{array}{c}n \\k \end{array}\right] x^k \\
+%\nonumber &=& x^n + (n-1)(-)^{n-1} x \\
+%&&+ \sum_{k=2}^{n-1} (-)^{n-k} \left\{ \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right] \right\} x^k \\
+%&=& x^n + \sum_{k=1}^{n-1} (-)^{n-k} \left\{ \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right] \right\} x^k 
+%\end{eqnarray}
+%Therefore, $\forall n,k > 0$,
+%\begin{eqnarray}
+%\left[\begin{array}{c}n \\k \end{array}\right] = \left[\begin{array}{c}n-1 \\k-1 \end{array}\right]  + (n-1)  \left[\begin{array}{c}n-1 \\k \end{array}\right]
+%\end{eqnarray}
+%
+%Now we have the following canonical, power representation of reconstructed polynomial
+%\begin{eqnarray}
+%f(z) &=& f_R(z) \\
+%&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} (x)_r \\
+%&=& \sum_{r=0}^R \frac{\Delta^r(f)(0)}{r!} \sum_{k=1}^r (-)^{r-k} \left[\begin{array}{c}r \\k \end{array}\right] x^k, 
+%\end{eqnarray}
+%So, what shall we do is to sum up order by order.
+%
+%Here is an implementation, first the Stirling numbers:
+%\begin{verbatim}
+%> stirlingC :: Integer -> Integer -> Integer
+%> stirlingC 0 0 = 1
+%> stirlingC 0 _ = 0
+%> stirlingC n k = (n-1)*(stirlingC (n-1) k) + stirlingC (n-1) (k-1)
+%\end{verbatim}
+%This definition can be used to convert from falling powers to standard powers.
+%\begin{verbatim}
+%> fall2pol :: (Integral a) => a -> [a]
+%> fall2pol 0 = [1]
+%> fall2pol n = 0   -- No constant term. 
+%>            : [(-1)^(n-k) * stirlingC n k| k<-[1..n]]
+%\end{verbatim}
+%We use \texttt{fall2pol} to convert Newton representations to standard polynomials in coefficients list representation.
+%Here we have uses \verb+sum+ to collect same order terms in list representation.
+%\begin{verbatim}
+%> npol2pol :: (Integral a) => [Ratio a] -> [Ratio a]
+%> npol2pol xs = sum [ [x] * map fromInteger (fall2pol k)
+%>                   | (x,k) <- zip xs [0..]
+%>                   ]
+%\end{verbatim}
+%
+%\subsection{\texttt{list2pol}: from output list to canonical coefficients}
+%Finally, here is the function for computing a polynomial from an output sequence:
+%\begin{verbatim}
+%> list2pol :: (Integral a) => [Ratio a] -> [Ratio a]
+%> list2pol = npol2pol . list2npol
+%\end{verbatim}
+%Here are some checks on these functions:
+%\begin{verbatim}
+%Reconstruction as curve fitting
+%  *NewtonInterpolation> list2pol $ map (\n -> 7*n^2+3*n-4) [0..100]
+%  [(-4) % 1,3 % 1,7 % 1]
+%
+%  *NewtonInterpolation> list2pol [0,1,5,14,30]
+%  [0 % 1,1 % 6,1 % 2,1 % 3]
+%  *NewtonInterpolation> map (\n -> n%6 + n^2%2 + n^3%3) [0..4]
+%  [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1]
+%
+%  *NewtonInterpolation> map (p2fct $ list2pol [0,1,5,14,30]) [0..8]
+%  [0 % 1,1 % 1,5 % 1,14 % 1,30 % 1,55 % 1,91 % 1,140 % 1,204 % 1]
+%
+%\end{verbatim}
+%First example shows that from the sufficiently long output list, we can reconstruct the list of coefficients.
+%Second example shows that from a given outputs, we have a list coefficients.
+%Then use these coefficients, we define the output list of the function, and they match.
+%The last example shows that from a limited (but sufficient) output information, we reconstruct a function and get extra outputs outside from the given data.
 
 \section{Univariate rational functions}
 We use the same notion, i.e., what we can know is the output-list of a univariate rational function, say \texttt{f::Int -> Ratio Int}:
@@ -1788,556 +1791,556 @@ d_0 &=& 1\\
 f(z) &=& \frac{\sum_i n_i z^i}{1 + \sum_{j >0} d_ z^j}.
 \end{eqnarray}
 
-\section{Univariate rational function reconstruction with Haskell}
-Here we the same notion of
-\begin{quotation}
-\url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula}
-\end{quotation}
-and especially
-\begin{quotation}
-\url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C}
-\end{quotation}
- 
-\subsection{Reciprocal difference}
-We claim, without proof\footnote{
-See the ref.\ref{Numerical}, Theorem (2.2.2.5) in 2nd edition.
-}, that the Thiele coefficients are given by
-\begin{eqnarray}
-a_0 &:=& f(0) \\
-a_n &:=& \rho_{n,0} - \rho_{{n-2},0},
-\end{eqnarray}
-where $\rho$ is so called the reciprocal difference:
-\begin{eqnarray}
-\rho_{n,i} &:=& 0, n<0 \\
-\rho_{0,i} &:=& f(i), i=0,1,2,\cdots \\
-\rho_{n,i} &:=& \frac{n}{\rho_{{n-1}, i+1} - \rho_{{n-1},i}} + \rho_{{n-2},i+1}
-\end{eqnarray}
+%\section{Univariate rational function reconstruction with Haskell}
+%Here we the same notion of
+%\begin{quotation}
+%\url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula}
+%\end{quotation}
+%and especially
+%\begin{quotation}
+%\url{https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C}
+%\end{quotation}
+% 
+%\subsection{Reciprocal difference}
+%We claim, without proof\footnote{
+%See the ref.\ref{Numerical}, Theorem (2.2.2.5) in 2nd edition.
+%}, that the Thiele coefficients are given by
+%\begin{eqnarray}
+%a_0 &:=& f(0) \\
+%a_n &:=& \rho_{n,0} - \rho_{{n-2},0},
+%\end{eqnarray}
+%where $\rho$ is so called the reciprocal difference:
+%\begin{eqnarray}
+%\rho_{n,i} &:=& 0, n<0 \\
+%\rho_{0,i} &:=& f(i), i=0,1,2,\cdots \\
+%\rho_{n,i} &:=& \frac{n}{\rho_{{n-1}, i+1} - \rho_{{n-1},i}} + \rho_{{n-2},i+1}
+%\end{eqnarray}
+%
+%These preparation helps us to write the following codes:
+%\begin{verbatim}
+%Thiele's interpolation formula
+%
+%Reciprocal difference rho, using the same notation of 
+%https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
+%
+%> rho :: [Ratio Int] -- A list of output of f :: Int -> Ratio Int
+%>     -> Int -> Int -> Ratio Int
+%> rho fs 0 i = fs !! i
+%> rho fs n _ 
+%>   | n < 0 = 0
+%> rho fs n i = (n*den)%num + rho fs (n-2) (i+1)
+%>   where
+%>     num  = numerator next
+%>     den  = denominator next
+%>     next = (rho fs (n-1) (i+1)) - (rho fs (n-1) i)
+%
+%Note that (%) has the following type,
+%  (%) :: Integral a => a -> a -> Ratio a
+%
+%> a fs 0 = fs !! 0
+%> a fs n = rho fs n 0 - rho fs (n-2) 0
+%\end{verbatim}
+%
+%\subsection{\texttt{tDegree} for termination}
+%Now let us consider a simple example which is given by the following Thiele coefficients
+%\begin{eqnarray}
+%a_0 = 1, a_1 = 2, a_2 = 3, a_3=4.
+%\end{eqnarray}
+%The function is now
+%\begin{eqnarray}
+%f(x) &:=& 1 + \cfrac{x}{2+\cfrac{x-1}{3+\cfrac{x-2}{4}}} \\
+%&=& \frac{x^2+16x+16}{16+6x}
+%\end{eqnarray}
+%Using Maxima\footnote{
+%\url{http://maxima.sourceforge.net}
+%}, we can verify this:
+%\begin{verbatim}
+%  (%i25) f(x) := 1+(x/(2+(x-1)/(3+(x-2)/4)));
+%  (%o25) f(x):=x/(2+(x-1)/(3+(x-2)/4))+1
+%  (%i26) ratsimp(f(x));
+%  (%o26) (x^2+16*x+16)/(16+6*x)
+%\end{verbatim}
+%Let us come back Haskell, and try to get the Thiele coefficients of
+%\begin{verbatim}
+%  *Univariate> let func x = (x^2 + 16*x + 16)%(6*x + 16)
+%  *Univariate> let fs = map func [0..]
+%  *Univariate> map (a fs) [0..]
+%  [1 % 1,2 % 1,3 % 1,4 % 1,*** Exception: Ratio has zero denominator\end{verbatim}
+%This is clearly unsafe, so let us think more carefully.
+%Observe the reciprocal differences
+%\begin{verbatim}
+%  *Univariate> let fs = map func [0..]
+%  *Univariate> take 5 $ map (rho fs 0) [0..]
+%  [1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]
+%  *Univariate> take 5 $ map (rho fs 1) [0..]
+%  [2 % 1,14 % 5,238 % 69,170 % 43,230 % 53]
+%  *Univariate> take 5 $ map (rho fs 2) [0..]
+%  [4 % 1,79 % 16,269 % 44,667 % 88,413 % 44]
+%  *Univariate> take 5 $ map (rho fs 3) [0..]
+%  [6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
+%\end{verbatim}
+%So, the constancy of the reciprocal differences can be used to get the depth of Thiele series:
+%\begin{verbatim}
+%> tDegree :: [Ratio Int] -> Int
+%> tDegree fs = helper fs 0
+%>   where
+%>     helper fs n
+%>       | isConstants fs' = n
+%>       | otherwise       = helper fs (n+1)
+%>       where
+%>         fs' = map (rho fs n) [0..]
+%>     isConstants (i:j:_) = i==j -- 2 times match
+%> --  isConstants (i:j:k:_) = i==j && j==k
+%\end{verbatim}
+%Using this \verb+tDegree+ function, we can safely take the (finite) Thiele sequence.
+%
+%\subsection{\texttt{thieleC}: from output list to Thiele coefficients}
+%From the equation (3.26) of ref.\ref{Tiziano},
+%\begin{verbatim}
+%  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+%  *Univariate> let hs = map h [0..]
+%  *Univariate> tDegree hs
+%  4
+%\end{verbatim}
+%So we get the Thiele coefficients
+%\begin{verbatim}  
+%  *Univariate> map (a hs) [0..(tDegree hs)]
+%  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+%\end{verbatim}
+%Plug these in the continued fraction, and simplify with Maxima
+%\begin{verbatim}
+%  (%i35) h(t):=3+t/((-23/42)+(t-1)/((-28/13)+(t-2)/((767/14)+(t-3)/(7/130))));
+%  (%o35) h(t):=t/((-23)/42+(t-1)/((-28)/13+(t-2)/(767/14+(t-3)/(7/130))))+3
+%  (%i36) ratsimp(h(t));
+%  (%o36) (18*t^2+6*t+3)/(1+2*t+20*t^2)
+%\end{verbatim}
+%
+%Finally we make a function \verb+thieleC+ that returns the Thiele coefficients:
+%\begin{verbatim}
+%> thieleC :: [Ratio Int] -> [Ratio Int]
+%> thieleC lst = map (a lst) [0..(tDegree lst)]
+%
+%  *Univariate> thieleC hs
+%  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+%\end{verbatim}
+%
+%We need a convertor from this Thiele sequence to continuous form of rational function.
+%\begin{verbatim}
+%> nextStep [a0,a1] (v:_)  = a0 + v/a1
+%> nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
+%>
+%> -- From thiele sequence to (rational) function.
+%> thiele2ratf :: Integral a => [Ratio a] -> (Ratio a -> Ratio a)
+%> thiele2ratf as x
+%>   | x == 0 = head as
+%>   | otherwise = nextStep as [x,x-1 ..]
+%\end{verbatim}
+%The following example shows that, the given output lists \verb+hs+, we can interpolate the value between our discrete data.
+%\begin{verbatim}
+%  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+%  *Univariate> let hs = map h [0..]
+%  *Univariate> take 5 hs
+%  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47]
+%  *Univariate> let as = thieleC hs
+%  *Univariate> as
+%  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+%  *Univariate> let th x = thiele2ratf as x
+%  *Univariate> map th [0..5]
+%  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47,69 % 73]
+%  *Univariate> th 0.5
+%  3 % 2
+%\end{verbatim}
+%
+%\subsection{Haskell representation for rational functions}
+%We represent a rational function by a tuple of coefficient lists, like,
+%\begin{eqnarray}
+%\texttt{(ns,ds) :: ([Ratio Int],[Ratio Int])}
+%\end{eqnarray}
+%
+%Here is a translator from coefficients lists to rational function.
+%\begin{verbatim}
+%> lists2ratf :: (Integral a) => 
+%>   ([Ratio a],[Ratio a]) -> (Ratio a -> Ratio a)
+%> lists2ratf (ns,ds) x = (p2fct ns x)/(p2fct ds x)
+%
+%  *Univariate> let frac x = lists2ratf ([1,1%2,1%3],[2,2%3]) x
+%  *Univariate> take 10 $ map frac [0..]
+%  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]
+%  *Univariate> let ffrac x = (1+(1%2)*x+(1%3)*x^2)/(2+(2%3)*x)
+%  *Univariate> take 10 $ map ffrac [0..]
+%  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]  
+%\end{verbatim}
+%Simply taking numerator and denominator polynomials.
+%
+%The following \texttt{canonicalizer} reduces the tuple-rep of rational function in canonical form, i.e., the coefficient of the lowest degree term of the denominator to be 1\footnote{
+%Here our data point start from 0, i.e., the output data is given by \texttt{map f [0..]}, 0 is not singular, i.e., the denominator should have constant term and that means non empty.
+%Therefore, the function firstNonzero is actually \texttt{head}.
+%}.
+%\begin{verbatim}
+%> canonicalize :: (Integral a) => 
+%>   ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
+%> canonicalize rat@(ns,ds)
+%>   | dMin == 1 = rat
+%>   | otherwise = (map (/dMin) ns, map (/dMin) ds)
+%>   where
+%>     dMin = firstNonzero ds
+%>     firstNonzero [a] = a -- head
+%>     firstNonzero (a:as)
+%>       | a /= 0 = a
+%>       | otherwise = firstNonzero as
+%
+%  *Univariate> canonicalize ([1,1%2,1%3],[2,2%3])
+%  ([1 % 2,1 % 4,1 % 6],[1 % 1,1 % 3])
+%  *Univariate> canonicalize ([1,1%2,1%3],[0,0,2,2%3])
+%  ([1 % 2,1 % 4,1 % 6],[0 % 1,0 % 1,1 % 1,1 % 3])
+%  *Univariate> canonicalize ([1,1%2,1%3],[0,0,0,2%3])
+%  ([3 % 2,3 % 4,1 % 2],[0 % 1,0 % 1,0 % 1,1 % 1])
+%\end{verbatim}
+%
+%What we need is a translator from Thiele coefficients to this tuple-rep.
+%Since the list of Thiele coefficients is finite, we can naturally think recursively.
+%
+%Before we go to a general case, consider
+%\begin{eqnarray}
+%f(x) := 1 + \cfrac{x}{2+\cfrac{x-1}{3+\cfrac{x-2}{4}}} 
+%\end{eqnarray}
+%When we simplify this expression, we should start from the bottom:
+%\begin{eqnarray}
+%f(x) &=& 1 + \cfrac{x}{2+\cfrac{x-1}{\cfrac{4*3+x-2}{4}}} \\
+%&=& 1 + \cfrac{x}{2+\cfrac{x-1}{\cfrac{x+10}{4}}} \\
+%&=& 1 + \cfrac{x}{\cfrac{2*(x+10) +4*(x-1)}{x+10}} \\
+%&=& 1 + \cfrac{x}{\cfrac{6x+16}{x+10}} \\
+%&=& \frac{1*(6x+16) + x*(x+10)}{6x+16} \\
+%&=& \frac{x^2+16x+16}{6x+16}
+%\end{eqnarray}
+%Finally, if we need, we take its canonical form:
+%\begin{eqnarray}
+%f(x) = \frac{1+ x+ \frac{1}{16}x^2}{1+ \frac{3}{8} x}
+%\end{eqnarray}
+%
+%In general, we have the following Thiele representation:
+%\begin{eqnarray}
+%a_0 + \cfrac{z}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z- 2}{ \cfrac{\vdots}{a_{n} + \cfrac{z-n}{a_{n+1}}}}}}
+%\end{eqnarray}
+%The base case should be
+%\begin{eqnarray}
+%a_{n}+ \frac{z-n}{a_{n+1}} &=& \frac{a_{n+1}* a_{n}-n + z }{a_{n+1}} 
+%\end{eqnarray}
+%and induction step $0 \leq r \leq n$ should be
+%\begin{eqnarray}
+%a_{r}(z)
+%&=&a_{r}+ \frac{z-r}{a_{r+1}(z)} \\
+%&=& \frac{a_{r}a_{r+1}(z)+ z -r}{a_{r+1}(z)} \\
+%&=& \frac{a_{r}*\texttt{num}\left(a_{r+1}(z) \right)+ \texttt{den}\left(a_{r+1}(z) \right) * \left(z -r\right)}{\texttt{num}\left(a_{r+1}(z) \right)} 
+%\end{eqnarray}
+%where
+%\begin{eqnarray}
+%a_{r+1}(z) = \frac{\texttt{num}\left(a_{r+1}(z) \right)}{\texttt{den}\left(a_{r+1}(z) \right)}
+%\end{eqnarray}
+%is a canonical representation of $a_{n+1}(z)$\footnote{
+%Not necessary being a canonical representation, it suffices to express $a_{n+1}(z)$ in a polynomial over polynomial form, that is, two lists in Haskell.
+%}.
+%
+%Thus, the implementation is the followings.
+%\begin{verbatim}
+%> thiele2coef :: (Integral a) => 
+%>   [Ratio a] -> ([Ratio a],[Ratio a])
+%> thiele2coef as = canonicalize $ t2r as 0
+%>   where
+%>     t2r [an,an'] n = ([an*an'-n,1],[an'])
+%>     t2r (a:as)   n = ((a .* num) + ([-n,1] * den), num)
+%>       where
+%>         (num, den) = t2r as (n+1)\end{verbatim}
+%
+%From the first example,
+%\begin{verbatim}
+%  *Univariate> let func x = (x^2+16*x+16)%(6*x+16)
+%  *Univariate> let funcList = map func [0..]
+%  *Univariate> tDegree funcList 
+%  3
+%  *Univariate> take 5 funcList 
+%  [1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]
+%  *Univariate> let aFunc = thieleC funcList 
+%  *Univariate> aFunc
+%  [1 % 1,2 % 1,3 % 1,4 % 1]
+%  *Univariate> thiele2coef aFunc
+%  ([1 % 1,1 % 1,1 % 16],[1 % 1,3 % 8])
+%\end{verbatim}
+%
+%From the other example, equation (3.26) of ref.\ref{Tiziano},
+%\begin{verbatim}
+%  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+%  *Univariate> let hs = map h [0..]
+%  *Univariate> take 5 hs
+%  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47]
+%  *Univariate> let th x = thiele2ratf as x
+%  *Univariate> map th [0..5]
+%  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47,69 % 73]
+%  *Univariate> as
+%  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
+%  *Univariate> thiele2coef as
+%  ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
+%\end{verbatim}
+%
+%\subsection{\texttt{list2rat}: from output list to canonical coefficients}
+%Finally, we get
+%\begin{verbatim}
+%> list2rat :: (Integral a) => [Ratio a] -> ([Ratio a], [Ratio a])
+%> list2rat = thiele2Coef . thieleC
+%\end{verbatim}
+%as the reconstruction function from the output sequence.
+%\begin{verbatim}
+%  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
+%  *Univariate> list2rat $ map h [0..]
+%  ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
+%\end{verbatim}
 
-These preparation helps us to write the following codes:
-\begin{verbatim}
-Thiele's interpolation formula
-
-Reciprocal difference rho, using the same notation of 
-https://rosettacode.org/wiki/Thiele%27s_interpolation_formula#C
-
-> rho :: [Ratio Int] -- A list of output of f :: Int -> Ratio Int
->     -> Int -> Int -> Ratio Int
-> rho fs 0 i = fs !! i
-> rho fs n _ 
->   | n < 0 = 0
-> rho fs n i = (n*den)%num + rho fs (n-2) (i+1)
->   where
->     num  = numerator next
->     den  = denominator next
->     next = (rho fs (n-1) (i+1)) - (rho fs (n-1) i)
-
-Note that (%) has the following type,
-  (%) :: Integral a => a -> a -> Ratio a
-
-> a fs 0 = fs !! 0
-> a fs n = rho fs n 0 - rho fs (n-2) 0
-\end{verbatim}
-
-\subsection{\texttt{tDegree} for termination}
-Now let us consider a simple example which is given by the following Thiele coefficients
-\begin{eqnarray}
-a_0 = 1, a_1 = 2, a_2 = 3, a_3=4.
-\end{eqnarray}
-The function is now
-\begin{eqnarray}
-f(x) &:=& 1 + \cfrac{x}{2+\cfrac{x-1}{3+\cfrac{x-2}{4}}} \\
-&=& \frac{x^2+16x+16}{16+6x}
-\end{eqnarray}
-Using Maxima\footnote{
-\url{http://maxima.sourceforge.net}
-}, we can verify this:
-\begin{verbatim}
-  (%i25) f(x) := 1+(x/(2+(x-1)/(3+(x-2)/4)));
-  (%o25) f(x):=x/(2+(x-1)/(3+(x-2)/4))+1
-  (%i26) ratsimp(f(x));
-  (%o26) (x^2+16*x+16)/(16+6*x)
-\end{verbatim}
-Let us come back Haskell, and try to get the Thiele coefficients of
-\begin{verbatim}
-  *Univariate> let func x = (x^2 + 16*x + 16)%(6*x + 16)
-  *Univariate> let fs = map func [0..]
-  *Univariate> map (a fs) [0..]
-  [1 % 1,2 % 1,3 % 1,4 % 1,*** Exception: Ratio has zero denominator\end{verbatim}
-This is clearly unsafe, so let us think more carefully.
-Observe the reciprocal differences
-\begin{verbatim}
-  *Univariate> let fs = map func [0..]
-  *Univariate> take 5 $ map (rho fs 0) [0..]
-  [1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]
-  *Univariate> take 5 $ map (rho fs 1) [0..]
-  [2 % 1,14 % 5,238 % 69,170 % 43,230 % 53]
-  *Univariate> take 5 $ map (rho fs 2) [0..]
-  [4 % 1,79 % 16,269 % 44,667 % 88,413 % 44]
-  *Univariate> take 5 $ map (rho fs 3) [0..]
-  [6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
-\end{verbatim}
-So, the constancy of the reciprocal differences can be used to get the depth of Thiele series:
-\begin{verbatim}
-> tDegree :: [Ratio Int] -> Int
-> tDegree fs = helper fs 0
->   where
->     helper fs n
->       | isConstants fs' = n
->       | otherwise       = helper fs (n+1)
->       where
->         fs' = map (rho fs n) [0..]
->     isConstants (i:j:_) = i==j -- 2 times match
-> --  isConstants (i:j:k:_) = i==j && j==k
-\end{verbatim}
-Using this \verb+tDegree+ function, we can safely take the (finite) Thiele sequence.
-
-\subsection{\texttt{thieleC}: from output list to Thiele coefficients}
-From the equation (3.26) of ref.\ref{Tiziano},
-\begin{verbatim}
-  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
-  *Univariate> let hs = map h [0..]
-  *Univariate> tDegree hs
-  4
-\end{verbatim}
-So we get the Thiele coefficients
-\begin{verbatim}  
-  *Univariate> map (a hs) [0..(tDegree hs)]
-  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
-\end{verbatim}
-Plug these in the continued fraction, and simplify with Maxima
-\begin{verbatim}
-  (%i35) h(t):=3+t/((-23/42)+(t-1)/((-28/13)+(t-2)/((767/14)+(t-3)/(7/130))));
-  (%o35) h(t):=t/((-23)/42+(t-1)/((-28)/13+(t-2)/(767/14+(t-3)/(7/130))))+3
-  (%i36) ratsimp(h(t));
-  (%o36) (18*t^2+6*t+3)/(1+2*t+20*t^2)
-\end{verbatim}
-
-Finally we make a function \verb+thieleC+ that returns the Thiele coefficients:
-\begin{verbatim}
-> thieleC :: [Ratio Int] -> [Ratio Int]
-> thieleC lst = map (a lst) [0..(tDegree lst)]
-
-  *Univariate> thieleC hs
-  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
-\end{verbatim}
-
-We need a convertor from this Thiele sequence to continuous form of rational function.
-\begin{verbatim}
-> nextStep [a0,a1] (v:_)  = a0 + v/a1
-> nextStep (a:as)  (v:vs) = a + (v / nextStep as vs)
->
-> -- From thiele sequence to (rational) function.
-> thiele2ratf :: Integral a => [Ratio a] -> (Ratio a -> Ratio a)
-> thiele2ratf as x
->   | x == 0 = head as
->   | otherwise = nextStep as [x,x-1 ..]
-\end{verbatim}
-The following example shows that, the given output lists \verb+hs+, we can interpolate the value between our discrete data.
-\begin{verbatim}
-  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
-  *Univariate> let hs = map h [0..]
-  *Univariate> take 5 hs
-  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47]
-  *Univariate> let as = thieleC hs
-  *Univariate> as
-  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
-  *Univariate> let th x = thiele2ratf as x
-  *Univariate> map th [0..5]
-  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47,69 % 73]
-  *Univariate> th 0.5
-  3 % 2
-\end{verbatim}
-
-\subsection{Haskell representation for rational functions}
-We represent a rational function by a tuple of coefficient lists, like,
-\begin{eqnarray}
-\texttt{(ns,ds) :: ([Ratio Int],[Ratio Int])}
-\end{eqnarray}
-
-Here is a translator from coefficients lists to rational function.
-\begin{verbatim}
-> lists2ratf :: (Integral a) => 
->   ([Ratio a],[Ratio a]) -> (Ratio a -> Ratio a)
-> lists2ratf (ns,ds) x = (p2fct ns x)/(p2fct ds x)
-
-  *Univariate> let frac x = lists2ratf ([1,1%2,1%3],[2,2%3]) x
-  *Univariate> take 10 $ map frac [0..]
-  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]
-  *Univariate> let ffrac x = (1+(1%2)*x+(1%3)*x^2)/(2+(2%3)*x)
-  *Univariate> take 10 $ map ffrac [0..]
-  [1 % 2,11 % 16,1 % 1,11 % 8,25 % 14,71 % 32,8 % 3,25 % 8,79 % 22,65 % 16]  
-\end{verbatim}
-Simply taking numerator and denominator polynomials.
-
-The following \texttt{canonicalizer} reduces the tuple-rep of rational function in canonical form, i.e., the coefficient of the lowest degree term of the denominator to be 1\footnote{
-Here our data point start from 0, i.e., the output data is given by \texttt{map f [0..]}, 0 is not singular, i.e., the denominator should have constant term and that means non empty.
-Therefore, the function firstNonzero is actually \texttt{head}.
-}.
-\begin{verbatim}
-> canonicalize :: (Integral a) => 
->   ([Ratio a],[Ratio a]) -> ([Ratio a],[Ratio a])
-> canonicalize rat@(ns,ds)
->   | dMin == 1 = rat
->   | otherwise = (map (/dMin) ns, map (/dMin) ds)
->   where
->     dMin = firstNonzero ds
->     firstNonzero [a] = a -- head
->     firstNonzero (a:as)
->       | a /= 0 = a
->       | otherwise = firstNonzero as
-
-  *Univariate> canonicalize ([1,1%2,1%3],[2,2%3])
-  ([1 % 2,1 % 4,1 % 6],[1 % 1,1 % 3])
-  *Univariate> canonicalize ([1,1%2,1%3],[0,0,2,2%3])
-  ([1 % 2,1 % 4,1 % 6],[0 % 1,0 % 1,1 % 1,1 % 3])
-  *Univariate> canonicalize ([1,1%2,1%3],[0,0,0,2%3])
-  ([3 % 2,3 % 4,1 % 2],[0 % 1,0 % 1,0 % 1,1 % 1])
-\end{verbatim}
-
-What we need is a translator from Thiele coefficients to this tuple-rep.
-Since the list of Thiele coefficients is finite, we can naturally think recursively.
-
-Before we go to a general case, consider
-\begin{eqnarray}
-f(x) := 1 + \cfrac{x}{2+\cfrac{x-1}{3+\cfrac{x-2}{4}}} 
-\end{eqnarray}
-When we simplify this expression, we should start from the bottom:
-\begin{eqnarray}
-f(x) &=& 1 + \cfrac{x}{2+\cfrac{x-1}{\cfrac{4*3+x-2}{4}}} \\
-&=& 1 + \cfrac{x}{2+\cfrac{x-1}{\cfrac{x+10}{4}}} \\
-&=& 1 + \cfrac{x}{\cfrac{2*(x+10) +4*(x-1)}{x+10}} \\
-&=& 1 + \cfrac{x}{\cfrac{6x+16}{x+10}} \\
-&=& \frac{1*(6x+16) + x*(x+10)}{6x+16} \\
-&=& \frac{x^2+16x+16}{6x+16}
-\end{eqnarray}
-Finally, if we need, we take its canonical form:
-\begin{eqnarray}
-f(x) = \frac{1+ x+ \frac{1}{16}x^2}{1+ \frac{3}{8} x}
-\end{eqnarray}
-
-In general, we have the following Thiele representation:
-\begin{eqnarray}
-a_0 + \cfrac{z}{a_1 + \cfrac{z-1}{a_2 + \cfrac{z- 2}{ \cfrac{\vdots}{a_{n} + \cfrac{z-n}{a_{n+1}}}}}}
-\end{eqnarray}
-The base case should be
-\begin{eqnarray}
-a_{n}+ \frac{z-n}{a_{n+1}} &=& \frac{a_{n+1}* a_{n}-n + z }{a_{n+1}} 
-\end{eqnarray}
-and induction step $0 \leq r \leq n$ should be
-\begin{eqnarray}
-a_{r}(z)
-&=&a_{r}+ \frac{z-r}{a_{r+1}(z)} \\
-&=& \frac{a_{r}a_{r+1}(z)+ z -r}{a_{r+1}(z)} \\
-&=& \frac{a_{r}*\texttt{num}\left(a_{r+1}(z) \right)+ \texttt{den}\left(a_{r+1}(z) \right) * \left(z -r\right)}{\texttt{num}\left(a_{r+1}(z) \right)} 
-\end{eqnarray}
-where
-\begin{eqnarray}
-a_{r+1}(z) = \frac{\texttt{num}\left(a_{r+1}(z) \right)}{\texttt{den}\left(a_{r+1}(z) \right)}
-\end{eqnarray}
-is a canonical representation of $a_{n+1}(z)$\footnote{
-Not necessary being a canonical representation, it suffices to express $a_{n+1}(z)$ in a polynomial over polynomial form, that is, two lists in Haskell.
-}.
-
-Thus, the implementation is the followings.
-\begin{verbatim}
-> thiele2coef :: (Integral a) => 
->   [Ratio a] -> ([Ratio a],[Ratio a])
-> thiele2coef as = canonicalize $ t2r as 0
->   where
->     t2r [an,an'] n = ([an*an'-n,1],[an'])
->     t2r (a:as)   n = ((a .* num) + ([-n,1] * den), num)
->       where
->         (num, den) = t2r as (n+1)\end{verbatim}
-
-From the first example,
-\begin{verbatim}
-  *Univariate> let func x = (x^2+16*x+16)%(6*x+16)
-  *Univariate> let funcList = map func [0..]
-  *Univariate> tDegree funcList 
-  3
-  *Univariate> take 5 funcList 
-  [1 % 1,3 % 2,13 % 7,73 % 34,12 % 5]
-  *Univariate> let aFunc = thieleC funcList 
-  *Univariate> aFunc
-  [1 % 1,2 % 1,3 % 1,4 % 1]
-  *Univariate> thiele2coef aFunc
-  ([1 % 1,1 % 1,1 % 16],[1 % 1,3 % 8])
-\end{verbatim}
-
-From the other example, equation (3.26) of ref.\ref{Tiziano},
-\begin{verbatim}
-  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
-  *Univariate> let hs = map h [0..]
-  *Univariate> take 5 hs
-  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47]
-  *Univariate> let th x = thiele2ratf as x
-  *Univariate> map th [0..5]
-  [3 % 1,27 % 23,87 % 85,183 % 187,45 % 47,69 % 73]
-  *Univariate> as
-  [3 % 1,(-23) % 42,(-28) % 13,767 % 14,7 % 130]
-  *Univariate> thiele2coef as
-  ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
-\end{verbatim}
-
-\subsection{\texttt{list2rat}: from output list to canonical coefficients}
-Finally, we get
-\begin{verbatim}
-> list2rat :: (Integral a) => [Ratio a] -> ([Ratio a], [Ratio a])
-> list2rat = thiele2Coef . thieleC
-\end{verbatim}
-as the reconstruction function from the output sequence.
-\begin{verbatim}
-  *Univariate> let h t = (3+6*t+18*t^2)%(1+2*t+20*t^2)
-  *Univariate> list2rat $ map h [0..]
-  ([3 % 1,6 % 1,18 % 1],[1 % 1,2 % 1,20 % 1])
-\end{verbatim}
-
-\section{Multivariate polynomials}
-From now on, we will use only the following functions from univariate cases.
-\begin{verbatim}
-Multivariate.lhs
-
-> module Multivariate 
->   where
-
-> import Data.Ratio
-> import Univariate 
->   ( degree, list2pol
->   , thiele2ratf, lists2ratf, thiele2coef, lists2rat
->   )
-\end{verbatim}
-
-\subsection{Foldings as recursive applications}
-Consider an arbitrary multivariate polynomial
-\begin{eqnarray}
-f(z_1,\cdots, z_n) \in \mathbb{K}[z_1,\cdots, z_n].
-\end{eqnarray}
-First, fix all the variable but 1st and apply the univariate Newton's reconstruction:
-\begin{eqnarray}
-f(z_1, z_2, \cdots, z_n) = \sum_{r=0}^R a_r (z_2,\cdots, z_n) \prod_{i=0}^{r-1}(z_1 - y_i)
-\end{eqnarray}
-Recursively, pick up one "coefficient" and apply the univariate Newton's reconstruction on $z_2$:
-\begin{eqnarray}
-a_r(z_2, \cdots, z_n) = \sum_{s=0}^{S} b_s (z_3,\cdots, z_n) \prod_{j=0}^{s-1}(z_2 - x_j)
-\end{eqnarray}
-The terminate cotndition should be the univariate case.
-
-\subsection{Experiments, 2 variables case}
-Let us take a polynomial from the denominator in eq.(3.23) of ref.\ref{Tiziano}.
-\begin{eqnarray}
-f(z_1,z_2) = 3 + 2z_1 + 4z_2 + 7z_1^2 + 5z_1z_2 + 6z_2^2
-\end{eqnarray}
-In Haskell, first, fix $z_2=0,1,2$ and identify $f(z_1, 0), f(z_1,1), f(z_1,2)$ as our univariate polynomials.
-\begin{verbatim}
-  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
-  *Multivariate> let fs z = map (`f` z) [0..]
-  *Multivariate> let llst = map fs [0,1,2]
-  *Multivariate> map degree llst
-  [2,2,2]
-\end{verbatim}
-Fine, so the canonical form can be
-\begin{eqnarray}
-f(z_1, z) = c_0(z) + c_1(z)z_1 + c_2(z) z_1^2.
-\end{eqnarray}
-Now our new target is three univariate polynomials $c_0(z), c_1(z), c_2(z)$.
-\begin{verbatim}
-  *Multivariate> list2pol $ take 10 $ fs 0
-  [3 % 1,2 % 1,7 % 1]
-  *Multivariate> list2pol $ take 10 $ fs 1
-  [13 % 1,7 % 1,7 % 1]
-  *Multivariate> list2pol $ take 10 $ fs 2
-  [35 % 1,12 % 1,7 % 1]
-\end{verbatim}
-That is
-\begin{eqnarray}
-f(z,0) &=& 3+ 2z+7z^2 \\
-f(z,1) &=& 13 + 7z + 7z^2 \\
-f(z,2) &=& 35 + 12z + 7z^2.
-\end{eqnarray}
-From these observation, we can determine $c_2(z)$, since it already a constant sequence.
-\begin{eqnarray}
-c_2(z) = 7
-\end{eqnarray}
-Consider $c_1(z)$, the sequence is now enough to determine $c_1(z)$:
-\begin{verbatim}
-  *Multivariate> degree [2,7,12]
-  1
-  *Multivariate> list2pol [2,7,12]
-  [2 % 1,5 % 1]
-\end{verbatim}
-i.e.,
-\begin{eqnarray}
-c_1(z) = 2 + 5z.
-\end{eqnarray}
-However, for $c_1(z)$
-\begin{verbatim}
-  *Multivariate> degree [3, 13, 35]
-  *** Exception: difLists: lack of data, or not a polynomial
-  CallStack (from HasCallStack):
-    error, called at ./Univariate.lhs:61:19 in main:Univariate
-\end{verbatim}
-so we need more numbers.
-Let us try one more:
-\begin{verbatim}
-  *Multivariate> list2pol $ take 10 $ map (`f` 3) [0..]
-  [69 % 1,17 % 1,7 % 1]
-  *Multivariate> degree [3, 13, 35, 69]
-  2
-  *Multivariate> list2pol [3,13,35,69]
-  [3 % 1,4 % 1,6 % 1]
-\end{verbatim}
-Thus we have
-\begin{eqnarray}
-c_0(z) = 3+4z+6z^2
-\end{eqnarray}
-and these fully determine our polynomial:
-\begin{eqnarray}
-f(z_1, z_2) = (3+4z_2+6z_2^2) + (2 + 5z_2)z_1 + 7z_1^2.
-\end{eqnarray}
-
-As another experiment, take the denominator.
-\begin{verbatim}
-  *Multivariate> let g x y = 1+7*x + 8*y + 10*x^2 + x*y+9*y^2
-  *Multivariate> let gs x = map (g x) [0..]
-  *Multivariate> map degree $ map gs [0..3] 
-  [2,2,2,2]
-\end{verbatim}
-So the canonical form should be
-\begin{eqnarray}
-g(x,y) = c_0(x) + c_1(x)y + c_2(x)y^2
-\end{eqnarray}
-Let us look at these coefficient polynomial:
-\begin{verbatim}
-  *Multivariate> list2pol $ take 10 $ gs 0
-  [1 % 1,8 % 1,9 % 1]
-  *Multivariate> list2pol $ take 10 $ gs 1
-  [18 % 1,9 % 1,9 % 1]
-  *Multivariate> list2pol $ take 10 $ gs 2
-  [55 % 1,10 % 1,9 % 1]
-  *Multivariate> list2pol $ take 10 $ gs 3
-  [112 % 1,11 % 1,9 % 1]
-\end{verbatim}
-So we get
-\begin{eqnarray}
-c_2(x) = 9
-\end{eqnarray}
-and 
-\begin{verbatim}  
-  *Multivariate> map (list2pol . (take 10) . gs) [0..4] 
-  [[1 % 1,8 % 1,9 % 1]
-  ,[18 % 1,9 % 1,9 % 1]
-  ,[55 % 1,10 % 1,9 % 1]
-  ,[112 % 1,11 % 1,9 % 1]
-  ,[189 % 1,12 % 1,9 % 1]
-  ]
-  *Multivariate> map head it
-  [1 % 1,18 % 1,55 % 1,112 % 1,189 % 1]
-  *Multivariate> list2pol it
-  [1 % 1,7 % 1,10 % 1]
-  *Multivariate> list2pol $ map (head . list2pol . (take 10) . gs) [0..4] 
-  [1 % 1,7 % 1,10 % 1]
-\end{verbatim}
-Using index operator \texttt{(!!)},
-\begin{verbatim}
-  *Multivariate> list2pol $ map ((!! 0) . list2pol . (take 10) . gs) [0..4] 
-  [1 % 1,7 % 1,10 % 1]
-  *Multivariate> list2pol $ map ((!! 1) . list2pol . (take 10) . gs) [0..4] 
-  [8 % 1,1 % 1]
-  *Multivariate> list2pol $ map ((!! 2) . list2pol . (take 10) . gs) [0..4] 
-  [9 % 1]
-\end{verbatim}
-Finally we get
-\begin{eqnarray}
-c_0(x) = 1 + 7x+10x^2, c_1(x) = 8+x, \left( c_2(x) = 9, \right)
-\end{eqnarray}
-and
-\begin{eqnarray}
-g(x,y) = (1+7x+10x^2) + (8+x)y + 9y^2
-\end{eqnarray}
-
-\subsection{Haskell implementation, 2 variables case}
-Let us assume that we are given a "table" of the values of a 2-variate function.
-We represent this table as a list of lists.
-\begin{verbatim}
-  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
-  *Multivariate> [[f x y | y <- [0..9]] | x <- [0..9]]
-  [[3,13,35,69,115,173,243,325,419,525]
-  ,[12,27,54,93,144,207,282,369,468,579]
-  ,[35,55,87,131,187,255,335,427,531,647]
-  ,[72,97,134,183,244,317,402,499,608,729]
-  ,[123,153,195,249,315,393,483,585,699,825]
-  ,[188,223,270,329,400,483,578,685,804,935]
-  ,[267,307,359,423,499,587,687,799,923,1059]
-  ,[360,405,462,531,612,705,810,927,1056,1197]
-  ,[467,517,579,653,739,837,947,1069,1203,1349]
-  ,[588,643,710,789,880,983,1098,1225,1364,1515]
-  ]
-
-> tablize :: (Enum t1, Num t1) => (t1 -> t1 -> t) -> Int -> [[t]]
-> tablize f n = [[f x y | y <- range] | x <- range]
->   where
->     range = take n [0..]
-\end{verbatim}
-So, this "table" is like
-\begin{eqnarray}
-\left(\begin{array}{ccc} f_{0,0} & f_{0,1} & \cdots \\ f_{1,0} & f_{1,1} & \cdots \\f_{2,0} & f_{2,1} & \cdots \\ \vdots && \ddots \end{array}\right)
-\end{eqnarray}
-Then we can apply the univariate technique.
-\begin{verbatim}
-  *Multivariate> let fTable = tablize f 10
-  *Multivariate> map list2pol fTable 
-  [[3 % 1,4 % 1,6 % 1]
-  ,[12 % 1,9 % 1,6 % 1]
-  ,[35 % 1,14 % 1,6 % 1]
-  ,[72 % 1,19 % 1,6 % 1]
-  ,[123 % 1,24 % 1,6 % 1]
-  ,[188 % 1,29 % 1,6 % 1]
-  ,[267 % 1,34 % 1,6 % 1]
-  ,[360 % 1,39 % 1,6 % 1]
-  ,[467 % 1,44 % 1,6 % 1]
-  ,[588 % 1,49 % 1,6 % 1]
-  ]
-\end{verbatim}
-Now we need to see the behavior of each coefficient, so take the "transpose" of it:
-\begin{verbatim}
-> wellOrd :: [[a]] -> [[a]]
-> wellOrd xss 
->   | null (head xss) = [] 
->   | otherwise       = map head xss : wellOrd (map tail xss)
-
-  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
-  *Multivariate> let fTable = tablize f 10
-  *Multivariate> map list2pol fTable 
-  [[3 % 1,4 % 1,6 % 1]
-  ,[12 % 1,9 % 1,6 % 1]
-  ,[35 % 1,14 % 1,6 % 1]
-  ,[72 % 1,19 % 1,6 % 1]
-  ,[123 % 1,24 % 1,6 % 1]
-  ,[188 % 1,29 % 1,6 % 1]
-  ,[267 % 1,34 % 1,6 % 1]
-  ,[360 % 1,39 % 1,6 % 1]
-  ,[467 % 1,44 % 1,6 % 1]
-  ,[588 % 1,49 % 1,6 % 1]
-  ]
-  *Multivariate> wellOrd it
-  [[3 % 1,12 % 1,35 % 1,72 % 1,123 % 1,188 % 1,267 % 1,360 % 1,467 % 1,588 % 1]
-  ,[4 % 1,9 % 1,14 % 1,19 % 1,24 % 1,29 % 1,34 % 1,39 % 1,44 % 1,49 % 1]
-  ,[6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
-  ]
-  *Multivariate> map list2pol it
-  [[3 % 1,2 % 1,7 % 1]
-  ,[4 % 1,5 % 1]
-  ,[6 % 1]]
-\end{verbatim}
-Therefore, the whole procedure becomes
-\begin{verbatim}  
-> table2pol :: [[Ratio Integer]] -> [[Ratio Integer]]
-> table2pol = map list2pol . wellOrd . map list2pol
-
-  *Multivariate> let g x y = 1+7*x + 8*y + 10*x^2 + x*y+9*y^2
-  *Multivariate> table2pol $ tablize g 5
-  [[1 % 1,7 % 1,10 % 1],[8 % 1,1 % 1],[9 % 1]]
-\end{verbatim}
+%\section{Multivariate polynomials}
+%From now on, we will use only the following functions from univariate cases.
+%\begin{verbatim}
+%Multivariate.lhs
+%
+%> module Multivariate 
+%>   where
+%
+%> import Data.Ratio
+%> import Univariate 
+%>   ( degree, list2pol
+%>   , thiele2ratf, lists2ratf, thiele2coef, lists2rat
+%>   )
+%\end{verbatim}
+%
+%\subsection{Foldings as recursive applications}
+%Consider an arbitrary multivariate polynomial
+%\begin{eqnarray}
+%f(z_1,\cdots, z_n) \in \mathbb{K}[z_1,\cdots, z_n].
+%\end{eqnarray}
+%First, fix all the variable but 1st and apply the univariate Newton's reconstruction:
+%\begin{eqnarray}
+%f(z_1, z_2, \cdots, z_n) = \sum_{r=0}^R a_r (z_2,\cdots, z_n) \prod_{i=0}^{r-1}(z_1 - y_i)
+%\end{eqnarray}
+%Recursively, pick up one "coefficient" and apply the univariate Newton's reconstruction on $z_2$:
+%\begin{eqnarray}
+%a_r(z_2, \cdots, z_n) = \sum_{s=0}^{S} b_s (z_3,\cdots, z_n) \prod_{j=0}^{s-1}(z_2 - x_j)
+%\end{eqnarray}
+%The terminate cotndition should be the univariate case.
+%
+%\subsection{Experiments, 2 variables case}
+%Let us take a polynomial from the denominator in eq.(3.23) of ref.\ref{Tiziano}.
+%\begin{eqnarray}
+%f(z_1,z_2) = 3 + 2z_1 + 4z_2 + 7z_1^2 + 5z_1z_2 + 6z_2^2
+%\end{eqnarray}
+%In Haskell, first, fix $z_2=0,1,2$ and identify $f(z_1, 0), f(z_1,1), f(z_1,2)$ as our univariate polynomials.
+%\begin{verbatim}
+%  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
+%  *Multivariate> let fs z = map (`f` z) [0..]
+%  *Multivariate> let llst = map fs [0,1,2]
+%  *Multivariate> map degree llst
+%  [2,2,2]
+%\end{verbatim}
+%Fine, so the canonical form can be
+%\begin{eqnarray}
+%f(z_1, z) = c_0(z) + c_1(z)z_1 + c_2(z) z_1^2.
+%\end{eqnarray}
+%Now our new target is three univariate polynomials $c_0(z), c_1(z), c_2(z)$.
+%\begin{verbatim}
+%  *Multivariate> list2pol $ take 10 $ fs 0
+%  [3 % 1,2 % 1,7 % 1]
+%  *Multivariate> list2pol $ take 10 $ fs 1
+%  [13 % 1,7 % 1,7 % 1]
+%  *Multivariate> list2pol $ take 10 $ fs 2
+%  [35 % 1,12 % 1,7 % 1]
+%\end{verbatim}
+%That is
+%\begin{eqnarray}
+%f(z,0) &=& 3+ 2z+7z^2 \\
+%f(z,1) &=& 13 + 7z + 7z^2 \\
+%f(z,2) &=& 35 + 12z + 7z^2.
+%\end{eqnarray}
+%From these observation, we can determine $c_2(z)$, since it already a constant sequence.
+%\begin{eqnarray}
+%c_2(z) = 7
+%\end{eqnarray}
+%Consider $c_1(z)$, the sequence is now enough to determine $c_1(z)$:
+%\begin{verbatim}
+%  *Multivariate> degree [2,7,12]
+%  1
+%  *Multivariate> list2pol [2,7,12]
+%  [2 % 1,5 % 1]
+%\end{verbatim}
+%i.e.,
+%\begin{eqnarray}
+%c_1(z) = 2 + 5z.
+%\end{eqnarray}
+%However, for $c_1(z)$
+%\begin{verbatim}
+%  *Multivariate> degree [3, 13, 35]
+%  *** Exception: difLists: lack of data, or not a polynomial
+%  CallStack (from HasCallStack):
+%    error, called at ./Univariate.lhs:61:19 in main:Univariate
+%\end{verbatim}
+%so we need more numbers.
+%Let us try one more:
+%\begin{verbatim}
+%  *Multivariate> list2pol $ take 10 $ map (`f` 3) [0..]
+%  [69 % 1,17 % 1,7 % 1]
+%  *Multivariate> degree [3, 13, 35, 69]
+%  2
+%  *Multivariate> list2pol [3,13,35,69]
+%  [3 % 1,4 % 1,6 % 1]
+%\end{verbatim}
+%Thus we have
+%\begin{eqnarray}
+%c_0(z) = 3+4z+6z^2
+%\end{eqnarray}
+%and these fully determine our polynomial:
+%\begin{eqnarray}
+%f(z_1, z_2) = (3+4z_2+6z_2^2) + (2 + 5z_2)z_1 + 7z_1^2.
+%\end{eqnarray}
+%
+%As another experiment, take the denominator.
+%\begin{verbatim}
+%  *Multivariate> let g x y = 1+7*x + 8*y + 10*x^2 + x*y+9*y^2
+%  *Multivariate> let gs x = map (g x) [0..]
+%  *Multivariate> map degree $ map gs [0..3] 
+%  [2,2,2,2]
+%\end{verbatim}
+%So the canonical form should be
+%\begin{eqnarray}
+%g(x,y) = c_0(x) + c_1(x)y + c_2(x)y^2
+%\end{eqnarray}
+%Let us look at these coefficient polynomial:
+%\begin{verbatim}
+%  *Multivariate> list2pol $ take 10 $ gs 0
+%  [1 % 1,8 % 1,9 % 1]
+%  *Multivariate> list2pol $ take 10 $ gs 1
+%  [18 % 1,9 % 1,9 % 1]
+%  *Multivariate> list2pol $ take 10 $ gs 2
+%  [55 % 1,10 % 1,9 % 1]
+%  *Multivariate> list2pol $ take 10 $ gs 3
+%  [112 % 1,11 % 1,9 % 1]
+%\end{verbatim}
+%So we get
+%\begin{eqnarray}
+%c_2(x) = 9
+%\end{eqnarray}
+%and 
+%\begin{verbatim}  
+%  *Multivariate> map (list2pol . (take 10) . gs) [0..4] 
+%  [[1 % 1,8 % 1,9 % 1]
+%  ,[18 % 1,9 % 1,9 % 1]
+%  ,[55 % 1,10 % 1,9 % 1]
+%  ,[112 % 1,11 % 1,9 % 1]
+%  ,[189 % 1,12 % 1,9 % 1]
+%  ]
+%  *Multivariate> map head it
+%  [1 % 1,18 % 1,55 % 1,112 % 1,189 % 1]
+%  *Multivariate> list2pol it
+%  [1 % 1,7 % 1,10 % 1]
+%  *Multivariate> list2pol $ map (head . list2pol . (take 10) . gs) [0..4] 
+%  [1 % 1,7 % 1,10 % 1]
+%\end{verbatim}
+%Using index operator \texttt{(!!)},
+%\begin{verbatim}
+%  *Multivariate> list2pol $ map ((!! 0) . list2pol . (take 10) . gs) [0..4] 
+%  [1 % 1,7 % 1,10 % 1]
+%  *Multivariate> list2pol $ map ((!! 1) . list2pol . (take 10) . gs) [0..4] 
+%  [8 % 1,1 % 1]
+%  *Multivariate> list2pol $ map ((!! 2) . list2pol . (take 10) . gs) [0..4] 
+%  [9 % 1]
+%\end{verbatim}
+%Finally we get
+%\begin{eqnarray}
+%c_0(x) = 1 + 7x+10x^2, c_1(x) = 8+x, \left( c_2(x) = 9, \right)
+%\end{eqnarray}
+%and
+%\begin{eqnarray}
+%g(x,y) = (1+7x+10x^2) + (8+x)y + 9y^2
+%\end{eqnarray}
+%
+%\subsection{Haskell implementation, 2 variables case}
+%Let us assume that we are given a "table" of the values of a 2-variate function.
+%We represent this table as a list of lists.
+%\begin{verbatim}
+%  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
+%  *Multivariate> [[f x y | y <- [0..9]] | x <- [0..9]]
+%  [[3,13,35,69,115,173,243,325,419,525]
+%  ,[12,27,54,93,144,207,282,369,468,579]
+%  ,[35,55,87,131,187,255,335,427,531,647]
+%  ,[72,97,134,183,244,317,402,499,608,729]
+%  ,[123,153,195,249,315,393,483,585,699,825]
+%  ,[188,223,270,329,400,483,578,685,804,935]
+%  ,[267,307,359,423,499,587,687,799,923,1059]
+%  ,[360,405,462,531,612,705,810,927,1056,1197]
+%  ,[467,517,579,653,739,837,947,1069,1203,1349]
+%  ,[588,643,710,789,880,983,1098,1225,1364,1515]
+%  ]
+%
+%> tablize :: (Enum t1, Num t1) => (t1 -> t1 -> t) -> Int -> [[t]]
+%> tablize f n = [[f x y | y <- range] | x <- range]
+%>   where
+%>     range = take n [0..]
+%\end{verbatim}
+%So, this "table" is like
+%\begin{eqnarray}
+%\left(\begin{array}{ccc} f_{0,0} & f_{0,1} & \cdots \\ f_{1,0} & f_{1,1} & \cdots \\f_{2,0} & f_{2,1} & \cdots \\ \vdots && \ddots \end{array}\right)
+%\end{eqnarray}
+%Then we can apply the univariate technique.
+%\begin{verbatim}
+%  *Multivariate> let fTable = tablize f 10
+%  *Multivariate> map list2pol fTable 
+%  [[3 % 1,4 % 1,6 % 1]
+%  ,[12 % 1,9 % 1,6 % 1]
+%  ,[35 % 1,14 % 1,6 % 1]
+%  ,[72 % 1,19 % 1,6 % 1]
+%  ,[123 % 1,24 % 1,6 % 1]
+%  ,[188 % 1,29 % 1,6 % 1]
+%  ,[267 % 1,34 % 1,6 % 1]
+%  ,[360 % 1,39 % 1,6 % 1]
+%  ,[467 % 1,44 % 1,6 % 1]
+%  ,[588 % 1,49 % 1,6 % 1]
+%  ]
+%\end{verbatim}
+%Now we need to see the behavior of each coefficient, so take the "transpose" of it:
+%\begin{verbatim}
+%> wellOrd :: [[a]] -> [[a]]
+%> wellOrd xss 
+%>   | null (head xss) = [] 
+%>   | otherwise       = map head xss : wellOrd (map tail xss)
+%
+%  *Multivariate> let f z1 z2 = 3+2*z1+4*z2+7*z1^2+5*z1*z2+6*z2^2
+%  *Multivariate> let fTable = tablize f 10
+%  *Multivariate> map list2pol fTable 
+%  [[3 % 1,4 % 1,6 % 1]
+%  ,[12 % 1,9 % 1,6 % 1]
+%  ,[35 % 1,14 % 1,6 % 1]
+%  ,[72 % 1,19 % 1,6 % 1]
+%  ,[123 % 1,24 % 1,6 % 1]
+%  ,[188 % 1,29 % 1,6 % 1]
+%  ,[267 % 1,34 % 1,6 % 1]
+%  ,[360 % 1,39 % 1,6 % 1]
+%  ,[467 % 1,44 % 1,6 % 1]
+%  ,[588 % 1,49 % 1,6 % 1]
+%  ]
+%  *Multivariate> wellOrd it
+%  [[3 % 1,12 % 1,35 % 1,72 % 1,123 % 1,188 % 1,267 % 1,360 % 1,467 % 1,588 % 1]
+%  ,[4 % 1,9 % 1,14 % 1,19 % 1,24 % 1,29 % 1,34 % 1,39 % 1,44 % 1,49 % 1]
+%  ,[6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1,6 % 1]
+%  ]
+%  *Multivariate> map list2pol it
+%  [[3 % 1,2 % 1,7 % 1]
+%  ,[4 % 1,5 % 1]
+%  ,[6 % 1]]
+%\end{verbatim}
+%Therefore, the whole procedure becomes
+%\begin{verbatim}  
+%> table2pol :: [[Ratio Integer]] -> [[Ratio Integer]]
+%> table2pol = map list2pol . wellOrd . map list2pol
+%
+%  *Multivariate> let g x y = 1+7*x + 8*y + 10*x^2 + x*y+9*y^2
+%  *Multivariate> table2pol $ tablize g 5
+%  [[1 % 1,7 % 1,10 % 1],[8 % 1,1 % 1],[9 % 1]]
+%\end{verbatim}
 
 \section{Multivariate rational functions}
 \subsection{The canonical normalization}
@@ -2379,182 +2382,182 @@ p_r(1, z_2, \cdots, z_n)
 \end{eqnarray}
 instead of $p_r(z_1, z_2, \cdots, z_n)$, reconstruct it using multivariate Newton's method, and homogenize with $z_1$.
 
-\subsection{Experiments, 2 variables case}
-Consider the equation (3.23) in ref.\ref{Tiziano}.
-\begin{verbatim}
-  *Multivariate> let f x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2)
-                              % (1+7*x+8*y+10*x^2+x*y+9*y^2)
-  *Multivariate> :t f
-  f :: Integral a => a -> a -> Ratio a
-  *Multivariate> let h x y t = f (t*x) (t*y)
-  *Multivariate> let hs x y = map (h x y) [0..]
-  *Multivariate> take 5 $ hs 0 0
-  [3 % 1,3 % 1,3 % 1,3 % 1,3 % 1]
-  *Multivariate> take 5 $ hs 0 1
-  [3 % 1,13 % 18,35 % 53,69 % 106,115 % 177]
-  *Multivariate> take 5 $ hs 1 0
-  [3 % 1,2 % 3,7 % 11,9 % 14,41 % 63]
-  *Multivariate> take 5 $ hs 1 1
-  [3 % 1,3 % 4,29 % 37,183 % 226,105 % 127]
-\end{verbatim}
-Here we have introduced the auxiliary $t$ as third argument.
-
-We take $(x,y) = (1,0), (1,1), (1,2), (1,3)$ and reconstruct them\footnote{Eq.(3.26) in ref.\ref{Tiziano} is different from our reconstruction.
-}.
-\begin{verbatim}
-  *Multivariate> lists2rat $ hs 1 0
-  ([3 % 1,2 % 1,7 % 1],[1 % 1,7 % 1,10 % 1])
-  *Multivariate> lists2rat $ hs 1 1
-  ([3 % 1,6 % 1,18 % 1],[1 % 1,15 % 1,20 % 1])
-  *Multivariate> lists2rat $ hs 1 2
-  ([3 % 1,10 % 1,41 % 1],[1 % 1,23 % 1,48 % 1])
-  *Multivariate> lists2rat $ hs 1 3
-  ([3 % 1,14 % 1,76 % 1],[1 % 1,31 % 1,94 % 1])
-\end{verbatim}
-So we have
-\begin{eqnarray}
-\label{tizianoExample1}
-h(1,0,t) &=& \frac{3+2t+7t^2}{1+7t+10t^2} \\
-\label{tizianoExample2}
-h(1,1,t) &=& \frac{3+6t+18t^2}{1+15t+20t^2} \\
-\label{tizianoExample3}
-h(1,2,t) &=& \frac{3+10t+41t^2}{1+23t+48t^2} \\
-\label{tizianoExample4}
-h(1,3,t) &=& \frac{3+14t+76t^2}{1+31t+94t^2}
-\end{eqnarray}
-Our next targets are the coefficients as polynomials in $y$ \footnote{
-In our example, we take $x=1$ fixed and reproduce $x$-dependence using homogenization
-}.
-
-Let us consider numerator first.
-This \texttt{list} is Haskell representation for eq.(\ref{tizianoExample1}), eq.(\ref{tizianoExample2}), eq.(\ref{tizianoExample3}) and eq.(\ref{tizianoExample4}).
-\begin{verbatim}
-  *Multivariate> let list = map (lists2rat . (hs 1)) [0..4]
-  *Multivariate> let numf = map fst list
-  *Multivariate> list
-  [([3 % 1,2 % 1,7 % 1],[1 % 1,7 % 1,10 % 1])
-  ,([3 % 1,6 % 1,18 % 1],[1 % 1,15 % 1,20 % 1])
-  ,([3 % 1,10 % 1,41 % 1],[1 % 1,23 % 1,48 % 1])
-  ,([3 % 1,14 % 1,76 % 1],[1 % 1,31 % 1,94 % 1])
-  ,([3 % 1,18 % 1,123 % 1],[1 % 1,39 % 1,158 % 1])
-  ]
-  *Multivariate> numf
-  [[3 % 1,2 % 1,7 % 1]
-  ,[3 % 1,6 % 1,18 % 1]
-  ,[3 % 1,10 % 1,41 % 1]
-  ,[3 % 1,14 % 1,76 % 1]
-  ,[3 % 1,18 % 1,123 % 1]
-  ]
-\end{verbatim}
-From this information, we reconstruct each polynomials
-\begin{verbatim}
-  *Multivariate> list2pol $ map head numf
-  [3 % 1]
-  *Multivariate> list2pol $ map (head . tail) numf
-  [2 % 1,4 % 1]
-  *Multivariate> list2pol $ map last numf
-  [7 % 1,5 % 1,6 % 1]
-\end{verbatim}
-that is we have $3, 2+4y, 7+5y+6y^2$ as results.
-Similarly,
-\begin{verbatim}
-  *Multivariate> let denf = map snd list
-  *Multivariate> denf
-  [[1 % 1,7 % 1,10 % 1]
-  ,[1 % 1,15 % 1,20 % 1]
-  ,[1 % 1,23 % 1,48 % 1]
-  ,[1 % 1,31 % 1,94 % 1]
-  ,[1 % 1,39 % 1,158 % 1]
-  ]
-  *Multivariate> list2pol $ map head denf
-  [1 % 1]
-  *Multivariate> list2pol $ map (head . tail) denf
-  [7 % 1,8 % 1]
-  *Multivariate> list2pol $ map last denf
-  [10 % 1,1 % 1,9 % 1]
-\end{verbatim}
-So we get
-\begin{eqnarray}
-h(1,y,t) = \frac{3 + (2+4y)t + (7+5y+6y^2)t^2}{1 + (7+8y)t + (10+y+9y^2)t^2}
-\end{eqnarray}
-Finally, we use the homogeneous property for each powers:
-\begin{eqnarray}
-h(x,y,t) = \frac{3 + (2x+4y)t + (7x^2+5xy+6y^2)t^2}{1 + (7x+8y)t + (10x^2+xy+9y^2)t^2}
-\end{eqnarray}
-Putting $t=1$, we get
-\begin{eqnarray}
-f(x,y) &=& h(x,y,1) \\
-&=& \frac{3 + (2x+4y) + (7x^2+5xy+6y^2)}{1 + (7x+8y) + (10x^2+xy+9y^2)}
-\end{eqnarray}
-
-\subsection{Haskell implementation, 2 variables case}
-Assume we have a "table" of data:
-\begin{verbatim}
-  *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
-  *Multivariate> let auxh x y t = h (t*x) (t*y)
-  *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2)% (1+7*x+8*y+10*x^2+x*y+9*y^2)
-  *Multivariate> let auxh x y t = h (t*x) (t*y)
-
-Using the homogenious property, we just take x=1:
-
-  *Multivariate> let auxhs = [map (auxh 1 y) [0..5] | y <- [0..5]]
-  *Multivariate> auxhs
-  [[3 % 1,2 % 3,7 % 11,9 % 14,41 % 63,94 % 143]
-  ,[3 % 1,3 % 4,29 % 37,183 % 226,105 % 127,161 % 192]
-  ,[3 % 1,3 % 4,187 % 239,201 % 251,233 % 287,77 % 94]
-  ,[3 % 1,31 % 42,335 % 439,729 % 940,425 % 543,1973 % 2506]
-  ,[3 % 1,8 % 11,59 % 79,291 % 385,681 % 895,528 % 691]
-  ,[3 % 1,23 % 32,155 % 211,1707 % 2302,1001 % 1343,4663 % 6236]
-  ]
-\end{verbatim}
-Now, each list can be seen as a univariate rational function:  
-\begin{verbatim}  
-  *Multivariate> map list2rat auxhs
-  [([3 % 1,2 % 1,7 % 1],[1 % 1,7 % 1,10 % 1])
-  ,([3 % 1,6 % 1,18 % 1],[1 % 1,15 % 1,20 % 1])
-  ,([3 % 1,10 % 1,41 % 1],[1 % 1,23 % 1,48 % 1])
-  ,([3 % 1,14 % 1,76 % 1],[1 % 1,31 % 1,94 % 1])
-  ,([3 % 1,18 % 1,123 % 1],[1 % 1,39 % 1,158 % 1])
-  ,([3 % 1,22 % 1,182 % 1],[1 % 1,47 % 1,240 % 1])
-  ]
-  *Multivariate> map fst it
-  [[3 % 1,2 % 1,7 % 1]
-  ,[3 % 1,6 % 1,18 % 1]
-  ,[3 % 1,10 % 1,41 % 1]
-  ,[3 % 1,14 % 1,76 % 1]
-  ,[3 % 1,18 % 1,123 % 1]
-  ,[3 % 1,22 % 1,182 % 1]
-  ]
-\end{verbatim}
-We need to see the behavior of each coefficients:
-\begin{verbatim}  
-  *Multivariate> wellOrd it
-  [[3 % 1,3 % 1,3 % 1,3 % 1,3 % 1,3 % 1]
-  ,[2 % 1,6 % 1,10 % 1,14 % 1,18 % 1,22 % 1]
-  ,[7 % 1,18 % 1,41 % 1,76 % 1,123 % 1,182 % 1]
-  ]
-  *Multivariate> map list2pol it
-  [[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]]
-\end{verbatim}  
-So, the numerator is given by
-\begin{verbatim}  
-  *Multivariate> map list2pol . wellOrd . map (fst . list2rat) $ auxhs
-  [[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]]
-\end{verbatim}    
-and the denominator is
-\begin{verbatim}  
-  *Multivariate> map list2pol . wellOrd . map (snd . list2rat) $ auxhs
-  [[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]]
-\end{verbatim}
-Thus, we finally get the following function
-\begin{verbatim}
-> table2ratf table = (t2r fst table, t2r snd table)
->   where
->     t2r third = map list2pol . wellOrd . map (third . list2rat)
-  
-  *Multivariate> table2ratf auxhs
-  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]])
-\end{verbatim}
+%\subsection{Experiments, 2 variables case}
+%Consider the equation (3.23) in ref.\ref{Tiziano}.
+%\begin{verbatim}
+%  *Multivariate> let f x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2)
+%                              % (1+7*x+8*y+10*x^2+x*y+9*y^2)
+%  *Multivariate> :t f
+%  f :: Integral a => a -> a -> Ratio a
+%  *Multivariate> let h x y t = f (t*x) (t*y)
+%  *Multivariate> let hs x y = map (h x y) [0..]
+%  *Multivariate> take 5 $ hs 0 0
+%  [3 % 1,3 % 1,3 % 1,3 % 1,3 % 1]
+%  *Multivariate> take 5 $ hs 0 1
+%  [3 % 1,13 % 18,35 % 53,69 % 106,115 % 177]
+%  *Multivariate> take 5 $ hs 1 0
+%  [3 % 1,2 % 3,7 % 11,9 % 14,41 % 63]
+%  *Multivariate> take 5 $ hs 1 1
+%  [3 % 1,3 % 4,29 % 37,183 % 226,105 % 127]
+%\end{verbatim}
+%Here we have introduced the auxiliary $t$ as third argument.
+%
+%We take $(x,y) = (1,0), (1,1), (1,2), (1,3)$ and reconstruct them\footnote{Eq.(3.26) in ref.\ref{Tiziano} is different from our reconstruction.
+%}.
+%\begin{verbatim}
+%  *Multivariate> lists2rat $ hs 1 0
+%  ([3 % 1,2 % 1,7 % 1],[1 % 1,7 % 1,10 % 1])
+%  *Multivariate> lists2rat $ hs 1 1
+%  ([3 % 1,6 % 1,18 % 1],[1 % 1,15 % 1,20 % 1])
+%  *Multivariate> lists2rat $ hs 1 2
+%  ([3 % 1,10 % 1,41 % 1],[1 % 1,23 % 1,48 % 1])
+%  *Multivariate> lists2rat $ hs 1 3
+%  ([3 % 1,14 % 1,76 % 1],[1 % 1,31 % 1,94 % 1])
+%\end{verbatim}
+%So we have
+%\begin{eqnarray}
+%\label{tizianoExample1}
+%h(1,0,t) &=& \frac{3+2t+7t^2}{1+7t+10t^2} \\
+%\label{tizianoExample2}
+%h(1,1,t) &=& \frac{3+6t+18t^2}{1+15t+20t^2} \\
+%\label{tizianoExample3}
+%h(1,2,t) &=& \frac{3+10t+41t^2}{1+23t+48t^2} \\
+%\label{tizianoExample4}
+%h(1,3,t) &=& \frac{3+14t+76t^2}{1+31t+94t^2}
+%\end{eqnarray}
+%Our next targets are the coefficients as polynomials in $y$ \footnote{
+%In our example, we take $x=1$ fixed and reproduce $x$-dependence using homogenization
+%}.
+%
+%Let us consider numerator first.
+%This \texttt{list} is Haskell representation for eq.(\ref{tizianoExample1}), eq.(\ref{tizianoExample2}), eq.(\ref{tizianoExample3}) and eq.(\ref{tizianoExample4}).
+%\begin{verbatim}
+%  *Multivariate> let list = map (lists2rat . (hs 1)) [0..4]
+%  *Multivariate> let numf = map fst list
+%  *Multivariate> list
+%  [([3 % 1,2 % 1,7 % 1],[1 % 1,7 % 1,10 % 1])
+%  ,([3 % 1,6 % 1,18 % 1],[1 % 1,15 % 1,20 % 1])
+%  ,([3 % 1,10 % 1,41 % 1],[1 % 1,23 % 1,48 % 1])
+%  ,([3 % 1,14 % 1,76 % 1],[1 % 1,31 % 1,94 % 1])
+%  ,([3 % 1,18 % 1,123 % 1],[1 % 1,39 % 1,158 % 1])
+%  ]
+%  *Multivariate> numf
+%  [[3 % 1,2 % 1,7 % 1]
+%  ,[3 % 1,6 % 1,18 % 1]
+%  ,[3 % 1,10 % 1,41 % 1]
+%  ,[3 % 1,14 % 1,76 % 1]
+%  ,[3 % 1,18 % 1,123 % 1]
+%  ]
+%\end{verbatim}
+%From this information, we reconstruct each polynomials
+%\begin{verbatim}
+%  *Multivariate> list2pol $ map head numf
+%  [3 % 1]
+%  *Multivariate> list2pol $ map (head . tail) numf
+%  [2 % 1,4 % 1]
+%  *Multivariate> list2pol $ map last numf
+%  [7 % 1,5 % 1,6 % 1]
+%\end{verbatim}
+%that is we have $3, 2+4y, 7+5y+6y^2$ as results.
+%Similarly,
+%\begin{verbatim}
+%  *Multivariate> let denf = map snd list
+%  *Multivariate> denf
+%  [[1 % 1,7 % 1,10 % 1]
+%  ,[1 % 1,15 % 1,20 % 1]
+%  ,[1 % 1,23 % 1,48 % 1]
+%  ,[1 % 1,31 % 1,94 % 1]
+%  ,[1 % 1,39 % 1,158 % 1]
+%  ]
+%  *Multivariate> list2pol $ map head denf
+%  [1 % 1]
+%  *Multivariate> list2pol $ map (head . tail) denf
+%  [7 % 1,8 % 1]
+%  *Multivariate> list2pol $ map last denf
+%  [10 % 1,1 % 1,9 % 1]
+%\end{verbatim}
+%So we get
+%\begin{eqnarray}
+%h(1,y,t) = \frac{3 + (2+4y)t + (7+5y+6y^2)t^2}{1 + (7+8y)t + (10+y+9y^2)t^2}
+%\end{eqnarray}
+%Finally, we use the homogeneous property for each powers:
+%\begin{eqnarray}
+%h(x,y,t) = \frac{3 + (2x+4y)t + (7x^2+5xy+6y^2)t^2}{1 + (7x+8y)t + (10x^2+xy+9y^2)t^2}
+%\end{eqnarray}
+%Putting $t=1$, we get
+%\begin{eqnarray}
+%f(x,y) &=& h(x,y,1) \\
+%&=& \frac{3 + (2x+4y) + (7x^2+5xy+6y^2)}{1 + (7x+8y) + (10x^2+xy+9y^2)}
+%\end{eqnarray}
+%
+%\subsection{Haskell implementation, 2 variables case}
+%Assume we have a "table" of data:
+%\begin{verbatim}
+%  *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2) % (1+7*x+8*y+10*x^2+x*y+9*y^2)
+%  *Multivariate> let auxh x y t = h (t*x) (t*y)
+%  *Multivariate> let h x y = (3+2*x+4*y+7*x^2+5*x*y+6*y^2)% (1+7*x+8*y+10*x^2+x*y+9*y^2)
+%  *Multivariate> let auxh x y t = h (t*x) (t*y)
+%
+%Using the homogenious property, we just take x=1:
+%
+%  *Multivariate> let auxhs = [map (auxh 1 y) [0..5] | y <- [0..5]]
+%  *Multivariate> auxhs
+%  [[3 % 1,2 % 3,7 % 11,9 % 14,41 % 63,94 % 143]
+%  ,[3 % 1,3 % 4,29 % 37,183 % 226,105 % 127,161 % 192]
+%  ,[3 % 1,3 % 4,187 % 239,201 % 251,233 % 287,77 % 94]
+%  ,[3 % 1,31 % 42,335 % 439,729 % 940,425 % 543,1973 % 2506]
+%  ,[3 % 1,8 % 11,59 % 79,291 % 385,681 % 895,528 % 691]
+%  ,[3 % 1,23 % 32,155 % 211,1707 % 2302,1001 % 1343,4663 % 6236]
+%  ]
+%\end{verbatim}
+%Now, each list can be seen as a univariate rational function:  
+%\begin{verbatim}  
+%  *Multivariate> map list2rat auxhs
+%  [([3 % 1,2 % 1,7 % 1],[1 % 1,7 % 1,10 % 1])
+%  ,([3 % 1,6 % 1,18 % 1],[1 % 1,15 % 1,20 % 1])
+%  ,([3 % 1,10 % 1,41 % 1],[1 % 1,23 % 1,48 % 1])
+%  ,([3 % 1,14 % 1,76 % 1],[1 % 1,31 % 1,94 % 1])
+%  ,([3 % 1,18 % 1,123 % 1],[1 % 1,39 % 1,158 % 1])
+%  ,([3 % 1,22 % 1,182 % 1],[1 % 1,47 % 1,240 % 1])
+%  ]
+%  *Multivariate> map fst it
+%  [[3 % 1,2 % 1,7 % 1]
+%  ,[3 % 1,6 % 1,18 % 1]
+%  ,[3 % 1,10 % 1,41 % 1]
+%  ,[3 % 1,14 % 1,76 % 1]
+%  ,[3 % 1,18 % 1,123 % 1]
+%  ,[3 % 1,22 % 1,182 % 1]
+%  ]
+%\end{verbatim}
+%We need to see the behavior of each coefficients:
+%\begin{verbatim}  
+%  *Multivariate> wellOrd it
+%  [[3 % 1,3 % 1,3 % 1,3 % 1,3 % 1,3 % 1]
+%  ,[2 % 1,6 % 1,10 % 1,14 % 1,18 % 1,22 % 1]
+%  ,[7 % 1,18 % 1,41 % 1,76 % 1,123 % 1,182 % 1]
+%  ]
+%  *Multivariate> map list2pol it
+%  [[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]]
+%\end{verbatim}  
+%So, the numerator is given by
+%\begin{verbatim}  
+%  *Multivariate> map list2pol . wellOrd . map (fst . list2rat) $ auxhs
+%  [[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]]
+%\end{verbatim}    
+%and the denominator is
+%\begin{verbatim}  
+%  *Multivariate> map list2pol . wellOrd . map (snd . list2rat) $ auxhs
+%  [[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]]
+%\end{verbatim}
+%Thus, we finally get the following function
+%\begin{verbatim}
+%> table2ratf table = (t2r fst table, t2r snd table)
+%>   where
+%>     t2r third = map list2pol . wellOrd . map (third . list2rat)
+%  
+%  *Multivariate> table2ratf auxhs
+%  ([[3 % 1],[2 % 1,4 % 1],[7 % 1,5 % 1,6 % 1]],[[1 % 1],[7 % 1,8 % 1],[10 % 1,1 % 1,9 % 1]])
+%\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Functional reconstruction over finite fields}
@@ -3028,6 +3031,8 @@ If we use non sequential inputs, this upper limit will go down.
 
 \section{\texttt{GMulFin.lhs}}
 \lstinputlisting[caption=GMulFin.lhs,label=GMulFin]{GMulFin.lhs}
+
+
 
 
 \end{document}
