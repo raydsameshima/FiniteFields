@@ -1,0 +1,1487 @@
+\documentclass[11pt]{book}
+\usepackage{amsmath,amssymb}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage[all]{xy}
+\usepackage[yyyymmdd]{datetime}
+\usepackage{listings}
+
+\usepackage{hyperref}
+
+% To show all the labels. Remove this when finish.
+% \usepackage{showkeys}
+
+\begin{document}
+
+\lstset{ language = Haskell
+         , numbers = left
+         , breaklines = true
+         , basicstyle = \small\ttfamily
+         }
+
+\newcommand{\Slash}[1]{{\ooalign{\hfil/\crcr$#1$}}}
+
+\title{A note on functional reconstruction and finite fields}
+\author{Ray D. Sameshima}
+\date{2016/09/23 $\sim$ \today \, \currenttime}
+\maketitle
+
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\setcounter{chapter}{-1}
+\chapter{Preface}
+\section{References}
+\begin{enumerate}
+\item \label{Tiziano}
+Scattering amplitudes over finite fields and multivariate functional reconstruction\\
+(Tiziano Peraro)\\
+\url{https://arxiv.org/pdf/1608.01902.pdf}
+
+\item Haskell Language \\
+\url{www.haskell.org}
+
+\item \url{http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7}\\
+ (Japanese tech support sns)
+
+\item \label{Haskellroad}
+The Haskell Road to Logic, Maths and Programming\\ 
+(Kees Doets, Jan van Eijck)\\
+\url{http://homepages.cwi.nl/~jve/HR/}
+
+\item \label{Numerical}
+Introduction to numerical analysis\\ 
+(Stoer Josef, Bulirsch Roland)
+
+\item \label{p-adic}
+A p-adic algorithm for univariate partial fractions
+(Paul S. Wang)
+
+\end{enumerate}
+
+\section{Set theoretical gadgets}
+\subsection{Numbers}
+Here is a list of what we assumed that the readers are familiar with:
+\begin{enumerate}
+\item $\mathbb{N}$ (Peano axiom: $\emptyset, \text{suc}$)
+\item $\mathbb{Z}$
+\item $\mathbb{Q}$
+\item $\mathbb{R}$ (Dedekind cut)
+\item $\mathbb{C}$ 
+\end{enumerate}
+
+\subsection{Algebraic structures}
+\begin{enumerate}
+\item Monoid: $(\mathbb{N},+), (\mathbb{N},\times)$
+\item Group: $(\mathbb{Z},+), (\mathbb{Z},\times)$
+\item Ring: $\mathbb{Z}$
+\item Field: $\mathbb{Q}$, $\mathbb{R}$ (continuous), $\mathbb{C}$ (algebraic closed)
+\end{enumerate}
+
+\section{Haskell language}
+From "A Brief, Incomplete and Mostly Wrong History of Programming Languages":\footnote{
+\url{http://james-iry.blogspot.com/2009/05/brief-incomplete-and-mostly-wrong.html}
+}
+\begin{quotation}
+1990 - A committee formed by Simon Peyton-Jones, Paul Hudak, Philip Wadler, Ashton Kutcher, and People for the Ethical Treatment of Animals creates Haskell, a pure, non-strict, functional language. Haskell gets some resistance due to the complexity of using monads to control side effects. Wadler tries to appease critics by explaining that "a monad is a monoid in the category of endofunctors, what's the problem?" 
+\end{quotation}
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=3cm, bb= 0 0 1280 904]{Haskell-Logo.png}
+\caption{Haskell's logo, the combinations of $\lambda$ and monad's bind \texttt{>>=}.}
+\label{Haskell-Logo}
+\end{center}
+\end{figure}
+
+Haskell language is a standardized purely functional declarative statically typed programming language.
+
+In declarative languages, we describe "what" or "definition" in its codes, however imperative languages, like C/C++, "how" or "procedure".
+\begin{quotation}
+Functional languages can be seen as 'executable mathematics'; the notation was designed to be as close as possible to the mathematical way of writing.\footnote{
+Algorithms: A Functional Programming Approach (Fethi A. Rabhi, Guy Lapalme)
+}
+\end{quotation}
+Instead of loops, we use (implicit) recursions in functional language.\footnote{Of course, as a best practice, we should use higher order function (in this case \texttt{foldr} or \texttt{foldl}) rather than explicit recursions.
+}
+\begin{verbatim}
+> sum :: [Int] -> Int
+> sum []     = 0
+> sum (i:is) = i + sum is
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Functional reconstruction}
+Here we define the problem and targets.
+In this chapter, the base field is that of rational numbers $\mathbb{Q}$.
+
+\section{Definition of functional reconstruction}
+\subsection{Targets}
+Our targets are either polynomials over rational field
+\begin{eqnarray}
+p : \mathbb{Q} \to \mathbb{Q}; x \mapsto \sum_{i=0}^{N (<\infty)} c_i * x^i
+\end{eqnarray}
+or rational functions
+\begin{eqnarray}
+r : \mathbb{Q} \to \mathbb{Q}; x \mapsto \frac{\sum_{i=0}^{N (<\infty)} n_i * x^i}{\sum_{j=0}^{M (<\infty)} d_j * x^j}.
+\end{eqnarray}
+
+They are fully determined its canonical coefficients, say
+\begin{eqnarray}
+(c_0, c_1, \cdots, c_N)
+\end{eqnarray}
+for a polynomial, and a pair of coefficients
+\begin{eqnarray}
+(n_0, \cdots, n_N), (d_0, \cdots, d_M)
+\end{eqnarray}
+
+For simplicity, we assume that our target rational functions are safe at $x=0$, i.e., $d_0 \neq 0$.
+Even if $x=0$ is a singular, by shifting the origin we can set $d_0 \neq 0$ for new variable.
+Under this assumption, we determine a canonical representation for rational function
+\begin{eqnarray}
+d_0 = 1,
+\end{eqnarray}
+i.e.,
+\begin{eqnarray}
+\frac{\sum_{i=0}^{N (<\infty)} n_i * x^i}{1+ \sum_{j=1}^{M (<\infty)} d_j * x^j}.
+\end{eqnarray}
+
+Here we define our problem; functional reconstruction is a procedure to construct the coefficients representation for a function from a subset of input range.
+That is, given $f : \mathbb{Q} \to \mathbb{Q}$, to find the coefficients which is represented a function $g$ and a subset $A \subset \mathbb{Q}$,
+\begin{eqnarray}
+g : A \to \mathbb{Q}
+\end{eqnarray}
+with the exact coincidence on $A \subset \mathbb{Q}$
+\begin{eqnarray}
+\left. f \right|_{A} = g
+\end{eqnarray}
+with minimum "degree", where the left hand side is a restriction function on $A \subset \mathbb{Q}$.
+We will define this "degree" later.
+
+\section{Interpolations for univariate functions}
+Basic idea for interpolations is a finite version of differential analysis and Taylor expansion.
+
+\subsection{Newton interpolation for polynomials}
+Consider a one-variable polynomial, which has $ f(x) = \sum_{i=0}^{N} c_i * x^i $ as its canonical form, but let us assume we can not access this representation directly, but we can access the in-out numbers.
+This $N$ is called the degree of $f$.
+
+Let 
+\begin{eqnarray}
+x_0, x_1, \cdots, x_n
+\end{eqnarray}
+be a set of inputs, and
+\begin{eqnarray}
+f_i := f(x_i)
+\end{eqnarray}
+be the out put of the target polynomial.
+
+Let us define finite differences, given inputs and outputs,
+\begin{eqnarray}
+f_{1,0} := \frac{f_1 - f_0}{x_1 - x_0}
+\end{eqnarray}
+is a first difference, and we can define $f_{1,2}, f_{2,3}, \cdots$.
+Similarly, we define higher finite differences recursively:
+\begin{eqnarray}
+f_{2,0} &:=& \frac{f_{2,1} - f_{1,0}}{x_2 - x_0} \\
+f_{3,0} &:=& \frac{f_{3,1} - f_{2,0}}{x_3 - x_0} \\
+\nonumber &\vdots& \\
+f_{k,0} &:=& \frac{f_{k,1} - f_{k-1,0}}{x_k - x_0} 
+\end{eqnarray}
+
+\subsubsection{Fact}
+If $f(x)$ is a polynomial of degree $N$, then
+\begin{eqnarray}
+\forall k > N, f_{k,0} = 0.
+\end{eqnarray}
+Especially,
+\begin{eqnarray}
+f_{N,0} \neq 0, f_{N+1, 0} = 0.
+\end{eqnarray}
+
+With the following $N+1$ numbers
+\begin{eqnarray}
+f_0, f_{1,0}, \cdots, f_{N,0}
+\end{eqnarray}
+the target polynomial is expressed as
+\begin{eqnarray}
+f_0 + f_{1,0}(x-x_0) + \cdots + f_{N,0} (x-x_0)\cdots (x-x_{N-1}).
+\end{eqnarray}
+
+\subsection{Thiele interpolation for rational function}
+Consider a rational function of the form $f(x) = \frac{\sum_{i=0}^{N} n_i * x^i}{1+ \sum_{j=1}^{M } d_j * x^j}$, with safe inputs
+\begin{eqnarray}
+x_0, x_1, \cdots, x_n
+\end{eqnarray}
+that is we choose
+\begin{eqnarray}
+f(x_0), \cdots, f(x_n) < \infty.
+\end{eqnarray}
+
+Let us define so called the reciprocal differences
+\begin{eqnarray}
+\rho_{0,0} &=& f_0 \\
+\rho_{1,0} &:=& \frac{x_1 - x_0}{\rho_{1,1} - \rho_{0,0}} \\
+\rho_{k,0} &:=& \frac{x_k - x_0}{\rho_{k,1} - \rho_{k-1,0}} + \rho_{k-1,1}
+\end{eqnarray}
+
+\subsubsection{Fact}
+The reciprocal differences of a certain degree $T$ of any rational function are constant:
+\begin{eqnarray}
+\rho_{T,0} = \rho_{T+1,1} = \rho_{T+2,2} = \cdots
+\end{eqnarray}
+Then the target function is expressed as a continuous fraction form:
+\begin{eqnarray}
+a_0 + \cfrac{x-x_0}{a_1 + \cfrac{x-x_1}{a_2 + \cfrac{x-x_2}{\text{ } + \cfrac{\vdots}{a_{T-1} + \cfrac{x - x_T}{a_T}}}}}
+\end{eqnarray}
+where
+\begin{eqnarray}
+a_0 &:=& \rho_{0,0} \\
+a_1 &:=& \rho_{1,0} \\
+a_2 &:=& \rho_{2,0} - \rho_{0,0}\\
+\nonumber
+&\vdots&\\
+a_T &:=& \rho_{T,0} - \rho_{T-2,0}
+\end{eqnarray}
+
+\subsection{Termination criteria}
+We put three times coincidence as our termination criteria, that is, for finite differences, if we meet
+\begin{eqnarray}
+f_{N,0} = f_{N+1,1} = f_{N+2,2},
+\end{eqnarray}
+then we take $N$ as the degree of our target polynomial.
+We call
+\begin{eqnarray}
+(f_0, f_{1,0}, \cdots, f_{N,0})
+\end{eqnarray}
+with the input list $(x_0, \cdots, x_N)$ are the Newton representation for the polynomial.
+In similar fashion,
+\begin{eqnarray}
+\rho_{T,0} = \rho_{T+1,1} = \rho_{T+2,2},
+\end{eqnarray}
+then $T$ is the degree of our target rational function.
+We call
+\begin{eqnarray}
+(a_0, a_1, \cdots, a_T)% = (\rho_{0,0}, \rho_{1,0}, \rho_{2,0}-\rho_{0,0}, \cdots, \rho_{T,0}-\rho_{T-2,0})
+\end{eqnarray}
+and the input list $(x_0, \cdots, x_T)$ are the Thiele representation for the polynomial.
+
+\section{Multivariate functions}
+Basically we can apply interpolation techniques for each variable, but here we introduce a systematic way.
+
+\subsection{An auxiliary $t$}
+Consider a function of two variables as an example, and fix $(x,y)$.
+Introducing an auxiliary variable $t$, let us define
+\begin{eqnarray}
+h(x,y;t) := f(tx, ty)
+\end{eqnarray}
+and reconstruct $h(x,y;t)$ as a univariate rational function of $t$:
+\begin{eqnarray}
+h(x,y;t) = \frac{\sum_{r=0}^R p_r(x,y) t^r}{1+ \sum_{r'=1}^{R'} q_{r'}(x,y) t^{r'}}
+\end{eqnarray}
+where $p_r(x,y), q_{r'}(x,y)$ are homogeneous polynomials.
+
+Thus, what we shall do is the (homogeneous) polynomial reconstructions of $\left. p_r(x,y) \right|_{0 \leq r \leq R}, \left. q_{r'}(x,y) \right|_{1 \leq r' \leq R'}$.
+
+\subsubsection{A simplification}
+Since our new targets are homogeneous polynomials, we can consider, say,
+\begin{eqnarray}
+p_r(1, y)
+\end{eqnarray}
+instead of $p_r(x,y)$, reconstruct it using multivariate Newton's method, and homogenize with $x$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Finite fields, quotient rings of primes}
+Both finite difference analysis and reciprocal difference analysis work on any field.
+To achieve efficiency, we project in-out relations of our target function on finite fields, then remap over $\mathbb{Q}$, this is the motivation to introduce finite fields.
+
+\section{Finite fields}
+We have assumed living knowledge on (axiomatic, i.e., ZFC) set theory and basic algebraic structures.
+However, in this section, we review some of algebraic structures.
+
+\subsection{Rings}
+A ring $(R,+,*)$ is a structured set $R$ with two binary operations
+\begin{eqnarray}
+\verb|(+) :: R -> R -> R|\\
+\verb|(*) :: R -> R -> R|
+\end{eqnarray}
+satisfying the following 3 (ring) axioms:
+\begin{enumerate}
+\item $(R,+)$ is an abelian, i.e., commutative group,
+i.e.,
+\begin{eqnarray}
+\forall a,b,c \in R, (a+b) + c = a + (b + c) & \text{ (associativity for $+$)} \\
+\forall a, b, \in R, a+b = b+a & \text{ (commutativity)} \\
+\exists 0 \in R, \text{ s.t. } \forall a \in R, a + 0 = a & \text{ (additive identity) } \\
+\forall a \in R, \exists (-a) \in R \text{ s.t. } a + (-a) = 0 & \text{ (additive inverse)}
+\end{eqnarray}
+
+\item $(R,*)$ is a monoid, i.e.,
+\begin{eqnarray}
+\forall a,b,c \in R, (a*b) * c = a * (b * c) & \text{ (associativity for $*$)} \\
+\exists 1 \in R, \text{ s.t. } \forall a \in R, a * 1 = a = 1*a & \text{ (multiplicative identity) } 
+\end{eqnarray}
+
+\item Multiplication is distributive w.r.t addition, i.e., $\forall a,b,c \in R$, 
+\begin{eqnarray}
+a*(b+c) = (a*b) + (a*c) & \text{ (left distributivity)} \\
+(a+b)*c = (a*c) + (b*c) & \text{ (right distributivity)} 
+\end{eqnarray}
+
+\end{enumerate}
+
+\subsection{Fields}
+A field is a ring $(\mathbb{K},+,*)$ whose non-zero elements form an abelian group under multiplication, i.e., $\forall r \in \mathbb{K}$,
+\begin{eqnarray}
+r \neq 0 \Rightarrow \exists r^{-1} \in \mathbb{K} \text{ s.t. } r*r^{-1} = 1 = r^{-1}*r.
+\end{eqnarray}
+A field $\mathbb{K}$ is a finite field iff the underlying set $\mathbb{K}$ is finite.
+A field $\mathbb{K}$ is called infinite field iff the underlying set is infinite.
+
+\subsubsection{An example of finite rings $\mathbb{Z}_n$}
+Let $n (>0) \in \mathbb{N}$ be a non-zero natural number.
+Then the quotient set
+\begin{eqnarray}
+\mathbb{Z}_n &:=& \mathbb{Z} / n\mathbb{Z} \\
+&\cong& \{0, \cdots, (n-1)\}
+\end{eqnarray}
+with addition, subtraction and multiplication under modulo $n$ is a ring.\footnote{
+Here we have taken an equivalence class, 
+\begin{eqnarray}
+0 \leq \forall k \leq (n-1), [k] := \{k + n*z | z \in \mathbb{Z} \}
+\end{eqnarray}
+with the following operations:
+\begin{eqnarray}
+\left[k \right] + \left[l \right] &:=& \left[k+l\right] \\
+\left[k \right] * \left[l \right] &:=& \left[k * l\right]
+\end{eqnarray}
+This is equivalent to take modular $n$:
+\begin{eqnarray}
+(k \mod n) + (l \mod n) &:=& (k+l \mod n) \\
+(k \mod n) * (l \mod n) &:=& (k*l \mod n).
+\end{eqnarray}
+
+}
+
+\subsection{B\'ezout's lemma}
+Consider $a,b \in \mathbb{Z}$ be nonzero integers.
+Then there exist $x,y \in \mathbb{Z}$ s.t.
+\begin{eqnarray}
+a*x + b*y = \gcd(a,b),
+\end{eqnarray}
+where $\gcd$ is the greatest common divisor (function), see \S\ref{gcdDefinition}.
+We will prove this statement in \S\ref{exGCD}.
+
+\subsubsection{Greatest common divisor}
+\label{gcdDefinition}
+Before the proof, here is an implementation of $\gcd$ using Euclidean algorithm with Haskell language:
+
+\begin{verbatim}
+> -- Eucledian algorithm.
+> myGCD :: Integral a => a -> a -> a
+> myGCD a b
+>   | b < 0 = myGCD a (-b)
+> myGCD a b
+>   | a == b = a
+>   | b >  a = myGCD b a
+>   | b <  a = myGCD (a-b) b
+\end{verbatim}
+
+\subsubsection{Example, by hands}
+Let us consider the gcd of 7 and 13.
+Since they are primes, the gcd should be 1.
+First it binds \texttt{a} with 7 and \texttt{b} with 13, and hit \texttt{b > a}.
+\begin{eqnarray}
+\texttt{myGCD 7 13 == myGCD 13 7}
+\end{eqnarray}
+Then it hits main line:
+\begin{eqnarray}
+\texttt{myGCD 13 7 == myGCD (13-7) 7}
+\end{eqnarray}
+In order to go to next step, Haskell evaluate $(13-7)$,\footnote{
+Since Haskell language adopts lazy evaluation, i.e., call by need, not call by name.
+}
+and
+\begin{eqnarray}
+\texttt{myGCD (13-7) 7} &\texttt{==}& \texttt{myGCD 6 7} \\
+&\texttt{==}& \texttt{myGCD 7 6} \\
+&\texttt{==}& \texttt{myGCD (7-6) 6} \\
+&\texttt{==}& \texttt{myGCD 1 6} \\
+&\texttt{==}& \texttt{myGCD 6 1}
+\end{eqnarray}
+Finally it ends with 1:
+\begin{eqnarray}
+\texttt{myGCD 1 1 == 1} 
+\end{eqnarray}
+
+As another example, consider $15$ and $25$:
+\begin{eqnarray}
+\texttt{myGCD 15 25} &\texttt{==}& \texttt{myGCD 25 15}\\
+&\texttt{==}& \texttt{myGCD (25-15) 15}\\
+&\texttt{==}& \texttt{myGCD 10 15}\\
+&\texttt{==}& \texttt{myGCD 15 10}\\
+&\texttt{==}& \texttt{myGCD (15-10) 10}\\
+&\texttt{==}& \texttt{myGCD 5 10}\\
+&\texttt{==}& \texttt{myGCD 10 5}\\
+&\texttt{==}& \texttt{myGCD (10-5) 5}\\
+&\texttt{==}& \texttt{myGCD 5 5}\\
+&\texttt{==}& \texttt{5}
+\end{eqnarray}
+
+\subsubsection{Example, with Haskell}
+Let us check simple example using Haskell:
+\begin{verbatim}
+  *Ffield> myGCD 7 13
+  1
+  *Ffield> myGCD 7 14
+  7
+  *Ffield> myGCD (-15) (20)
+  5
+  *Ffield> myGCD (-299) (-13)
+  13
+\end{verbatim}
+The final result is from
+\begin{verbatim}
+  *Ffield> 13*23
+  299
+\end{verbatim}
+
+\subsection{Extended Euclidean algorithm}
+\label{exGCD}
+Here we treat the extended Euclidean algorithm, this is a constructive solution for B\'ezout's lemma.
+
+As intermediate steps, this algorithm makes sequences of integers $\{r_i\}_i$, $\{s_i\}_i$, $\{t_i\}_i$ and quotients $\{q_i\}_i$ as follows.
+The base cases are
+\begin{eqnarray}
+\left(r_0, s_0, t_0 \right) &:=& (a,1,0) \\
+\left(r_1, s_1, t_1 \right) &:=& (b,0,1) 
+\end{eqnarray}
+and inductively, for $i \geq 2$,
+\begin{eqnarray}
+q_i &:=& \text{quot}(r_{i-2}, r_{i-1}) \\
+r_i &:=& r_{i-2} - q_i * r_{i-1} \\
+s_i &:=& s_{i-2} - q_i * s_{i-1} \\
+t_i &:=& t_{i-2} - q_i * t_{i-1}.
+\end{eqnarray}
+The termination condition\footnote{
+This algorithm will terminate eventually, since the sequence $\{r_i\}_i$ is non-negative by definition of $q_i$, but strictly decreasing, i.e., decreasing natural numbers.
+Therefore, $\{r_i\}_i$ will meet $0$ in finite step $k$.
+} is
+\begin{eqnarray}
+r_k = 0
+\end{eqnarray}
+for some $k \in \mathbb{N}$ and
+\begin{eqnarray}
+\gcd(a,b) &=& r_{k-1} \\
+x &=& s_{k-1} \\
+y &=& t_{k-1}.
+\end{eqnarray}
+
+\subsubsection{Proof}
+By definition,
+\begin{eqnarray}
+\gcd(r_{i-1}, r_i) &=& \gcd(r_{i-1}, r_{i-2} - q_i * r_{i-1}) \\
+&=& \gcd(r_{i-1}, r_{i-2})
+\end{eqnarray}
+and this implies 
+\begin{eqnarray}
+\gcd(a,b) =: \gcd(r_0, r_1) = \cdots = \gcd(r_{k-1}, 0),
+\end{eqnarray}
+i.e., 
+\begin{eqnarray}
+r_{k-1} = \gcd(a,b).
+\end{eqnarray}
+
+Next, for $i=0,1$ observe
+\begin{eqnarray}
+\label{guessOfRational}
+a*s_i + b*t_i = r_i.
+\end{eqnarray}
+Let $i\geq 2$, then
+\begin{eqnarray}
+r_i &=& r_{i-2}  - q_i * r_{i-1} \\
+&=& a*s_{i-2} + b*t_{i-2} - q_i *(a*s_{i-1} + b*t_{i-1} ) \\
+&=& a*(s_{i-2} - q_i *s_{i-1}) + b* (t_{i-2} - q_i *t_{i-1} ) \\
+&=:& a*s_i + b*t_i.
+\end{eqnarray}
+Therefore, inductively we get
+\begin{eqnarray}
+\gcd(a,b) = r_{k-1} = a*s_{k-1} + b*t_{k-1}. =: a*x + b*y.
+\end{eqnarray}
+This prove B\'ezout's lemma. \\
+$\blacksquare$
+
+\subsubsection{Haskell implementation}
+\label{exGCDHaskell}
+Here I use lazy lists for intermediate lists of $qs,rs,ss,ts$, and pick up (second) last elements for the results.
+
+\label{extendedEuclideanAlgorithm}
+\begin{verbatim}
+Here we would like to implement the extended Euclidean algorithm.
+See the algorithm, examples, and pseudo code at:
+
+  https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
+  http://qiita.com/bra_cat_ket/items/205c19611e21f3d422b7
+
+> exGCD' 
+>   :: (Integral n) => 
+>      n -> n -> ([n], [n], [n], [n])
+> exGCD' a b = (qs, rs, ss, ts)
+>   where
+>     qs = zipWith quot rs (tail rs)
+>     rs = takeBefore (==0) r'
+>     r' = steps a b
+>     ss = steps 1 0
+>     ts = steps 0 1
+>
+>     steps a b = rr
+>       where 
+>         rr@(_:rs) = a:b: zipWith (-) rr (zipWith (*) qs rs)
+>
+> takeBefore 
+>   :: (a -> Bool) -> [a] -> [a]
+> takeBefore p = foldr func []
+>   where
+>     func x xs 
+>       | p x       = []
+>       | otherwise = x : xs
+\end{verbatim}
+Here we have used so called lazy lists, and higher order function\footnote{
+Naively speaking, the function whose inputs and/or outputs are functions is called a higher order function.
+}.
+The gcd of $a$ and $b$ should be the last element of second list \verb+rs+, and our targets $(s,t)$ are second last elements of last two lists \verb+ss+ and \verb+ts+.
+The following example is from wikipedia:
+\begin{verbatim}
+  *Ffield> exGCD' 240 46
+  ([5,4,1,1,2],[240,46,10,6,4,2],[1,0,1,-4,5,-9,23],[0,1,-5,21,-26,47,-120])
+\end{verbatim}  
+Look at the second lasts of \verb+[1,0,1,-4,5,-9,23],[0,1,-5,21,-26,47,-120]+, i.e., -9 and 47:
+\begin{verbatim}  
+  *Ffield> gcd 240 46
+  2
+  *Ffield> 240*(-9) + 46*(47)
+  2
+\end{verbatim}
+It works, and we have other simpler examples:
+\begin{verbatim}
+  *Ffield> exGCD' 15 25
+  ([0,1,1,2],[15,25,15,10,5],[1,0,1,-1,2,-5],[0,1,0,1,-1,3])
+  *Ffield> 15 * 2 + 25*(-1)
+  5
+  *Ffield> exGCD' 15 26
+  ([0,1,1,2,1,3],[15,26,15,11,4,3,1],[1,0,1,-1,2,-5,7,-26],[0,1,0,1,-1,3,-4,15])
+  *Ffield> 15*7 + (-4)*26
+  1
+\end{verbatim}
+Now what we should do is extract gcd of $a$ and $b$, and $(x, y)$ from the tuple of lists:
+\begin{verbatim}
+> -- a*x + b*y = gcd a b
+> exGCD :: Integral t => t -> t -> (t, t, t)
+> exGCD a b = (g, x, y)
+>   where
+>     (_,r,s,t) = exGCD' a b
+>     g = last r
+>     x = last . init $ s
+>     y = last . init $ t
+\end{verbatim}
+where the underscore \verb+_+ is a special symbol in Haskell that hits every pattern, since we do not need to evaluate the quotient list \verb+qs+.
+So, in order to get gcd and $(x, y)$ we don't need quotients list.
+\begin{verbatim}
+  *Ffield> exGCD 46 240
+  (2,47,-9)
+  *Ffield> 46*47 + 240*(-9)
+  2
+  *Ffield> gcd 46 240
+  2
+\end{verbatim}
+
+\subsection{Inverses in $\mathbb{Z}_n$}
+For a non-zero element
+\begin{eqnarray}
+a \in \mathbb{Z}_n,
+\end{eqnarray}
+there is a unique number 
+\begin{eqnarray}
+b \in \mathbb{Z}_n \text{ s.t. } ((a*b) \mod n) = 1
+\end{eqnarray}
+iff $a$ and $n$ are coprime:
+\begin{verbatim}
+  coprime :: Integral a => a -> a -> Bool
+  coprime a b = (gcd a b) == 1
+\end{verbatim}
+
+
+\subsubsection{Proof}
+From B\'ezout's lemma, $a$ and $n$ are coprime iff
+\begin{eqnarray}
+\exists s,t \in \mathbb{Z}, a*s + n*t = 1.
+\end{eqnarray}
+Therefore
+\begin{eqnarray}
+\text{$a$ and $n$ are coprime} &\Leftrightarrow& \exists s,t \in \mathbb{Z}, a*s + n*t = 1 \\
+&\Leftrightarrow &\exists s,t' \in \mathbb{Z}, a*s = 1 + n*t'.
+\end{eqnarray}
+This $s$, by taking its modulo $n$ is our $b = a^{-1}$:
+\begin{eqnarray}
+a*s = 1 \mod n.
+\end{eqnarray}
+We will make a Haskell implementation in \S\ref{inverses}.\\
+$\blacksquare$
+
+\subsection{Finite field $\mathbb{Z}_p$}
+If $p$ is prime, then 
+\begin{eqnarray}
+\mathbb{Z}_p := \{0, \cdots, (p-1)\}
+\end{eqnarray}
+with addition, subtraction and multiplication under modulo $n$ is a field.
+
+\subsubsection{Proof}
+It suffices to show that 
+\begin{eqnarray}
+\forall a \in \mathbb{Z}_p, a \neq 0 \Rightarrow \exists a^{-1} \in \mathbb{K} \text{ s.t. } a*a^{-1} = 1 = a^{-1}*a,
+\end{eqnarray}
+but since $p$ is prime, and
+\begin{eqnarray}
+\forall a \in \mathbb{Z}_p, a \neq 0 \Rightarrow \texttt{gcd a p == 1}
+\end{eqnarray}
+so all non-zero element has its inverse in $ \mathbb{Z}_p$.\\
+$\blacksquare$
+
+\subsubsection{Example and implementation}
+\label{inverses}
+Let us pick 11 as a prime and consider $\mathbb{Z}_{11}$:
+\begin{verbatim}
+  Example Z_{11}
+
+  *Ffield> isField 11
+  True
+  *Ffield> map (exGCD 11) [0..10]
+  [(11,1,0),(1,0,1),(1,1,-5),(1,-1,4),(1,-1,3)
+  ,(1,1,-2),(1,-1,2),(1,2,-3),(1,3,-4),(1,-4,5),(1,1,-1)
+  ]
+\end{verbatim}
+This list of three-tuple let us know the candidates of inverses.
+Take the last one, \verb+(1,1,-1)+.
+This is the image of \verb+exGcd 11 10+, and 
+\begin{eqnarray}
+1 = 10*1 + 11*(-1)
+\end{eqnarray}
+holds.
+This suggests -1 is a candidate of the inverse of 10 in $\mathbb{Z}_{11}$:
+\begin{eqnarray}
+10^{-1} &=& -1 \mod 11 \\
+&=& 10 \mod 11
+\end{eqnarray}
+In fact,
+\begin{eqnarray}
+10*10 = 11*9+1.
+\end{eqnarray}
+So, picking up the third elements in tuple and zipping with nonzero elements, we have a list of inverses:
+\begin{verbatim}
+  *Ffield> map ((`mod` 11) . (\(_,_,x)->x) . exGCD 11) [1..10] 
+  [1,6,4,3,9,2,8,7,5,10]
+
+We get non-zero elements with its inverse:
+
+  *Ffield> zip [1..10] it
+  [(1,1),(2,6),(3,4),(4,3),(5,9),(6,2),(7,8),(8,7),(9,5),(10,10)]
+\end{verbatim}
+Let us generalize these flow into a function\footnote{
+From \url{https://hackage.haskell.org/package/base-4.9.0.0/docs/Data-Maybe.html}:
+\begin{quotation}
+The Maybe type encapsulates an optional value. 
+A value of type Maybe a either contains a value of type a (represented as Just a), or it is empty (represented as Nothing). 
+Using Maybe is a good way to deal with errors or exceptional cases without resorting to drastic measures such as error.
+\end{quotation}
+}:
+\begin{verbatim}  
+> -- a^{-1} (in Z_p) == a `inversep` p
+> inversep :: Integral a => a -> a -> Maybe a
+> a `inversep` p = let (g,x,_) = exGCD a p in
+>   if (g == 1) then Just (x `mod` p)
+>               else Nothing
+\end{verbatim}
+This \texttt{inversep} function returns the inverse with respect to second argument, if they are coprime, i.e. $\gcd$ is 1.
+So the second argument should not be prime.
+\begin{verbatim}
+> inversesp :: Integral a => a -> [Maybe a]
+> inversesp p = map (`inversep` p) [1..(p-1)]
+
+  *Ffield> inversesp 11
+  [Just 1,Just 6,Just 4,Just 3,Just 9,Just 2,Just 8,Just 7,Just 5,Just 10]
+  *Ffield> inversesp 9
+  [Just 1,Just 5,Nothing,Just 7,Just 2,Nothing,Just 4,Just 8]
+\end{verbatim}
+
+\section{Rational number reconstruction}
+\subsection{A map from $\mathbb{Q}$ to $\mathbb{Z}_p$}
+Let $p$ be a prime.
+Now we have a map
+\begin{eqnarray}
+- \mod p : \mathbb{Z} \to \mathbb{Z}_p; a \mapsto (a \mod p),
+\end{eqnarray}
+and a natural inclusion (or a forgetful map)\footnote{
+By introducing this forgetful map, we can use 
+\begin{eqnarray}
+\times : (\mathbb{Z}, \mathbb{Z}) \to \mathbb{Z} 
+\end{eqnarray}
+of normal product on $\mathbb{Z}$ in eq.(\ref{modpForRational}).
+}
+\begin{eqnarray}
+\text{\textquestiondown} : \mathbb{Z}_p \hookrightarrow \mathbb{Z}.
+\end{eqnarray}
+Then we can define a map
+\begin{eqnarray}
+- \mod p : \mathbb{Q} \to \mathbb{Z}_p
+\end{eqnarray}
+by\footnote{
+This is an example of operator overloadings.
+}
+\begin{eqnarray}
+\label{modpForRational}
+q = \frac{a}{b} \mapsto (q \mod p) := \left( \left( a \times \text{\textquestiondown} \left( b^{-1} \mod p\right) \right) \mod p \right).
+\end{eqnarray}
+
+\subsubsection{Example and implementation}
+An easy implementation is the followings:\footnote{
+The backquotes makes any binary function infix operator.
+For example,
+\begin{eqnarray}
+\texttt{add 1 2 == 1 `add` 2}
+\end{eqnarray}
+Similarly, use parenthesis we can use an infix binary operator to a function:
+\begin{eqnarray}
+\texttt{(+) 1 2 == 1 + 2}
+\end{eqnarray}
+}
+\begin{verbatim}
+> -- A map from Q to Z_p, where p is a prime.
+> modp 
+>   :: Ratio Int -> Int -> Maybe Int
+> q `modp` p 
+>   | coprime b p = Just $ (a * (bi `mod` p)) `mod` p
+>   | otherwise   = Nothing
+>   where
+>     (a,b)   = (numerator q, denominator q)
+>     Just bi = b `inversep` p
+>
+> -- When the denominator of q is not proprtional to p, use this.
+> modp' 
+>   :: Ratio Int -> Int -> Int
+> q `modp'` p = (a * (bi `mod` p)) `mod` p
+>   where
+>     (a,b)   = (numerator q, denominator q)
+>     bi = b `inversep'` p
+\end{verbatim}
+Let us consider a rational number $\frac{3}{7}$ on a finite field $\mathbb{Z}_{11}$:
+\begin{verbatim}
+Example: on Z_{11}
+Consider (3 % 7).
+
+  *Ffield> let q = (3%7)
+  *Ffield> 3 `mod` 11
+  3
+  *Ffield> 7 `inversep` 11
+  Just 8
+  *Ffield> (3*8) `mod` 11
+  2
+\end{verbatim}
+ For example, pick 7:
+ \begin{verbatim}  
+  *Ffield> 7*8 == 11*5+1
+   True
+ \end{verbatim}
+Therefore, on $\mathbb{Z}_{11}$, $(7^{-1} \mod 11)$ is equal to $(8 \mod 11)$ and
+\begin{eqnarray}
+\frac{3}{7} \in \mathbb{Q} &\mapsto& (3 \times \text{\textquestiondown}(7^{-1} \mod 11) \mod 11) \\
+&&= (3 \times 8) \mod 11 \\
+&&= 24 \mod 11 \\
+&&= 2 \mod 11.
+\end{eqnarray}
+Haskell returns the same result
+\begin{verbatim}  
+  *Ffield> q `modp` 11
+  Just 2
+\end{verbatim}
+
+\subsection{Reconstruction from $\mathbb{Z}_p$ to $\mathbb{Q}$}
+Consider a rational number $q$ and its image $a \in \mathbb{Z}_p$.
+\begin{eqnarray}
+a := q \mod p
+\end{eqnarray}
+The extended Euclidean algorithm can be used for guessing a rational number $q$ from the images $a := q \mod p$ of several primes $p$'s.
+
+At each step, the extended Euclidean algorithm satisfies eq.(\ref{guessOfRational}).
+\begin{eqnarray}
+a*s_i + p*t_i = r_i
+\end{eqnarray}
+Therefore
+\begin{eqnarray}
+r_i = a*s_i \mod p. %\Leftrightarrow \frac{r_i}{s_i} \mod p = a.
+\end{eqnarray}
+Hence $\frac{r_i}{s_i}$ is a possible guess for $q$.
+We take
+\begin{eqnarray}
+\label{terminationOfRec}
+r_i^2 , s_i^2 < p
+\end{eqnarray}
+as the termination condition for this reconstruction.
+
+\subsubsection{Haskell implementation}
+Let us first try to reconstruct from the image $(\frac{1}{3} \mod p)$ of some prime $p$.
+Here we choose three primes
+\begin{verbatim}
+Reconstruction Z_p -> Q
+  *Ffield> let q = (1%3)
+  *Ffield> take 3 $ dropWhile (<100) primes
+  [101,103,107]
+\end{verbatim}
+The following images are basically given by the first elements of second lists ($s_0$'s):
+\begin{verbatim}  
+  *Ffield> q `modp` 101
+  34
+  *Ffield> let try x = exGCD' (q `modp` x) x
+  *Ffield> try 101
+  ([0,2,1,33],[34,101,34,33,1],[1,0,1,-2,3,-101],[0,1,0,1,-1,34])
+  *Ffield> try 103
+  ([0,1,2,34],[69,103,69,34,1],[1,0,1,-1,3,-103],[0,1,0,1,-2,69])
+  *Ffield> try 107
+  ([0,2,1,35],[36,107,36,35,1],[1,0,1,-2,3,-107],[0,1,0,1,-1,36])  
+\end{verbatim}
+Look at the first hit of termination condition eq.(\ref{terminationOfRec}), $r_4=1$ and $s_4=3$ of $\mathbb{Z}_{101}$.
+The same facts on $\mathbb{Z}_{103}$ and $\mathbb{Z}_{107}$ give us the same guess $\frac{1}{3}$, and that the reconstructed number.
+
+From the above observations we can make a simple \verb+guess+ function:
+\begin{verbatim}
+> -- This is guess function without Chinese Reminder Theorem.
+> guess 
+>   :: Integral t => 
+>      (Maybe t, t)       -- (q `modp` p, p)
+>   -> Maybe (Ratio t, t)
+> guess (Nothing, _) = Nothing
+> guess (Just a, p) = let (_,rs,ss,_) = exGCD' a p in
+>   Just (select rs ss p, p)
+>     where
+>       select 
+>         :: Integral t => 
+>            [t] -> [t] -> t -> Ratio t
+>       select [] _ _ = 0%1
+>       select (r:rs) (s:ss) p
+>         | s /= 0 && r*r <= p && s*s <= p = r%s
+>         | otherwise                      = select rs ss p
+\end{verbatim}
+
+We put a list of big primes as follows.
+\begin{verbatim}
+> -- Hard code of big primes
+> -- We have chosen a finite number (100) version.
+> bigPrimes :: [Int]
+> bigPrimes = take 100 $ dropWhile (<10^4) primes
+
+  *Ffield> bigPrimes 
+  [10007,10009,10037,10039,10061,10067,10069,10079,10091,10093,10099,10103
+  ,10111,10133,10139,10141,10151,10159,10163,10169,10177,10181,10193,10211
+  ,10223,10243,10247,10253,10259,10267,10271,10273,10289,10301,10303,10313
+  ,10321,10331,10333,10337,10343,10357,10369,10391,10399,10427,10429,10433
+  ,10453,10457,10459,10463,10477,10487,10499,10501,10513,10529,10531,10559
+  ,10567,10589,10597,10601,10607,10613,10627,10631,10639,10651,10657,10663
+  ,10667,10687,10691,10709,10711,10723,10729,10733,10739,10753,10771,10781
+  ,10789,10799,10831,10837,10847,10853,10859,10861,10867,10883,10889,10891
+  ,10903,10909,10937,10939
+  ]
+\end{verbatim}
+This choice of primes of order $O(10^4)$ let our \verb+guess+ function reconstruct rational numbers up to
+\begin{eqnarray}
+\frac{O(10^2)}{O(10^2)}.
+\end{eqnarray}
+
+\subsubsection{Good and bad examples}
+Our \verb+guess+ function can find correct answer from the images of $\frac{12}{13}$.
+\begin{verbatim}
+  *Ffield> let knownData q = zip (map (modp q) bigPrimes) bigPrimes
+  *Ffield> let ds = knownData (12%13)
+  *Ffield> map guess ds
+  [Just (12 % 13,10007)
+  ,Just (12 % 13,10009)
+  ,Just (12 % 13,10037)
+  ,Just (12 % 13,10039) ..
+\end{verbatim}
+However, for $\frac{112}{113}$, it gets wrong answer.
+\begin{verbatim}
+  *Ffield> let ds' = knownData (112%113)
+  *Ffield> map guess ds'
+  [Just ((-39) % 50,10007)
+  ,Just ((-41) % 48,10009)
+  ,Just ((-69) % 20,10037)
+  ,Just ((-71) % 18,10039) ..
+\end{verbatim}
+
+A solution of this problem is next subsection.
+
+
+We choose 3 times match as the termination condition.
+\begin{verbatim}
+> matches3 :: Eq a => [a] -> a
+> matches3 (a:bb@(b:c:cs))
+>   | a == b && b == c = a
+>   | otherwise        = matches3 bb
+\end{verbatim}
+Finally, we can check our gadgets.
+
+What we know is a list of (q `modp` p) and prime p for several (big) primes.
+\begin{verbatim}
+  *Ffield> let q = 10%19
+  *Ffield> let knownData = zip (map (modp q) bigPrimes) bigPrimes 
+  *Ffield> take 3 knownData 
+  [(614061,897473),(377894,897497),(566842,897499)]
+  *Ffield> matches3 $  map (fst . guess) knownData
+  10 % 19
+\end{verbatim}
+The following is the function we need, its input is the list of tuple which first element is the image in $\mathbb{Z}_p$ and second element is that prime $p$.
+\begin{verbatim}
+> reconstruct :: Integral a =>
+>                [(a, a)]  -- :: [(Z_p, primes)]
+>             -> Ratio a
+> reconstruct aps = matches3 $ map (fst . guess) aps
+
+Here is a naive test:
+  > let qs = [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32
+             ,869 % 232,778 % 123,331 % 739]
+  > let modmap q = zip (map (modp q) bigPrimes) bigPrimes 
+  > let longList = map modmap qs
+  > map reconstruct longList 
+  [1 % 3,10 % 19,41 % 17,30 % 311,311 % 32
+  ,869 % 232,778 % 123,331 % 739]
+  > it == qs
+  True
+\end{verbatim}
+
+For later use, let us define
+\begin{verbatim}
+> imagesAndPrimes ::  Rational-> [(Integer, Integer)]
+> imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
+\end{verbatim}
+to generate a list of images (of our target rational number) in $Z_p$ and the base primes.
+
+As another example, we have slightly involved function:
+\begin{verbatim}
+> matches3' :: Eq a => [(a, t)] -> (a, t)
+> matches3' (a0@(a,_):bb@((b,_):(c,_):cs))
+>   | a == b && b == c = a0
+>   | otherwise        = matches3' bb
+\end{verbatim}
+Let us see the first good guess, Haskell tells us that in order to reconstruct, say $\frac{331}{739}$, we should take three primes start from 614693:
+\begin{verbatim}
+  *Ffield> let knowData q = zip (map (modp q) primes) primes
+  *Ffield> matches3' $ map guess $ knowData (331%739)
+  (331 % 739,614693)
+  (18.31 secs, 12,393,394,032 bytes)
+  
+  *Ffield> matches3' $ map guess $ knowData (11%13)
+  (11 % 13,311)
+  (0.02 secs, 2,319,136 bytes)
+  *Ffield> matches3' $ map guess $ knowData (1%13)
+  (1 % 13,191)
+  (0.01 secs, 1,443,704 bytes)
+  *Ffield> matches3' $ map guess $ knowData (1%3)
+  (1 % 3,13)
+  (0.01 secs, 268,592 bytes)
+  *Ffield> matches3' $ map guess $ knowData (11%31)
+  (11 % 31,1129)
+  (0.03 secs, 8,516,568 bytes)
+  *Ffield> matches3' $ map guess $ knowData (12%312)
+  (1 % 26,709)
+\end{verbatim}
+
+\subsubsection{A problem}
+Since our choice of \texttt{bigPrimes} are order $10^6$, our reconstruction can fail for rational numbers of
+\begin{eqnarray}
+\frac{O(10^3)}{O(10^3)},
+\end{eqnarray}
+say
+\begin{verbatim}
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> take 4 knownData 
+  [(882873,897473)
+  ,(365035,897497)
+  ,(705735,897499)
+  ,(511060,897517)
+  ]
+  *Ffield> map guess it
+  [((-854) % 123,897473)
+  ,((-656) % 327,897497)
+  ,((-192) % 805,897499)
+  ,((-491) % 497,897517)
+  ]
+\end{verbatim}
+We can solve this by introducing the following theorem.
+
+\subsection{Chinese remainder theorem}
+From wikipedia\footnote{
+\url{https://en.wikipedia.org/wiki/Chinese_remainder_theorem}
+}
+\begin{quotation}
+There are certain things whose number is unknown. If we count them by threes, we have two left over; by fives, we have three left over; and by sevens, two are left over. How many things are there? 
+\end{quotation}
+Here is a solution with Haskell, using list comprehension.
+\begin{verbatim}
+*Ffield> let lst = [n|n<-[0..], mod n 3==2, mod n 5==3, mod n 7==2]
+*Ffield> head lst
+23
+\end{verbatim}
+We define an infinite list of natural numbers that satisfy
+\begin{eqnarray}
+n \mod 3 = 2, n \mod 5 = 3, n \mod 7 = 2.
+\end{eqnarray}
+Then take the first element, and this is the answer.
+
+\subsubsection{Claim}
+The statement for binary case is the following.
+Let $n_1, n_2 \in \mathbb{Z}$ be coprime, then for arbitrary $a_1,a_2 \in \mathbb{Z}$, the following a system of equations
+\begin{eqnarray}
+x &=& a_1 \mod n_1\\
+x &=& a_2 \mod n_2
+\end{eqnarray}
+have a unique solution modular $n_1*n_2$\footnote{
+Note that, this is equivalent that there is a unique solution $a$ in
+\begin{eqnarray}
+0 \leq a < n_1\times n_2.
+\end{eqnarray}
+}.
+
+\subsubsection{Proof}
+(existence) With \S\ref{exGCD}, there are $m_1,m_2 \in \mathbb{Z}$ s.t.
+\begin{eqnarray}
+n_1 * m_1 + n_2 * m_2 = 1.
+\end{eqnarray}
+Now we have
+\begin{eqnarray}
+n_1 * m_1 &=& 1 \mod n_2 \\
+n_2 * m_2 &=& 1 \mod n_1
+\end{eqnarray}
+that is\footnote{
+Here we have used slightly different notions from \ref{Tiziano}.
+$m_1$ in \ref{Tiziano} is our $m_2$ times our $n_2$.
+}
+\begin{eqnarray}
+m_1 &=& n_1^{-1} \mod n_2 \\
+m_2 &=& n_2^{-1} \mod n_1.
+\end{eqnarray}
+Then
+\begin{eqnarray}
+a := a_1 * n_2 * m_2 + a_2 * n_1 * m_1 \mod (n_1*n_2)
+\end{eqnarray}
+is a solution.
+
+(uniqueness)
+If $a'$ is also a solution, then
+\begin{eqnarray}
+a - a' &=& 0 \mod n_1 \\
+a - a' &=& 0 \mod n_2.
+\end{eqnarray}
+Since $n_1$ and $n_2$ are coprime, i.e., no common divisors, this difference is divisible by $n_1*n_2$, and
+\begin{eqnarray}
+a - a' = 0 \mod (n_1 * n_2).
+\end{eqnarray}
+Therefore, the solution is unique modular $n_1*n_2$. \\
+$\blacksquare$
+
+\subsubsection{Generalization}
+Given $a \in Z_n$ of pairwise coprime numbers
+\begin{eqnarray}
+n := n_1 * \cdots * n_k,
+\end{eqnarray}
+a system of equations
+\begin{eqnarray}
+\left. a_i = a \mod n_i \right|_{i=1}^k
+\end{eqnarray}
+have a unique solution
+\begin{eqnarray}
+a = \sum_i m_i a_i \mod n,
+\end{eqnarray}
+where
+\begin{eqnarray}
+\left. m_i = \left( \frac{n_i}{n} \mod n_i \right) \frac{n}{n_i} \right|_{i=1}^k.
+\end{eqnarray}
+
+\subsubsection{Haskell implementation}
+Let us see how our naive \texttt{guess} function fail one more time.
+We make a helper function for tests.
+\begin{verbatim}
+> imagesAndPrimes :: Ratio Int -> [(Maybe Int, Int)]
+> imagesAndPrimes q = zip (map (modp q) bigPrimes) bigPrimes
+\end{verbatim}
+
+\begin{verbatim}
+*Ffield> let q = 895%922
+*Ffield> let knownData = imagesAndPrimes q
+*Ffield> let [(a1,p1),(a2,p2)] = take 2 knownData
+*Ffield> take 2 knownData
+[(Just 6003,10007),(Just 9782,10009)]
+*Ffield> map guess it
+[Just ((-6) % 5,10007),Just (21 % 44,10009)]
+\end{verbatim}
+
+It suffices to make a binary version of Chinese Remainder theorem in Haskell:
+\begin{verbatim}
+Our data is a list of the type
+  [(Maybe Int, Int)]
+In order to use CRT, we should cast its type.
+
+> toInteger2 :: [(Maybe Int, Int)] -> [(Maybe Integer, Integer)]
+> toInteger2 = map helper
+>   where 
+>     helper (x,y) = (fmap toInteger x, toInteger y)
+>
+> crtRec':: Integral a => (Maybe a, a) -> (Maybe a, a) -> (Maybe a, a)
+> crtRec' (Nothing,p) (_,q)       = (Nothing, p*q)
+> crtRec' (_,p)       (Nothing,q) = (Nothing, p*q)
+> crtRec' (Just a1,p1) (Just a2,p2) = (Just a,p)
+>   where
+>     a = (a1*p2*m2 + a2*p1*m1) `mod` p
+>     Just m1 = p1 `inversep` p2 
+>     Just m2 = p2 `inversep` p1
+>     p = p1*p2
+
+\end{verbatim}
+\texttt{crtRec'} function takes two tuples of image in $\mathbb{Z}_p$ and primes, and returns these combination.
+
+Now let us fold.
+\begin{verbatim}
+
+  *Ffield> let ds = imagesAndPrimes (1123%1135)
+  *Ffield> map guess ds
+  [Just (25 % 52,10007)
+  ,Just ((-81) % 34,10009)
+  ,Just ((-88) % 63,10037) ..
+
+  *Ffield> matches3 it
+  Nothing
+
+  *Ffield> scanl1 crtRec' ds
+
+  *Ffield> scanl1 crtRec' . toInteger2 $ ds
+  [(Just 3272,10007)
+  ,(Just 14913702,100160063)
+  ,(Just 298491901442,1005306552331) ..
+
+  *Ffield> map guess it
+  [Just (25 % 52,10007)
+  ,Just (1123 % 1135,100160063)
+  ,Just (1123 % 1135,1005306552331)
+  ,Just (1123 % 1135,10092272478850909) ..
+
+  *Ffield> matches3 it
+  Just (1123 % 1135,100160063)
+
+\end{verbatim}
+Schematically, this \texttt{scanl1 f} function takes
+\begin{eqnarray}
+\left[d_0, d_1, d_2, d_3, \cdots \right]
+\end{eqnarray}
+and returns
+\begin{eqnarray}
+\left[d_0, f(d_0,d_1), f(f(d_0,d_1),d_2), f(f(f(d_0,d_1),d_2), d_3), \cdots \right]
+\end{eqnarray}
+We have used another higher order function which is slightly modified from standard definition:
+\begin{verbatim}
+> -- Strict zipWith, from:
+> --   http://d.hatena.ne.jp/kazu-yamamoto/touch/20100624/1277348961
+> zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
+> zipWith' f (a:as) (b:bs) = (x `seq` x) : zipWith' f as bs
+>   where x = f a b
+> zipWith' _ _      _      = []
+\end{verbatim}
+
+Let us check our implementation.
+\begin{verbatim}
+  *Ffield> let q = 895%922
+  *Ffield> let knownData = imagesAndPrimes q
+  *Ffield> take 4 knownData 
+  [(882873,897473)
+  ,(365035,897497)
+  ,(705735,897499)
+  ,(511060,897517)
+  ]
+  *Ffield> pile crtRec' it
+  [(882873,897473)
+  ,(86488560937,805479325081)
+  ,(397525881357811624,722916888780872419)
+  ,(232931448259966259937614,648830197267942270883623)
+  ]
+  *Ffield> map guess it
+  [((-854) % 123,897473)
+  ,(895 % 922,805479325081)
+  ,(895 % 922,722916888780872419)
+  ,(895 % 922,648830197267942270883623)
+\end{verbatim}
+So on a product ring $\mathbb{Z}_{805479325081}$, we get the right answer.
+
+\subsection{\texttt{reconstruct}: from image in $\mathbb{Z}_p$ to rational number}
+From above discussion, here we define a function which takes a list of images in $\mathbb{Z}_p$ and returns the rational number.
+It, basically, takes a list of image (of our target rational number) and primes, then applying Chinese Remainder theorem recursively, return several guess of rational number.
+
+\begin{verbatim}
+We should determine the number of matches to cover the range 
+of machine size integer, i.e., Int of Haskell.
+
+  *Ffield> let mI = maxBound :: Int
+  *Ffield> mI == 2^63-1
+  True
+  *Ffield> logBase 10 (fromIntegral mI)
+  18.964889726830812
+
+Since our choice of bigPrimes are
+  O(10^4)
+5 times is enough to cover the machine size integers.
+
+> reconstruct :: [(Maybe Int, Int)] -> Maybe (Ratio Integer)
+> reconstruct = matches 5 . makeList -- 5 times match
+>   where
+>     matches n (a:as)
+>       | all (a==) $ take (n-1) as = a
+>       | otherwise                 = matches n as
+>
+>     makeList = map (fmap fst . guess) . scanl1 crtRec' . toInteger2 
+>                . filter (isJust . fst)
+
+> reconstruct' :: [(Maybe Int, Int)] -> Maybe (Ratio Int)
+> reconstruct' = fmap coersion . reconstruct
+>   where
+>     coersion :: Ratio Integer -> Ratio Int
+>     coersion q = (fromInteger . numerator $ q) 
+>                    % (fromInteger . denominator $ q)
+
+  *Ffield> let q = 513197683989569 % 1047805145658 :: Ratio Int
+  *Ffield> let ds = imagesAndPrimes q
+  *Ffield> let answer = fmap fromRational . reconstruct $ ds
+  *Ffield> answer :: Maybe (Ratio Int)
+  Just (513197683989569 % 1047805145658)
+\end{verbatim}
+
+Here is some random checks and results.
+
+\begin{verbatim}
+-- QuickCheck
+
+> prop_rec :: Ratio Int -> Bool
+> prop_rec q = Just q == answer
+>   where
+>    answer :: Maybe (Ratio Int)
+>    answer = fmap fromRational . reconstruct $ ds
+>    ds = imagesAndPrimes q
+
+  *Ffield> quickCheckWith stdArgs { maxSuccess = 100000 } prop_rec 
+  +++ OK, passed 100000 tests.
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Implementation}
+\section{An expression for polynomials in Haskell}
+\subsection{A polynomial as a list of coefficients: \texttt{Polynomials.hs}}
+We use a list of rational numbers as an expression for a polynomial.
+For the detail, see the reference \ref{Haskellroad}, but we basically represent a univariate polynomial as its coefficients list.
+
+\lstinputlisting[caption=Polynomials.hs,label=Polynomials]{Polynomials.hs}
+
+Note that the above operators are overloaded, say \texttt{(*)}, \texttt{f*g} is a multiplication of two numbers but \texttt{fs*gg} is a multiplication of two list of coefficients.
+We can not extend this overloading to scalar multiplication, since Haskell type system takes the operands of \texttt{(*)} the same type
+\begin{eqnarray}
+\verb+(*) :: Num a => a -> a -> a+
+\end{eqnarray}
+
+\begin{verbatim}
+> -- scalar multiplication
+> infixl 7 .*
+> (.*) :: Num a => a -> [a] -> [a]
+> c .* []     = []
+> c .* (f:fs) = c*f : c .* fs
+\end{verbatim}
+Let us see few examples.
+If we take a scalar multiplication, say
+\begin{eqnarray}
+3 * \left( 1+2z+3z^2+4z^3\right)
+\end{eqnarray}
+the result should be
+\begin{eqnarray}
+3 * \left( 1+2z+3z^2+4z^3\right)
+=
+3+6z+9z^2+12z^3
+\end{eqnarray}
+In Haskell 
+\begin{verbatim}
+  *Univariate> 3 .* [1,2,3,4]
+  [3,6,9,12]
+\end{verbatim}
+and this is exactly same as map with section:
+\begin{verbatim}
+  *Univariate> map (3*) [1,2,3,4]
+  [3,6,9,12]
+\end{verbatim}
+When we multiply two polynomials, say
+\begin{eqnarray}
+(1+2z) * (3+4z+5z^2+6z^3)
+\end{eqnarray}
+the result should be
+\begin{eqnarray}
+\nonumber
+(1+2z) * (3+4z+5z^2+6z^3)
+&=& 1*(3+4z+5z^2+6z^3) + 2z*(3+4z+5z^2+6z^3) \\
+\nonumber
+&=& 3+(4+2*3)z+(5+2*4)z^2+(6+2*5)z^3 + 2*6 z^4 \\
+&=& 3+ 10z + 13z^2 + 16 z^3 + 12 z^4 
+\end{eqnarray}
+In Haskell,
+\begin{verbatim}
+  *Univariate> [1,2] * [3,4,5,6]
+  [3,10,13,16,12]
+\end{verbatim}
+
+Now the (dummy) variable is given as 
+\begin{verbatim}
+> -- z of f(z), variable
+> z :: Num a => [a]
+> z = [0,1]
+\end{verbatim}
+
+A polynomial of degree $R$ is given by a finite sum of the following form:
+\begin{eqnarray}
+f(z) := \sum_{i=0}^R c_i z^i.
+\end{eqnarray}
+Therefore, it is natural to represent $f(z)$ by a list of coefficient $\{c_i\}_i$.
+Here is the translator from the coefficient list to a polynomial function:
+\begin{verbatim}
+> p2fct :: Num a => [a] -> a -> a
+> p2fct [] x = 0
+> p2fct (a:as) x = a + (x * p2fct as x)
+\end{verbatim}
+This gives us\footnote{
+Here we have used lambda, or so called anonymous function.
+From\\
+\url{http://learnyouahaskell.com/higher-order-functions}
+\begin{quote}
+To make a lambda, we write a \textbackslash (because it kind of looks like the greek letter lambda if you squint hard enough) and then we write the parameters, separated by spaces. 
+\end{quote}
+For example,
+\begin{eqnarray}
+f(x) &:=& x^2 + 1 \\
+f &:=& \lambda x. x^2+1
+\end{eqnarray}
+are the same definition.
+}
+\begin{verbatim}
+*Univariate> take 10 $ map (p2fct [1,2,3]) [0..]
+[1,6,17,34,57,86,121,162,209,262]
+*Univariate> take 10 $ map (\n -> 1+2*n+3*n^2) [0..]
+[1,6,17,34,57,86,121,162,209,262]
+\end{verbatim}
+
+\section{Univariate (1 variable) case}
+The code is on \S\ref{GUniFin}.
+Here we declare a special data type.
+\begin{verbatim}
+> -- using record syntax
+> data PDiff 
+>   = PDiff { points    :: (Int, Int) -- end points
+>           , value     :: Int        -- Zp value
+>           , basePrime :: Int
+>           }
+>   deriving (Show, Read)
+\end{verbatim}
+This is a hybrid data which has both $\mathbb{Z}_p$ value and two indices for finite difference analysis.
+
+\subsection{The flow}
+Both Newton and Thiele interpolation, we use the same flow.
+Initially, take first 3 elements, and check weather they are constants or not.
+If we do not have 3 coincidence, we put a new data point, and build the "triangle."
+Foe example, if 4th depth \verb+[r26, r15, r04]+ is not constant list:
+\begin{verbatim}
+[[f6,  f5,  f4,  f3,  f2,  f1,  f0  ]
+,[r56, r45, r34, r23, r12, r01]
+,[r46, r35, r24, r13, r02]
+,[r36, r25, r14, r03]
+,[r26, r15, r04]
+]
+\end{verbatim}
+take a new data \verb+f7+
+\begin{verbatim}
+f7 [[f6,  f5,  f4,  f3,  f2,  f1,  f0]
+   ,[r56, r45, r34, r23, r12, r01]
+   ,[r46, r35, r24, r13, r02]
+   ,[r36, r25, r14, r03]
+   ,[r26, r15, r04]
+   ] 
+\end{verbatim}
+Taking the head elements of each sublists, we can build the new heads for this new \verb+f7+
+\begin{verbatim}
+[r67, r57, r37, r27]
+\end{verbatim}
+Attaching this new heads, we have
+\begin{verbatim}
+[[f7,  f6,  f5,  f4,  f3,  f2,  f1,  f0]
+,[r67, r56, r45, r34, r23, r12, r01]
+,[r57, r46, r35, r24, r13, r02]
+,[r47, r36, r25, r14, r03]
+,[r37, r26, r15, r04]
+]
+\end{verbatim}
+Using last two sublists, we build new 3 elements
+\begin{verbatim}
+[r27, r16, r05]
+\end{verbatim}
+and 
+\begin{verbatim}
+[[f7,  f6,  f5,  f4,  f3,  f2,  f1,  f0]
+,[r67, r56, r45, r34, r23, r12, r01]
+,[r57, r46, r35, r24, r13, r02]
+,[r47, r36, r25, r14, r03]
+,[r37, r26, r15, r04]
+,[r27, r16, r05]
+]
+\end{verbatim}
+Then we check the termination condition for this new last list.
+
+\section{2 variable case}
+The code is on \S\ref{GMulFin}.
+The reconstruction function has the following type:
+\begin{verbatim}
+> twoVariableRational
+>   :: (Q -> Q -> Q) -- 2var function
+>   -> [Q]           -- safe ys
+>   -> (Maybe [[Ratio Int]], Maybe [[Ratio Int]]) 
+\end{verbatim}
+It takes an unknown 2 variable function and safe \verb+y+'s, and returns the numerator and denominator.
+With this safe \verb+y+'s, we take
+\begin{eqnarray}
+(1,y), y \in \text{ safe y's}
+\end{eqnarray}
+as the representative, that is, for a representative $(1,y)$ we apply univariate rational functional reconstruction over
+\begin{eqnarray}
+\left\{\left. (t,y*t)  \right| t \in 0,1,2 \cdots \right\}
+\end{eqnarray}
+to see the evolution of coefficients.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Codes}
+\section{\texttt{Ffield.lhs}}
+\lstinputlisting[caption=Ffield.lhs,label=Ffield]{Ffield.lhs}
+
+\section{\texttt{Polynomials.hs}}
+\lstinputlisting[caption=Polynomials.hs,label=Polynomials]{Polynomials.hs}
+
+\section{\texttt{GUniFin.lhs}}
+\lstinputlisting[caption=GUniFin.lhs,label=GUniFin]{GUniFin.lhs}
+
+
+\section{\texttt{GMulFin.lhs}}
+\lstinputlisting[caption=GMulFin.lhs,label=GMulFin]{GMulFin.lhs}
+
+
+\end{document}
