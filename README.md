@@ -22,7 +22,11 @@ Once it hits a pole at the sampling phase, it simply halts.
 Non-sequential inputs, finite fields.
 Time consuming but still works.
 
+## Multivariate cases
+More than 2 variables.
+Here merely is 2 variables cases.
 
-## Multivariate polynomial
-## Multivariate rational function
+### GMulFin.lhs
+Heavy recursion (adding one layer more).
+Up to certain total degree it works, say x^2*y^2/(1+y)^3, but it also requires clever choice of samplings.
 
