@@ -9,7 +9,8 @@ It passed QuickCheck.
 
 # Function reconstruction
 ## Univariate (1-variable) cases
-Newton interpolation
+Newton interpolation and Thiele interpolation.
+
 ### Univariate.lhs
 Following "The Haskell Road to Logic, Maths and Programming (Kees Doets, Jan van Eijck), arbitrary precision version of Newton algorithm (finite difference analysis).
 It determines the degree of the input polynomial (or the outputs), then constructs the list of coefficients. 
